@@ -269,6 +269,7 @@ version = "0.3.0"
 dependencies = [
  "pyo3",
  "tok-bpmn",
+ "tok-cli",
  "tok-core",
  "tok-sim",
 ]

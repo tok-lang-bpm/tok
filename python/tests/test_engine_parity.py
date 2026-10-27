@@ -1,11 +1,15 @@
-"""Parity of the Rust engine (Python module ``tok_engine``) with the pure-Python implementation.
+"""Parity of the Rust engine (module ``tok._engine``) with the pure-Python implementation.
 
 Compared: diagnostics, canonical text, BPMN, SVG and exported files of every document; BPMN
 import; decision table evaluation over a grid of typed input values; FEEL evaluation of the
 expression corpus of the Rust fixtures (``rust/tok-core/tests/fixtures/eval/feel.json``); simulation
 of every document and of the synthetic models of ``rust/tok-sim/tests/fixtures/sim``.
 
-The tests are skipped when ``tok_engine`` is not installed; see ``rust/tok-py/README.md``.
+Also compared: the output and exit status of the ``tok`` command on the engine and with
+``TOK_ENGINE=python``, and the functions of ``tok.api`` on both.
+
+The tests are skipped when the engine is not installed (a wheel of ``tok-lang``); see
+``rust/tok-py/README.md``.
 The pure-Python reference runs in a fresh interpreter for every input, so that the global
 namespace registry of ElementTree does not carry over from one model to the next.
 """
@@ -18,7 +22,7 @@ import sys
 import unittest
 
 try:
-    import tok_engine
+    from tok import _engine as tok_engine
 except ImportError:  # pragma: no cover - depends on the environment
     tok_engine = None
 
@@ -287,6 +291,20 @@ def decision_grid(decision):
     return runs
 
 
+def run_tok(args, engine):
+    """Output of ``python -m tok ARGS`` with the installed package: on the engine, or on the
+    pure-Python implementation."""
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", COLUMNS="200")
+    env.pop("PYTHONPATH", None)
+    if engine:
+        env.pop("TOK_ENGINE", None)
+    else:
+        env["TOK_ENGINE"] = "python"
+    res = subprocess.run([sys.executable, "-m", "tok"] + args, env=env, capture_output=True, cwd=REPO)
+    return (res.returncode, res.stdout.replace(b"\r\n", b"\n"),
+            res.stderr.replace(b"\r\n", b"\n"))
+
+
 def engine_or_none(fn, *args, **kw):
     try:
         return fn(*args, **kw)
@@ -294,7 +312,7 @@ def engine_or_none(fn, *args, **kw):
         return None
 
 
-@unittest.skipIf(tok_engine is None, "tok_engine (Rust engine) is not installed")
+@unittest.skipIf(tok_engine is None, "the Rust engine (tok._engine) is not installed")
 class EngineParity(unittest.TestCase):
     def test_documents(self):
         compared = 0
@@ -387,6 +405,43 @@ class EngineParity(unittest.TestCase):
                     self.assertEqual(engine_simulation(text, cases, seed), expected)
                 compared += 1
         self.assertGreater(compared, 100)
+
+    def test_command_line(self):
+        """``tok`` on the engine prints exactly what the pure-Python command prints."""
+        import tempfile
+        compared = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            for path in DOCUMENTS:
+                commands = [["check", path], ["check", path, "--json", "--lang", "pl"],
+                            ["check", path, "--level", "basic"], ["fmt", path],
+                            ["svg", path, "-o", os.path.join(tmp, "m.svg")]]
+                for args in commands:
+                    got = run_tok(args, engine=True)
+                    want = run_tok(args, engine=False)
+                    with self.subTest(command=" ".join(args[:1] + [os.path.basename(path)] + args[2:])):
+                        self.assertEqual(got, want)
+                    compared += 1
+        for args in (["--version"], ["nonsense"], [], ["check"]):
+            with self.subTest(command=" ".join(args)):
+                self.assertEqual(run_tok(args, engine=True), run_tok(args, engine=False))
+        self.assertGreater(compared, 100)
+
+    def test_api_on_both_implementations(self):
+        from tok import api
+        text = open(os.path.join(REPO, "examples", "propozycja-zakupu.tok"), encoding="utf-8").read()
+        on_engine = (api.check(text, "pl"), api.fmt(text), api.export(text, "m"),
+                     api.eval_decision(text, "tryb-akceptacji", {"rodzaj": "drukowana", "cena": 99}),
+                     api.format_kpi(api.simulate(text, 20, 7).kpi(), "pl"))
+        self.assertEqual(api.engine(), "rust")
+        os.environ["TOK_ENGINE"] = "python"
+        try:
+            self.assertEqual(api.engine(), "python")
+            on_python = (api.check(text, "pl"), api.fmt(text), api.export(text, "m"),
+                         api.eval_decision(text, "tryb-akceptacji", {"rodzaj": "drukowana", "cena": 99}),
+                         api.format_kpi(api.simulate(text, 20, 7).kpi(), "pl"))
+        finally:
+            del os.environ["TOK_ENGINE"]
+        self.assertEqual(on_engine, on_python)
 
     def test_errors_raise(self):
         with self.assertRaises(ValueError):

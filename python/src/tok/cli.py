@@ -14,6 +14,17 @@ from .printer import fmt
 EXIT_OK, EXIT_ERRORS, EXIT_USAGE = 0, 1, 2
 
 
+def _engine():
+    """The Rust engine (``tok._engine``) when installed and not disabled with TOK_ENGINE=python."""
+    if os.environ.get("TOK_ENGINE", "").lower() == "python":
+        return None
+    try:
+        from . import _engine
+    except ImportError:
+        return None
+    return _engine
+
+
 def _read(path):
     try:
         with open(path, encoding="utf-8") as f:
@@ -295,6 +306,11 @@ def build_parser():
 
 
 def main(argv=None):
+    engine = _engine()
+    if engine is not None:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        return engine.cli(list(sys.argv[1:] if argv is None else argv))
     if hasattr(sys.stdout, "reconfigure"):
         try:
             sys.stdout.reconfigure(encoding="utf-8")

@@ -1,8 +1,9 @@
-//! Python bindings of the tok engine (module `tok_engine`).
+//! Python bindings of the tok engine: the extension module `tok._engine` of the package
+//! `tok-lang`.
 //!
-//! The functions mirror the pure-Python package `tok` so that both can be compared on the
-//! same inputs. Until the 1.0 registry release the installed `tok-lang` package stays pure
-//! Python; this module exists for parity testing.
+//! The `tok` command of the package runs the Rust command line through `cli`, and the
+//! functions of `tok.api` call the other functions. They mirror the pure-Python
+//! implementation (frozen at language 0.3), which the parity tests compare them with.
 
 use pyo3::create_exception;
 use pyo3::exceptions::{
@@ -24,37 +25,37 @@ use tok_sim::result::{ActivityKpi, Kpi, ResourceKpi};
 use tok_sim::{Param, SimResult};
 
 create_exception!(
-    tok_engine,
+    tok._engine,
     FeelError,
     PyException,
     "A FEEL expression that cannot be evaluated (tok.feel.FeelError)."
 );
 create_exception!(
-    tok_engine,
+    tok._engine,
     FeelSyntaxError,
     FeelError,
     "A malformed FEEL expression, F002 (tok.feel.FeelSyntaxError)."
 );
 create_exception!(
-    tok_engine,
+    tok._engine,
     FeelUnsupported,
     FeelError,
     "Valid FEEL outside the subset of tok, F001 (tok.feel.FeelUnsupported)."
 );
 create_exception!(
-    tok_engine,
+    tok._engine,
     DecisionError,
     PyException,
     "A violated hit policy of a decision table (tok.dmn.DecisionError)."
 );
 create_exception!(
-    tok_engine,
+    tok._engine,
     SimError,
     PyException,
     "A model the simulator cannot run, e.g. without a start event (tok.sim.SimError)."
 );
 create_exception!(
-    tok_engine,
+    tok._engine,
     DistError,
     PyException,
     "An invalid distribution (tok.sim.DistError)."
@@ -552,7 +553,7 @@ fn param_of(obj: Option<&Bound<'_, PyAny>>) -> PyResult<Option<Param>> {
 }
 
 /// The result of a simulation run, as `sim.Result`.
-#[pyclass(name = "SimResult", module = "tok_engine", frozen)]
+#[pyclass(name = "SimResult", module = "tok._engine", frozen)]
 struct PySimResult {
     inner: SimResult,
 }
@@ -646,7 +647,7 @@ impl PySimResult {
 /// Run the simulation of a document (`sim.simulate`) and return a `SimResult`.
 /// `cases` and `seed` override the attributes of `simulate`; like `sim.py`, the simulator
 /// takes `int(float(value))` of them. Raises `ValueError` for a document with errors and
-/// the exceptions of the reference implementation (`tok_engine.SimError` for a process
+/// the exceptions of the reference implementation (`tok._engine.SimError` for a process
 /// without a start event, `ValueError`, `TypeError`, `OverflowError` …).
 #[pyfunction]
 #[pyo3(signature = (text, cases = None, seed = None))]
@@ -748,9 +749,19 @@ fn format_kpi(kpi: &Bound<'_, PyAny>, lang: &str) -> PyResult<String> {
     Ok(k.format(lang))
 }
 
+/// Run the `tok` command line (`tok check …`, `tok sim …`) with the arguments after the
+/// program name; returns the exit status. Output goes to the standard streams of the
+/// process.
+#[pyfunction]
+fn cli(py: Python<'_>, argv: Vec<String>) -> u8 {
+    py.detach(|| tok_cli::main_with_args(&argv))
+}
+
 #[pymodule]
+#[pyo3(name = "_engine")]
 fn tok_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
+    m.add_function(wrap_pyfunction!(cli, m)?)?;
     m.add("FeelError", py.get_type::<FeelError>())?;
     m.add("FeelSyntaxError", py.get_type::<FeelSyntaxError>())?;
     m.add("FeelUnsupported", py.get_type::<FeelUnsupported>())?;

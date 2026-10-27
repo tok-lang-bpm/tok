@@ -3,8 +3,6 @@
 //! negative numbers as values, options between positional arguments, `--`, type and
 //! choice checks, and the same error messages.
 
-use std::process::ExitCode;
-
 use crate::{EXIT_OK, EXIT_USAGE, usage};
 
 /// What an option does.
@@ -197,13 +195,13 @@ impl Spec {
     }
 
     /// An error of this subcommand's parser.
-    pub fn error(&self, msg: &str) -> ExitCode {
+    pub fn error(&self, msg: &str) -> u8 {
         errln!("{}", self.usage);
         errln!("tok {}: error: {msg}", self.name);
-        ExitCode::from(EXIT_USAGE)
+        EXIT_USAGE
     }
 
-    fn ignored_explicit(&self, name: &str, arg: &str) -> ExitCode {
+    fn ignored_explicit(&self, name: &str, arg: &str) -> u8 {
         self.error(&format!(
             "argument {name}: ignored explicit argument {}",
             tok_core::pyutil::repr_str(arg)
@@ -275,7 +273,7 @@ impl Spec {
     }
 
     /// Store the value of an option after argparse's type and choice checks.
-    fn take_value(&self, parsed: &mut Parsed, action: Opt, value: String) -> Result<(), ExitCode> {
+    fn take_value(&self, parsed: &mut Parsed, action: Opt, value: String) -> Result<(), u8> {
         let Opt::Value(dest, conv) = action else {
             return Ok(());
         };
@@ -309,7 +307,7 @@ impl Spec {
 
     /// Parse the arguments after the subcommand name. `Err` carries the exit code after a
     /// usage error or the help text.
-    pub fn parse(&self, argv: &[String]) -> Result<Parsed, ExitCode> {
+    pub fn parse(&self, argv: &[String]) -> Result<Parsed, u8> {
         let mut pattern: Vec<char> = Vec::new();
         let mut options: Vec<Option<OptTuple>> = Vec::new();
         let mut rest_positional = false;
@@ -438,7 +436,7 @@ impl Spec {
                 match act {
                     Opt::Help => {
                         out!("{}", self.help);
-                        return Err(ExitCode::from(EXIT_OK));
+                        return Err(EXIT_OK);
                     }
                     Opt::Flag(dest) => {
                         if !p.parsed.flags.contains(&dest) {

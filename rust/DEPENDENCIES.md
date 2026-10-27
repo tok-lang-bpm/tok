@@ -8,7 +8,7 @@ The dependency tree is kept small so that the R package can vendor it for offlin
 | roxmltree | tok-core (import), tok-bpmn | reading BPMN/DMN XML |
 | serde, serde_json | tok-core, tok-cli, tok-bpmn, tok-sim (tests only) | JSON diagnostics, Camunda forms (tok-bpmn reads `.form` ids for the Camunda profile; its parity test compares JSON); the parity tests read their fixtures as JSON |
 | indexmap | tok-core, tok-sim | ordered maps that keep declaration order (and the insertion order of Python dicts in case variables) |
-| pyo3 (0.29, features `abi3-py38`, `extension-module`) | tok-py only | Python bindings (module `tok_engine`); 0.29 is the newest release that still builds an abi3 module for Python 3.8, the minimum version of `tok-lang` |
+| pyo3 (0.29, features `abi3-py38`, `extension-module`) | tok-py only | Python bindings (module `tok._engine` of the package `tok-lang`); 0.29 is the newest release that still builds an abi3 module for Python 3.8, the minimum version of `tok-lang` |
 
 ## Random numbers
 

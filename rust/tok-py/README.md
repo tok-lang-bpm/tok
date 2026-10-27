@@ -1,11 +1,18 @@
 # tok-py: Python bindings of the tok engine
 
-The crate builds the Python extension module `tok_engine` on top of `tok-core`, `tok-bpmn` and `tok-sim`. It is used to test that the Rust engine and the pure-Python implementation of tok produce the same results. It is not published: until the 1.0 registry release the installed package `tok-lang` stays pure Python, so users need no Rust compiler.
+The crate builds the extension module `tok._engine` of the Python package `tok-lang` on top of `tok-core`, `tok-bpmn`, `tok-sim` and `tok-cli`. A wheel of `tok-lang` contains the Python package `python/src/tok` and this module:
+
+- the `tok` command runs the Rust command line (`tok._engine.cli`), so its output is that of the native `tok` program;
+- the functions of `tok.api` call the engine;
+- with the environment variable `TOK_ENGINE=python` both use the pure-Python implementation instead, which is frozen at language 0.3 and serves as the reference of the parity tests.
+
+Installing from the source archive (`pip install https://codeberg.org/MarekDeja/tok/archive/main.zip`) builds the pure-Python package of the repository root and needs no Rust compiler.
 
 ## Functions
 
 | Function | Result |
 |---|---|
+| `cli(argv)` | runs the `tok` command line with the arguments after the program name and returns the exit status |
 | `version()` | version of the engine |
 | `check(text, lang="en", level="full", bpmn=True)` | list of diagnostics as dicts with `code`, `severity`, `line`, `id`, `message`, sorted like `tok check` |
 | `fmt(text)` | canonical text (`tok fmt`) |
@@ -23,27 +30,27 @@ The crate builds the Python extension module `tok_engine` on top of `tok-core`, 
 
 Documents with errors raise `ValueError` with the error diagnostics as text; `fmt` and `semantic_xml` need a document without parser errors, `bpmn`, `svg`, `export`, `eval_decision` and `simulate` a document without any errors (`eval_decision` checks without the BPMN rules, like `tok eval`).
 
-Evaluation errors are raised as in the pure-Python implementation: `KeyError` for an unknown decision, `tok_engine.DecisionError` for a violated hit policy (two rules under `unique`, different outputs under `any`), `tok_engine.FeelSyntaxError` and `tok_engine.FeelUnsupported` (both subclasses of `tok_engine.FeelError`) for expressions that cannot be parsed, and the exceptions of the `decimal` module and the built-in ones (`ValueError`, `OverflowError`, `TypeError`) where Python's decimal and datetime arithmetic raises them. Variables may be `None`, `bool`, `str`, `int`, `float`, `decimal.Decimal`, `datetime.date`, `datetime.datetime`, `datetime.timedelta`, lists, tuples and dicts with string keys; other types raise `TypeError`.
+Evaluation errors are raised as in the pure-Python implementation: `KeyError` for an unknown decision, `tok._engine.DecisionError` for a violated hit policy (two rules under `unique`, different outputs under `any`), `tok._engine.FeelSyntaxError` and `tok._engine.FeelUnsupported` (both subclasses of `tok._engine.FeelError`) for expressions that cannot be parsed, and the exceptions of the `decimal` module and the built-in ones (`ValueError`, `OverflowError`, `TypeError`) where Python's decimal and datetime arithmetic raises them. Variables may be `None`, `bool`, `str`, `int`, `float`, `decimal.Decimal`, `datetime.date`, `datetime.datetime`, `datetime.timedelta`, lists, tuples and dicts with string keys; other types raise `TypeError`.
 
 ## Build
 
-Requirements: the Rust toolchain of the workspace and Python 3.8 or newer. From the repository root:
+Requirements: the Rust toolchain of the workspace, Python 3.8 or newer and maturin. From the repository root:
 
 ```
 python -m venv .venv-engine
-.venv-engine/Scripts/python -m pip install maturin          # macOS/Linux: .venv-engine/bin/python
-.venv-engine/Scripts/maturin develop --release -m rust/tok-py/Cargo.toml
+.venv-engine/Scripts/python -m pip install maturin          # macOS/Linux: .venv-engine/bin/...
+PATH="$PWD/.venv-engine/Scripts:$PATH" bash tools/wheel.sh -o dist
+.venv-engine/Scripts/python -m pip install dist/tok_lang-*.whl
 ```
 
-`maturin develop` compiles the module and installs it into the active virtual environment.
+`tools/wheel.sh` copies the Python package into `rust/tok-py/python/` (ignored by git) and runs `maturin build`; its arguments go to maturin (`--zig --compatibility manylinux2014` for Linux wheels that run on old distributions, `--target …` for other platforms). The wheel is abi3: one file per platform for every Python from 3.8.
 
 ## Parity tests
 
 ```
-cd python
-PYTHONPATH=src ../.venv-engine/Scripts/python -m unittest tests.test_engine_parity -v
+.venv-engine/Scripts/python -m unittest python/tests/test_engine_parity.py -v
 ```
 
-`tests/test_engine_parity.py` compares, for every document in `examples/`, `conformance/cases/` and (when the course repository `tok-course` is checked out next to this one) its `przyklady/`: diagnostics in English and Polish, canonical text, semantic XML, BPMN with layout, SVG and every exported file; `import_bpmn` (with and without flow identifiers) for every model in `conformance/import/`; `eval_decision` for every decision table of those documents and of `tok-core/tests/fixtures/eval/eval-tables.tok` over a grid of typed input values; `feel_eval` for the expression corpus `tok-core/tests/fixtures/eval/feel.json`; and `simulate` (indicators, log, cases, JSON and both text reports, or the exception) for every document and the synthetic simulation models `tok-sim/tests/fixtures/sim/sim-*.tok`, with several case counts and seeds. The pure-Python reference runs in a fresh interpreter for each input. Without `tok_engine` the tests are skipped, so the normal Python test suite does not need Rust.
+The installed package is tested; the pure-Python reference runs from `python/src`. `tests/test_engine_parity.py` compares, for every document in `examples/`, `conformance/cases/` and (when the course repository `tok-course` is checked out next to this one) its `przyklady/`: diagnostics in English and Polish, canonical text, semantic XML, BPMN with layout, SVG and every exported file; `import_bpmn` (with and without flow identifiers) for every model in `conformance/import/`; `eval_decision` for every decision table of those documents and of `tok-core/tests/fixtures/eval/eval-tables.tok` over a grid of typed input values; `feel_eval` for the expression corpus `tok-core/tests/fixtures/eval/feel.json`; and `simulate` (indicators, log, cases, JSON and both text reports, or the exception) for every document and the synthetic simulation models `tok-sim/tests/fixtures/sim/sim-*.tok`, with several case counts and seeds. The pure-Python reference runs in a fresh interpreter for each input. The tests also compare the output and exit status of the `tok` command on the engine and with `TOK_ENGINE=python`, and the functions of `tok.api` on both. Without the engine the tests are skipped, so the normal Python test suite does not need Rust.
 
 The crate has no Rust test harness (`test = false`): an extension module links against the Python runtime only when Python loads it, so `cargo test --workspace` builds but does not run it.

@@ -8,6 +8,10 @@ authors.workspace = true
 repository.workspace = true
 description = "Command line interface of the tok process language"
 
+[lib]
+name = "tok_cli"
+path = "src/lib.rs"
+
 [[bin]]
 name = "tok"
 path = "src/main.rs"

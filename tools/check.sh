@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Release gates of the tok repository, run from any directory on Linux, macOS or Windows (Git Bash).
 #
-#   tools/check.sh            formatting, lints and tests of Rust, Python and Julia; engine wheel
-#                             and its parity with the Python implementation; native tok program
-#   tools/check.sh --cross    additionally cross-compiles engine wheels for the other platforms
+#   tools/check.sh            formatting, lints and tests of Rust, Python, R and Julia; wheel of
+#                             tok-lang with the Rust engine and its parity with the pure-Python
+#                             implementation; native tok program
+#   tools/check.sh --cross    additionally cross-compiles wheels for the other platforms
 #                             with zig (Linux host: Linux aarch64 and macOS universal2; not tested)
 #
 # Built wheels and the tok program are written to dist/. Julia is skipped when it is not installed.
@@ -41,7 +42,7 @@ for f in examples/*.tok; do "dist/$EXE" check "$f"; done
 step "Python: pure-Python implementation"
 PYTHONPATH=python/src "$PY" -m unittest discover -s python/tests
 
-step "Engine wheel ($PLATFORM) and parity with the Python implementation"
+step "Wheel of tok-lang with the Rust engine ($PLATFORM); parity with the pure-Python implementation"
 VENV=rust/target/check-venv
 [ -x "$VENV/$BIN/python" ] || "$PY" -m venv "$VENV"
 "$VENV/$BIN/python" -m pip install --quiet --disable-pip-version-check --upgrade "maturin>=1.7,<2" ziglang
@@ -51,16 +52,17 @@ WHEELS=rust/target/wheels-check
 rm -rf "$WHEELS"
 if [ "$PLATFORM" = linux ]; then
   # zig links against an old glibc, so the wheel is manylinux2014 (glibc 2.17) whatever the host is
-  "$VENV/$BIN/maturin" build --release -m rust/tok-py/Cargo.toml -o "$WHEELS" --zig --compatibility manylinux2014
+  bash tools/wheel.sh -o "$WHEELS" --zig --compatibility manylinux2014
 else
-  "$VENV/$BIN/maturin" build --release -m rust/tok-py/Cargo.toml -o "$WHEELS"
+  bash tools/wheel.sh -o "$WHEELS"
 fi
 "$VENV/$BIN/python" -m pip install --quiet --force-reinstall "$WHEELS"/*.whl
-PYTHONPATH=python/src "$VENV/$BIN/python" -m unittest python/tests/test_engine_parity.py
+# the installed package (with tok._engine) is tested; the reference runs from python/src
+"$VENV/$BIN/python" -m unittest python/tests/test_engine_parity.py
 cp "$WHEELS"/*.whl dist/
 
 if [ "$CROSS" = 1 ] && [ "$PLATFORM" = linux ]; then
-  step "Cross-compiled engine wheels (not tested on their platforms)"
+  step "Cross-compiled wheels (not tested on their platforms)"
   for target in aarch64-unknown-linux-gnu universal2-apple-darwin; do
     case "$target" in
       universal2-apple-darwin) (cd rust && rustup target add aarch64-apple-darwin x86_64-apple-darwin) ;;
@@ -68,7 +70,7 @@ if [ "$CROSS" = 1 ] && [ "$PLATFORM" = linux ]; then
     esac
     extra=()
     [ "$target" = aarch64-unknown-linux-gnu ] && extra=(--compatibility manylinux2014)
-    "$VENV/$BIN/maturin" build --release -m rust/tok-py/Cargo.toml -o dist --zig --target "$target" "${extra[@]}"
+    bash tools/wheel.sh -o dist --zig --target "$target" "${extra[@]}"
   done
 fi
 

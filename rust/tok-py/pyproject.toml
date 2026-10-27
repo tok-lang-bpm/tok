@@ -1,16 +1,33 @@
+# Wheels of tok-lang with the Rust engine: the Python package from python/src (copied to
+# python/ next to this file by tools/wheel.sh) plus the extension module tok._engine. The
+# repository root holds the pure-Python build of the same package, which installs where no
+# wheel exists.
 [build-system]
 requires = ["maturin>=1.7,<2"]
 build-backend = "maturin"
 
 [project]
-name = "tok-engine"
-version = "0.2.0.dev0"
-description = "Python bindings of the tok Rust engine, used to test parity with the pure-Python implementation (not published)"
+name = "tok-lang"
+dynamic = ["version"]
+description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
 requires-python = ">=3.8"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Marek Deja" }]
-classifiers = ["Private :: Do Not Upload"]
+keywords = ["BPMN", "DMN", "process modelling", "simulation", "Camunda"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Rust",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+Homepage = "https://codeberg.org/MarekDeja/tok"
+
+[project.scripts]
+tok = "tok.cli:main"
 
 [tool.maturin]
-module-name = "tok_engine"
+python-source = "python"
+module-name = "tok._engine"
 features = ["pyo3/extension-module"]

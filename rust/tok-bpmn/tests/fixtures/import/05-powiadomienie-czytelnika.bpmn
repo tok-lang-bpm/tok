@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Powiadomienie" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/05">
+  <bpmn:collaboration id="Collaboration_Powiadomienie">
+    <bpmn:participant id="Participant_Biblioteka" name="Biblioteka uczelniana" processRef="Process_Powiadomienie" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Powiadomienie" name="Powiadomienie czytelnika o egzemplarzu do odbioru" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_System" name="System biblioteczny">
+        <bpmn:flowNodeRef>Start_Gotowy</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kontakt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Kanaly</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Email</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Sms</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Kanaly_join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Powiadomiony</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Bibliotekarz" name="Bibliotekarz wypożyczalni">
+        <bpmn:flowNodeRef>Task_List</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Gotowy" name="Egzemplarz gotowy do odbioru" />
+    <bpmn:serviceTask id="Task_Kontakt" name="Sprawdzenie danych kontaktowych" />
+    <bpmn:inclusiveGateway id="Gw_Kanaly" name="Którymi kanałami powiadomić?" default="F_List" />
+    <bpmn:serviceTask id="Task_Email" name="Wysłanie e-maila" />
+    <bpmn:serviceTask id="Task_Sms" name="Wysłanie SMS-a" />
+    <bpmn:userTask id="Task_List" name="Przygotowanie listu" />
+    <bpmn:inclusiveGateway id="Gw_Kanaly_join" />
+    <bpmn:endEvent id="End_Powiadomiony" name="Czytelnik powiadomiony" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Gotowy" targetRef="Task_Kontakt" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Kontakt" targetRef="Gw_Kanaly" />
+    <bpmn:sequenceFlow id="F_Email" name="podany e-mail" sourceRef="Gw_Kanaly" targetRef="Task_Email">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">czytelnik podał adres e-mail</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_Sms" name="zgoda na SMS" sourceRef="Gw_Kanaly" targetRef="Task_Sms">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">czytelnik zgodził się na SMS</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_List" name="brak e-maila i zgody na SMS" sourceRef="Gw_Kanaly" targetRef="Task_List" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_Email" targetRef="Gw_Kanaly_join" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Task_Sms" targetRef="Gw_Kanaly_join" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Task_List" targetRef="Gw_Kanaly_join" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Gw_Kanaly_join" targetRef="End_Powiadomiony" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Powiadomienie">
+      <bpmndi:BPMNShape id="Participant_Biblioteka_di" bpmnElement="Participant_Biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="750" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="720" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Bibliotekarz_di" bpmnElement="Lane_Bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="270" width="720" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Gotowy_di" bpmnElement="Start_Gotowy">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kontakt_di" bpmnElement="Task_Kontakt">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Kanaly_di" bpmnElement="Gw_Kanaly">
+        <dc:Bounds x="326" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Email_di" bpmnElement="Task_Email">
+        <dc:Bounds x="426" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Sms_di" bpmnElement="Task_Sms">
+        <dc:Bounds x="426" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_List_di" bpmnElement="Task_List">
+        <dc:Bounds x="426" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Kanaly_join_di" bpmnElement="Gw_Kanaly_join">
+        <dc:Bounds x="576" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Powiadomiony_di" bpmnElement="End_Powiadomiony">
+        <dc:Bounds x="676" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="326" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_Email_di" bpmnElement="F_Email">
+        <di:waypoint x="376" y="70" />
+        <di:waypoint x="426" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_Sms_di" bpmnElement="F_Sms">
+        <di:waypoint x="351" y="95" />
+        <di:waypoint x="351" y="200" />
+        <di:waypoint x="426" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_List_di" bpmnElement="F_List">
+        <di:waypoint x="351" y="95" />
+        <di:waypoint x="351" y="340" />
+        <di:waypoint x="426" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="526" y="70" />
+        <di:waypoint x="576" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="526" y="200" />
+        <di:waypoint x="601" y="200" />
+        <di:waypoint x="601" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="526" y="340" />
+        <di:waypoint x="601" y="340" />
+        <di:waypoint x="601" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="626" y="70" />
+        <di:waypoint x="676" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

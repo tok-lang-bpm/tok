@@ -1,0 +1,44 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Propozycja",
+  "komunikat": "„Propozycja złożona” (Start_Propozycja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Tryb",
+  "komunikat": "„Ustalenie trybu akceptacji” (Task_Tryb): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Tryb",
+  "komunikat": "„Czy potrzebna akceptacja kierownika?” (Gw_Tryb): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Akceptacja",
+  "komunikat": "„Akceptacja propozycji” (Task_Akceptacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Zgoda",
+  "komunikat": "„Czy kierownik się zgodził?” (Gw_Zgoda): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Koszt",
+  "komunikat": "„Wyliczenie kosztu zakupu” (Task_Koszt): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zamowienie",
+  "komunikat": "„Złożenie zamówienia u dostawcy” (Task_Zamowienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

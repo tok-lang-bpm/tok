@@ -1,0 +1,68 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Wplynelo",
+  "komunikat": "„Pismo wpłynęło” (Start_Wplynelo): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Dziennik",
+  "komunikat": "„Wpis do dziennika podawczego” (Task_Dziennik): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Skanowanie",
+  "komunikat": "„Skanowanie pisma” (Task_Skanowanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_EZD",
+  "komunikat": "„Rejestracja pisma w EZD” (Task_EZD): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przekazanie",
+  "komunikat": "„Przekazanie oryginału do sekretariatu” (Task_Przekazanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_RejestrSekretariatu",
+  "komunikat": "„Wpis do rejestru sekretariatu” (Task_RejestrSekretariatu): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przedlozenie",
+  "komunikat": "„Przedłożenie pisma kierownikowi” (Task_Przedlozenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Dekretacja",
+  "komunikat": "„Dekretacja pisma na papierze” (Task_Dekretacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Wlasciwa",
+  "komunikat": "„Czy pismo trafiło do właściwej jednostki?” (Gw_Wlasciwa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Ustalenie",
+  "komunikat": "„Ustalenie właściwej jednostki” (Task_Ustalenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zalatwienie",
+  "komunikat": "„Przekazanie pisma do załatwienia” (Task_Zalatwienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

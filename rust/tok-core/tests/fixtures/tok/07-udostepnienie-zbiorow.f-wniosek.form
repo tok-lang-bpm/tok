@@ -1,0 +1,67 @@
+{
+  "id": "f-wniosek",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "textfield",
+      "id": "Field_sygnatura",
+      "key": "sygnatura",
+      "label": "Sygnatura",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "number",
+      "id": "Field_wiek",
+      "key": "wiek",
+      "label": "Wiek materiału (lata)",
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "type": "select",
+      "id": "Field_cel",
+      "key": "cel",
+      "label": "Cel",
+      "values": [
+        {
+          "label": "naukowy",
+          "value": "naukowy"
+        },
+        {
+          "label": "urzędowy",
+          "value": "urzędowy"
+        },
+        {
+          "label": "prywatny",
+          "value": "prywatny"
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_dane",
+      "key": "dane",
+      "label": "Materiał zawiera dane osobowe"
+    },
+    {
+      "type": "checkbox",
+      "id": "Field_pilne",
+      "key": "pilne",
+      "label": "Sprawa pilna"
+    }
+  ],
+  "schemaVersion": 18
+}

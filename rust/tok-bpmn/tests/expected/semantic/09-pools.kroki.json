@@ -1,0 +1,44 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "s",
+  "komunikat": "„Wniosek wpłynął” (s): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "r",
+  "komunikat": "„Rejestracja wniosku” (r): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "q",
+  "komunikat": "„Poszukiwania” (q): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "z",
+  "komunikat": "„Zatwierdzenie odpowiedzi” (z): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "o",
+  "komunikat": "„Wysłanie odpowiedzi” (o): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "bs",
+  "komunikat": "bs: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "bp",
+  "komunikat": "„Przyjęcie wpłaty” (bp): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

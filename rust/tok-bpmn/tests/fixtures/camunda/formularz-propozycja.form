@@ -1,0 +1,17 @@
+{
+  "id": "formularz-propozycja",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "components": [
+    { "type": "text", "id": "Text_Naglowek", "text": "## Propozycja zakupu książki\nWypełnij formularz. Bibliotekarze gromadzenia rozpatrzą propozycję." },
+    { "type": "textfield", "id": "Field_Tytul", "key": "tytul", "label": "Tytuł", "validate": { "required": true } },
+    { "type": "textfield", "id": "Field_Autor", "key": "autor", "label": "Autor" },
+    { "type": "select", "id": "Field_Rodzaj", "key": "rodzaj", "label": "Rodzaj publikacji", "defaultValue": "drukowana",
+      "values": [ { "label": "książka drukowana", "value": "drukowana" }, { "label": "e-book", "value": "e-book" } ],
+      "validate": { "required": true } },
+    { "type": "number", "id": "Field_Cena", "key": "cena", "label": "Przybliżona cena (zł)", "decimalDigits": 2, "validate": { "required": true, "min": 0 } },
+    { "type": "textarea", "id": "Field_Uzasadnienie", "key": "uzasadnienie", "label": "Uzasadnienie (np. przedmiot, w którym książka jest potrzebna)" }
+  ],
+  "schemaVersion": 18
+}

@@ -1,0 +1,49 @@
+tok 0.1 "Realizacja zamówienia międzybibliotecznego" id=Definitions_Oczekiwanie namespace=https://codeberg.org/MarekDeja/ipm/diagramy/05 collaboration=Collaboration_Oczekiwanie
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Oczekiwanie
+  lane Lane_Bibliotekarz "Bibliotekarz wypożyczalni międzybibliotecznej"
+    start Start_Przyjete "Zamówienie przyjęte do realizacji"
+    xor Gw_Wyslij
+    send Task_Wyslanie "Wysłanie zamówienia" message="Zamówienie"
+    xor Gw_Czekaj
+    eventgw Gw_Odpowiedz "Co nastąpi pierwsze?"
+    catch Catch_Egzemplarz "Egzemplarz otrzymany" message="Przesyłka z egzemplarzem"
+    catch Catch_Odmowa "Odmowa otrzymana" message="Odmowa"
+    catch Catch_14dni "Minęło 14 dni" timer=P14D
+    user Task_Przyjecie "Przyjęcie egzemplarza"
+    end End_Przyjety "Egzemplarz przyjęty"
+    xor Gw_Ponaglono "Czy wysłano już ponaglenie?"
+    send Task_Ponaglenie "Wysłanie ponaglenia" message="Ponaglenie"
+    xor Gw_Brak
+    xor Gw_Inna "Czy inna biblioteka ma egzemplarz?"
+    user Task_Wybor "Wybór innej biblioteki"
+  lane Lane_System "System biblioteczny"
+    service Task_Informacja "Powiadomienie czytelnika o niepowodzeniu"
+    end End_Niezrealizowane "Zamówienie niezrealizowane"
+
+pool Participant_Udostepniajaca "Biblioteka udostępniająca"
+
+flow Start_Przyjete -> Gw_Wyslij id=F1
+flow Gw_Wyslij -> Task_Wyslanie id=F2
+flow Task_Wyslanie -> Gw_Czekaj id=F3
+flow Gw_Czekaj -> Gw_Odpowiedz id=F4
+flow Gw_Odpowiedz -> Catch_Egzemplarz id=F5
+flow Gw_Odpowiedz -> Catch_Odmowa id=F6
+flow Gw_Odpowiedz -> Catch_14dni id=F7
+flow Catch_Egzemplarz -> Task_Przyjecie id=F8
+flow Task_Przyjecie -> End_Przyjety id=F9
+flow Catch_14dni -> Gw_Ponaglono id=F10
+flow Gw_Ponaglono -> Task_Ponaglenie "nie" id=F11
+flow Task_Ponaglenie -> Gw_Czekaj id=F12
+flow Gw_Ponaglono -> Gw_Brak "tak" id=F13
+flow Catch_Odmowa -> Gw_Brak id=F14
+flow Gw_Brak -> Gw_Inna id=F15
+flow Gw_Inna -> Task_Wybor "tak" id=F16
+flow Task_Wybor -> Gw_Wyslij id=F17
+flow Gw_Inna -> Task_Informacja "nie" id=F18
+flow Task_Informacja -> End_Niezrealizowane id=F19
+
+message Task_Wyslanie -> Participant_Udostepniajaca "Zamówienie" id=MF_Zamowienie
+message Task_Ponaglenie -> Participant_Udostepniajaca "Ponaglenie" id=MF_Ponaglenie
+message Participant_Udostepniajaca -> Catch_Egzemplarz "Przesyłka" message="Przesyłka z egzemplarzem" id=MF_Przesylka
+message Participant_Udostepniajaca -> Catch_Odmowa "Odmowa" id=MF_Odmowa

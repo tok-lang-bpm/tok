@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Propozycja zakupu książki" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="propozycja-zakupu" />
+  </bpmn:collaboration>
+  <bpmn:process id="propozycja-zakupu" name="Propozycja zakupu książki" isExecutable="true">
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>zlozona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="system" name="System biblioteczny">
+        <bpmn:flowNodeRef>tryb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>potrzebna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>scalenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>koszt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="kierownik" name="Kierownik Oddziału Gromadzenia">
+        <bpmn:flowNodeRef>akceptacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>termin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zgoda</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odrzucona</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wygasla</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="gromadzenie" name="Bibliotekarz gromadzenia">
+        <bpmn:flowNodeRef>zamowienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowiona</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="zlozona" name="Propozycja złożona">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="f-propozycja" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="tryb" name="Ustalenie trybu akceptacji">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="tryb-akceptacji" resultVariable="tryb" />
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway id="potrzebna" name="Czy potrzebna akceptacja kierownika?" default="f-potrzebna-scalenie" />
+    <bpmn:exclusiveGateway id="scalenie" />
+    <bpmn:scriptTask id="koszt" name="Wyliczenie kosztu zakupu">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=cena + 12.5" resultVariable="koszt" />
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="akceptacja" name="Akceptacja propozycji">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="f-akceptacja" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="termin" name="Minęło 7 dni" attachedToRef="akceptacja">
+      <bpmn:timerEventDefinition id="termin-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="zgoda" name="Czy kierownik się zgodził?" default="f-zgoda-odrzucona" />
+    <bpmn:endEvent id="odrzucona" name="Propozycja odrzucona" />
+    <bpmn:endEvent id="wygasla" name="Propozycja wygasła" />
+    <bpmn:userTask id="zamowienie" name="Złożenie zamówienia u dostawcy">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="f-zamowienie" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="zamowiona" name="Książka zamówiona" />
+    <bpmn:sequenceFlow id="f-zlozona-tryb" sourceRef="zlozona" targetRef="tryb" />
+    <bpmn:sequenceFlow id="f-tryb-potrzebna" sourceRef="tryb" targetRef="potrzebna" />
+    <bpmn:sequenceFlow id="f-potrzebna-akceptacja" name="tak" sourceRef="potrzebna" targetRef="akceptacja">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=tryb = "kierownik"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-potrzebna-scalenie" name="nie" sourceRef="potrzebna" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-akceptacja-zgoda" sourceRef="akceptacja" targetRef="zgoda" />
+    <bpmn:sequenceFlow id="f-zgoda-scalenie" name="tak" sourceRef="zgoda" targetRef="scalenie">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=zgoda = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-zgoda-odrzucona" name="nie" sourceRef="zgoda" targetRef="odrzucona" />
+    <bpmn:sequenceFlow id="f-termin-wygasla" sourceRef="termin" targetRef="wygasla" />
+    <bpmn:sequenceFlow id="f-scalenie-koszt" sourceRef="scalenie" targetRef="koszt" />
+    <bpmn:sequenceFlow id="f-koszt-zamowienie" sourceRef="koszt" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-zamowienie-zamowiona" sourceRef="zamowienie" targetRef="zamowiona" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="biblioteka_di" bpmnElement="biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1150" height="640" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czytelnik_di" bpmnElement="czytelnik" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1120" height="130" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="system_di" bpmnElement="system" isHorizontal="true">
+        <dc:Bounds x="30" y="130" width="1120" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kierownik_di" bpmnElement="kierownik" isHorizontal="true">
+        <dc:Bounds x="30" y="270" width="1120" height="230" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="gromadzenie_di" bpmnElement="gromadzenie" isHorizontal="true">
+        <dc:Bounds x="30" y="500" width="1120" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zlozona_di" bpmnElement="zlozona">
+        <dc:Bounds x="90" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="tryb_di" bpmnElement="tryb">
+        <dc:Bounds x="176" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="potrzebna_di" bpmnElement="potrzebna" isMarkerVisible="true">
+        <dc:Bounds x="326" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="scalenie_di" bpmnElement="scalenie" isMarkerVisible="true">
+        <dc:Bounds x="676" y="175" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="koszt_di" bpmnElement="koszt">
+        <dc:Bounds x="776" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="akceptacja_di" bpmnElement="akceptacja">
+        <dc:Bounds x="426" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zgoda_di" bpmnElement="zgoda" isMarkerVisible="true">
+        <dc:Bounds x="576" y="315" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odrzucona_di" bpmnElement="odrzucona">
+        <dc:Bounds x="683" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wygasla_di" bpmnElement="wygasla">
+        <dc:Bounds x="583" y="430" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowienie_di" bpmnElement="zamowienie">
+        <dc:Bounds x="926" y="530" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowiona_di" bpmnElement="zamowiona">
+        <dc:Bounds x="1076" y="552" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="termin_di" bpmnElement="termin">
+        <dc:Bounds x="478" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-zlozona-tryb_di" bpmnElement="f-zlozona-tryb">
+        <di:waypoint x="126" y="48" />
+        <di:waypoint x="151" y="48" />
+        <di:waypoint x="151" y="200" />
+        <di:waypoint x="176" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-tryb-potrzebna_di" bpmnElement="f-tryb-potrzebna">
+        <di:waypoint x="276" y="200" />
+        <di:waypoint x="326" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-potrzebna-akceptacja_di" bpmnElement="f-potrzebna-akceptacja">
+        <di:waypoint x="351" y="225" />
+        <di:waypoint x="351" y="340" />
+        <di:waypoint x="426" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-potrzebna-scalenie_di" bpmnElement="f-potrzebna-scalenie">
+        <di:waypoint x="376" y="200" />
+        <di:waypoint x="676" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-akceptacja-zgoda_di" bpmnElement="f-akceptacja-zgoda">
+        <di:waypoint x="526" y="340" />
+        <di:waypoint x="576" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zgoda-scalenie_di" bpmnElement="f-zgoda-scalenie">
+        <di:waypoint x="601" y="315" />
+        <di:waypoint x="601" y="200" />
+        <di:waypoint x="676" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zgoda-odrzucona_di" bpmnElement="f-zgoda-odrzucona">
+        <di:waypoint x="626" y="340" />
+        <di:waypoint x="683" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-termin-wygasla_di" bpmnElement="f-termin-wygasla">
+        <di:waypoint x="496" y="398" />
+        <di:waypoint x="496" y="448" />
+        <di:waypoint x="583" y="448" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-scalenie-koszt_di" bpmnElement="f-scalenie-koszt">
+        <di:waypoint x="726" y="200" />
+        <di:waypoint x="776" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-koszt-zamowienie_di" bpmnElement="f-koszt-zamowienie">
+        <di:waypoint x="876" y="200" />
+        <di:waypoint x="901" y="200" />
+        <di:waypoint x="901" y="570" />
+        <di:waypoint x="926" y="570" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zamowienie-zamowiona_di" bpmnElement="f-zamowienie-zamowiona">
+        <di:waypoint x="1026" y="570" />
+        <di:waypoint x="1076" y="570" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

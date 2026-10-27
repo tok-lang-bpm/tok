@@ -1,0 +1,38 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start",
+  "komunikat": "„Potrzeba książki” (Start): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zlozenie",
+  "komunikat": "„Złożenie zamówienia” (Task_Zlozenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Sprawdzenie",
+  "komunikat": "„Sprawdzenie katalogów” (Task_Sprawdzenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Dostepna",
+  "komunikat": "„Czy książka dostępna lokalnie?” (Gw_Dostepna): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wskazanie",
+  "komunikat": "„Wskazanie egzemplarza” (Task_Wskazanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zamowienie",
+  "komunikat": "„Zamówienie w innej bibliotece” (Task_Zamowienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

@@ -1,0 +1,68 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Opis",
+  "komunikat": "„Opis procesu gotowy” (Start_Opis): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Polecenie",
+  "komunikat": "„Wpisanie polecenia” (Task_Polecenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Odczytanie",
+  "komunikat": "„Odczytanie opisu i skilla” (Task_Odczytanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Mapowanie",
+  "komunikat": "„Zapis mapowania” (Task_Mapowanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zapis",
+  "komunikat": "„Zapis modelu .bpmn” (Task_Zapis): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Walidacja",
+  "komunikat": "„Walidacja, układ i rysunek” (Task_Walidacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Bledy",
+  "komunikat": "„Czy 0 błędów?” (Gw_Bledy): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Poprawa",
+  "komunikat": "„Poprawa modelu” (Task_Poprawa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Recenzja",
+  "komunikat": "„Recenzja modelu” (Task_Recenzja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Zgodny",
+  "komunikat": "„Czy model zgodny z opisem?” (Gw_Zgodny): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Poprawka",
+  "komunikat": "„Wpisanie polecenia poprawki” (Task_Poprawka): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "code": "P001",
+    "severity": "error",
+    "line": 6,
+    "id": null,
+    "message": "unknown keyword 'usr'"
+  },
+  {
+    "code": "R020",
+    "severity": "error",
+    "line": 18,
+    "id": null,
+    "message": "a flow line with a label or attributes must contain exactly one arrow"
+  },
+  {
+    "code": "P009",
+    "severity": "error",
+    "line": 27,
+    "id": null,
+    "message": "malformed decision table row: expected inputs || outputs [|| annotation]"
+  }
+]

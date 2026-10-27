@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-34 10 1340 156" width="1340" height="156" font-family="Arial, Helvetica, sans-serif">
+<title>model.bpmn</title>
+<defs><marker id="seqEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2328"/></marker><marker id="msgEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0.5,0.5 L9.5,5 L0.5,9.5 z" fill="#fff" stroke="#1f2328"/></marker><marker id="msgStart" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"><circle cx="5" cy="5" r="4" fill="#fff" stroke="#1f2328"/></marker><marker id="assocEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#1f2328"/></marker></defs>
+<rect x="-34" y="10" width="1340" height="156" fill="#fff"/>
+<polyline points="66.0,70.0 116.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="216.0,70.0 266.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="366.0,70.0 416.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="516.0,70.0 566.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="666.0,70.0 716.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="816.0,70.0 866.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="966.0,70.0 1016.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="1116.0,70.0 1166.0,70.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<circle cx="48.0" cy="70.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<rect x="116.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="166.0" y="72.8" font-size="11" text-anchor="middle" ><tspan x="166.0" dy="0.0">2. Rejestracja</tspan></text>
+<rect x="266.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="316.0" y="72.8" font-size="11" text-anchor="middle" ><tspan x="316.0" dy="0.0">3.1. Ocena</tspan></text>
+<rect x="416.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="466.0" y="72.8" font-size="11" text-anchor="middle" ><tspan x="466.0" dy="0.0">5a Interwencja</tspan></text>
+<rect x="566.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="616.0" y="66.1" font-size="11" text-anchor="middle" ><tspan x="616.0" dy="0.0">7–9 Obsługa</tspan><tspan x="616.0" dy="13.2">zbiorcza</tspan></text>
+<rect x="716.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="766.0" y="66.1" font-size="11" text-anchor="middle" ><tspan x="766.0" dy="0.0">1.5Nazwa bez</tspan><tspan x="766.0" dy="13.2">spacji</tspan></text>
+<rect x="866.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="916.0" y="72.8" font-size="11" text-anchor="middle" ><tspan x="916.0" dy="0.0">Bez numeru</tspan></text>
+<rect x="1016.0" y="30.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="1066.0" y="72.8" font-size="11" text-anchor="middle" ><tspan x="1066.0" dy="0.0">12</tspan></text>
+<circle cx="1184.0" cy="70.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<text x="48.0" y="101.0" font-size="10" text-anchor="middle" ><tspan x="48.0" dy="0.0">1. Wpływ</tspan></text>
+</svg>

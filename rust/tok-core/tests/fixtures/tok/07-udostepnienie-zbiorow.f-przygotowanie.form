@@ -1,0 +1,27 @@
+{
+  "id": "f-przygotowanie",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_1",
+      "text": "## {{sygnatura}}\nMateriały mają być gotowe w ciągu {{dni}} dni."
+    },
+    {
+      "type": "textfield",
+      "id": "Field_stanowisko",
+      "key": "stanowisko",
+      "label": "Stanowisko w czytelni",
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "schemaVersion": 18
+}

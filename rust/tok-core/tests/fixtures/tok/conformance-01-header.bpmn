@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="definitions" name="Pusty model" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:process id="process" name="Pusty model" isExecutable="false" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process" />
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,50 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Wplynelo",
+  "komunikat": "„Pismo wpłynęło” (Start_Wplynelo): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Rejestracja",
+  "komunikat": "„Skanowanie i rejestracja pisma w EZD” (Task_Rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Rozwidlenie",
+  "komunikat": "Gw_Rozwidlenie: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Sklad",
+  "komunikat": "„Odłożenie oryginału do składu chronologicznego” (Task_Sklad): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wstepna",
+  "komunikat": "„Wstępny przydział według wykazu jednostek” (Task_Wstepna): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Dekretacja",
+  "komunikat": "„Dekretacja pisma w EZD” (Task_Dekretacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Wlasciwa",
+  "komunikat": "„Czy pismo trafiło do właściwej jednostki?” (Gw_Wlasciwa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Korekta",
+  "komunikat": "„Korekta przydziału w EZD” (Task_Korekta): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

@@ -1,0 +1,32 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "T6",
+  "komunikat": "„Bez numeru” (T6): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "T7",
+  "komunikat": "„12” (T7): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K02",
+  "id": null,
+  "komunikat": "Krok 4 z opisu procesu nie ma w modelu żadnego elementu (nazwa zaczynająca się od „4.”)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K02",
+  "id": null,
+  "komunikat": "Krok 10 z opisu procesu nie ma w modelu żadnego elementu (nazwa zaczynająca się od „10.”)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K03",
+  "id": null,
+  "komunikat": "Model zawiera element z numerem kroku 9, którego nie ma w opisie procesu."
+ }
+]

@@ -1,0 +1,37 @@
+tok 0.1 "Praca z agentem nad modelem BPMN" id=Definitions_PracaZAgentem namespace=https://codeberg.org/MarekDeja/ipm/diagramy/10 collaboration=Collaboration_PracaZAgentem
+
+pool Participant_Stanowisko "Modelowanie z agentem AI" process=Process_PracaZAgentem
+  lane Lane_Student "Student"
+    start Start_Opis "Opis procesu gotowy"
+    user Task_Polecenie "Wpisanie polecenia"
+    user Task_Recenzja "Recenzja modelu"
+    xor Gw_Zgodny "Czy model zgodny z opisem?"
+    user Task_Poprawka "Wpisanie polecenia poprawki"
+    end End_Przyjety "Model przyjęty"
+  lane Lane_Agent "Agent AI"
+    service Task_Odczytanie "Odczytanie opisu i skilla"
+    service Task_Mapowanie "Zapis mapowania"
+    service Task_Zapis "Zapis modelu .bpmn"
+    xor Gw_Walidacja
+    xor Gw_Bledy "Czy 0 błędów?"
+    xor Gw_Poprawa
+    service Task_Poprawa "Poprawa modelu"
+  lane Lane_Skrypt "Skrypt bpmn.py"
+    service Task_Walidacja "Walidacja, układ i rysunek"
+  data DOR_Opis "Opis procesu (proces.md)"
+  data DOR_Mapowanie "Mapowanie (mapowanie.md)"
+  data DOR_Recenzja "Recenzja (recenzja.md)"
+
+flow Start_Opis -> Task_Polecenie -> Task_Odczytanie -> Task_Mapowanie -> Task_Zapis -> Gw_Walidacja -> Task_Walidacja -> Gw_Bledy
+flow Gw_Bledy -> Gw_Poprawa "nie"
+flow Gw_Bledy -> Task_Recenzja "tak"
+flow Gw_Poprawa -> Task_Poprawa -> Gw_Walidacja
+flow Task_Recenzja -> Gw_Zgodny
+flow Gw_Zgodny -> End_Przyjety "tak"
+flow Gw_Zgodny -> Task_Poprawka "nie"
+flow Task_Poprawka -> Gw_Poprawa
+
+reads Task_Odczytanie DOR_Opis
+writes Task_Mapowanie DOR_Mapowanie
+reads Task_Recenzja DOR_Mapowanie
+writes Task_Recenzja DOR_Recenzja

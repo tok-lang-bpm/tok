@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1" id="definitions" name="Wyjątki" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zwrot" name="Zwrot" />
+  <bpmn:signal id="Signal_Zamkniecie_czytelni" name="Zamknięcie czytelni" />
+  <bpmn:error errorCode="ZAPIS" id="Error_Blad_zapisu" name="Błąd zapisu" />
+  <bpmn:escalation escalationCode="T1" id="Escalation_Termin" name="Termin" />
+  <bpmn:process id="process" isExecutable="false" name="Wyjątki">
+    <bpmn:startEvent id="s" />
+    <bpmn:userTask id="o" name="Odbiór książki" />
+    <bpmn:boundaryEvent attachedToRef="o" id="b1" name="Minęło 7 dni">
+      <bpmn:timerEventDefinition id="b1-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent attachedToRef="o" cancelActivity="false" id="b2" name="Przypomnienie">
+      <bpmn:timerEventDefinition id="b2-def">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R3/P2D</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="r" name="Rejestracja wypożyczenia" />
+    <bpmn:boundaryEvent attachedToRef="r" id="b3" name="Błąd zapisu">
+      <bpmn:errorEventDefinition errorRef="Error_Blad_zapisu" id="b3-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent attachedToRef="r" cancelActivity="false" id="b4" name="Eskalacja">
+      <bpmn:escalationEventDefinition escalationRef="Escalation_Termin" id="b4-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateThrowEvent id="x" name="Sygnał">
+      <bpmn:signalEventDefinition id="x-def" signalRef="Signal_Zamkniecie_czytelni" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" />
+    <bpmn:endEvent id="e2" name="Zwrot">
+      <bpmn:messageEventDefinition id="e2-def" messageRef="Message_Zwrot" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="e3" name="Błąd">
+      <bpmn:errorEventDefinition errorRef="Error_Blad_zapisu" id="e3-def" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="e4">
+      <bpmn:escalationEventDefinition escalationRef="Escalation_Termin" id="e4-def" />
+    </bpmn:endEvent>
+    <bpmn:endEvent id="e5">
+      <bpmn:signalEventDefinition id="e5-def" signalRef="Signal_Zamkniecie_czytelni" />
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="d" name="Data">
+      <bpmn:timerEventDefinition id="d-def">
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">2027-01-15T09:00</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="f-s-o" sourceRef="s" targetRef="o" />
+    <bpmn:sequenceFlow id="f-o-r" sourceRef="o" targetRef="r" />
+    <bpmn:sequenceFlow id="f-r-x" sourceRef="r" targetRef="x" />
+    <bpmn:sequenceFlow id="f-x-e" sourceRef="x" targetRef="e" />
+    <bpmn:sequenceFlow id="f-b1-e2" sourceRef="b1" targetRef="e2" />
+    <bpmn:sequenceFlow id="f-b2-e4" sourceRef="b2" targetRef="e4" />
+    <bpmn:sequenceFlow id="f-b3-e3" sourceRef="b3" targetRef="e3" />
+    <bpmn:sequenceFlow id="f-b4-e5" sourceRef="b4" targetRef="e5" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="o_di" bpmnElement="o">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="r_di" bpmnElement="r">
+        <dc:Bounds x="266" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="x_di" bpmnElement="x">
+        <dc:Bounds x="416" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="502" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="298" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e3_di" bpmnElement="e3">
+        <dc:Bounds x="416" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e4_di" bpmnElement="e4">
+        <dc:Bounds x="298" y="246" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e5_di" bpmnElement="e5">
+        <dc:Bounds x="416" y="246" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d_di" bpmnElement="d">
+        <dc:Bounds x="30" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b1_di" bpmnElement="b1">
+        <dc:Bounds x="168" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b2_di" bpmnElement="b2">
+        <dc:Bounds x="124" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b3_di" bpmnElement="b3">
+        <dc:Bounds x="318" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b4_di" bpmnElement="b4">
+        <dc:Bounds x="274" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-o_di" bpmnElement="f-s-o">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-o-r_di" bpmnElement="f-o-r">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-r-x_di" bpmnElement="f-r-x">
+        <di:waypoint x="366" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-x-e_di" bpmnElement="f-x-e">
+        <di:waypoint x="452" y="70" />
+        <di:waypoint x="502" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-b1-e2_di" bpmnElement="f-b1-e2">
+        <di:waypoint x="186" y="128" />
+        <di:waypoint x="186" y="178" />
+        <di:waypoint x="298" y="178" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-b2-e4_di" bpmnElement="f-b2-e4">
+        <di:waypoint x="142" y="128" />
+        <di:waypoint x="142" y="264" />
+        <di:waypoint x="298" y="264" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-b3-e3_di" bpmnElement="f-b3-e3">
+        <di:waypoint x="336" y="128" />
+        <di:waypoint x="336" y="178" />
+        <di:waypoint x="416" y="178" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-b4-e5_di" bpmnElement="f-b4-e5">
+        <di:waypoint x="292" y="128" />
+        <di:waypoint x="292" y="226" />
+        <di:waypoint x="434" y="226" />
+        <di:waypoint x="434" y="246" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,149 @@
+[
+  {
+    "code": "P001",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "unknown keyword 'proces'"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 5,
+    "id": null,
+    "message": "malformed attribute near 'label'"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 6,
+    "id": null,
+    "message": "'lane' is not allowed inside top"
+  },
+  {
+    "code": "P002",
+    "severity": "error",
+    "line": 7,
+    "id": null,
+    "message": "'task' needs an identifier"
+  },
+  {
+    "code": "P003",
+    "severity": "error",
+    "line": 8,
+    "id": null,
+    "message": "'task' cannot have an indented block"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 9,
+    "id": null,
+    "message": "malformed flow line: expected '->'"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 10,
+    "id": null,
+    "message": "malformed flow line: expected '->'"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 11,
+    "id": null,
+    "message": "malformed message line: expected 'message A -> B'"
+  },
+  {
+    "code": "P010",
+    "severity": "error",
+    "line": 12,
+    "id": null,
+    "message": "a second header"
+  },
+  {
+    "code": "P001",
+    "severity": "error",
+    "line": 13,
+    "id": null,
+    "message": "unknown keyword 'tekst'"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 14,
+    "id": null,
+    "message": "'|' is not allowed inside top"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 16,
+    "id": null,
+    "message": "'start' is not allowed inside form"
+  },
+  {
+    "code": "P009",
+    "severity": "error",
+    "line": 18,
+    "id": null,
+    "message": "malformed decision table row: expected inputs || outputs [|| annotation]"
+  },
+  {
+    "code": "P009",
+    "severity": "error",
+    "line": 19,
+    "id": null,
+    "message": "malformed decision table row: unbalanced quotes"
+  },
+  {
+    "code": "P002",
+    "severity": "error",
+    "line": 20,
+    "id": null,
+    "message": "'data' needs an identifier"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 21,
+    "id": null,
+    "message": "malformed reads line: expected 'reads ACTIVITY DATA'"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 22,
+    "id": null,
+    "message": "malformed attribute near 'etykieta'"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 23,
+    "id": null,
+    "message": "malformed variable line: expected variable NAME \"DIST\""
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 24,
+    "id": null,
+    "message": "'text' is not allowed inside top"
+  },
+  {
+    "code": "T001",
+    "severity": "error",
+    "line": 25,
+    "id": null,
+    "message": "invalid token: unexpected character '@'"
+  },
+  {
+    "code": "T001",
+    "severity": "error",
+    "line": 26,
+    "id": null,
+    "message": "invalid token: unterminated string"
+  }
+]

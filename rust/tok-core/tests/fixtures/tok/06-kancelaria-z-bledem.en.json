@@ -1,0 +1,9 @@
+[
+  {
+    "code": "R001",
+    "severity": "error",
+    "line": 23,
+    "id": "jednostka",
+    "message": "identifier 'jednostka' is already used on line 9"
+  }
+]

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1" id="definitions" name="Podprocesy" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Wycofanie" name="Wycofanie" />
+  <bpmn:process id="process" isExecutable="false" name="Podprocesy">
+    <bpmn:startEvent id="s" />
+    <bpmn:subProcess id="p" name="Poszukiwania w zasobie">
+      <bpmn:standardLoopCharacteristics />
+      <bpmn:startEvent id="ps" />
+      <bpmn:task id="a" name="Kwerenda w inwentarzu">
+        <bpmn:multiInstanceLoopCharacteristics isSequential="false" />
+      </bpmn:task>
+      <bpmn:task id="b" name="Kwerenda w aktach">
+        <bpmn:multiInstanceLoopCharacteristics isSequential="true" />
+      </bpmn:task>
+      <bpmn:endEvent id="pe" />
+      <bpmn:sequenceFlow id="f-ps-a" sourceRef="ps" targetRef="a" />
+      <bpmn:sequenceFlow id="f-a-b" sourceRef="a" targetRef="b" />
+      <bpmn:sequenceFlow id="f-b-pe" sourceRef="b" targetRef="pe" />
+    </bpmn:subProcess>
+    <bpmn:callActivity calledElement="wydanie" id="c" isForCompensation="true" name="Wydanie kopii" />
+    <bpmn:endEvent id="e">
+      <bpmn:terminateEventDefinition id="e-def" />
+    </bpmn:endEvent>
+    <bpmn:subProcess id="w" name="Wycofanie wniosku" triggeredByEvent="true">
+      <bpmn:startEvent id="ws" isInterrupting="false" name="Wniosek wycofany">
+        <bpmn:messageEventDefinition id="ws-def" messageRef="Message_Wycofanie" />
+      </bpmn:startEvent>
+      <bpmn:task id="wt" name="Zamknięcie sprawy" />
+      <bpmn:endEvent id="we">
+        <bpmn:compensateEventDefinition id="we-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ws-wt" sourceRef="ws" targetRef="wt" />
+      <bpmn:sequenceFlow id="f-wt-we" sourceRef="wt" targetRef="we" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="f-s-p" sourceRef="s" targetRef="p" />
+    <bpmn:sequenceFlow id="f-p-c" sourceRef="p" targetRef="c" />
+    <bpmn:sequenceFlow id="f-c-e" sourceRef="c" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

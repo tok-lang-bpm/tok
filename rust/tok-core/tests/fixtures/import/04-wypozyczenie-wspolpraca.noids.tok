@@ -1,0 +1,33 @@
+tok 0.1 "Wypożyczenie międzybiblioteczne" id=Definitions_Wspolpraca namespace=https://codeberg.org/MarekDeja/ipm/diagramy/04 collaboration=Collaboration_Wspolpraca
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Wypozyczenie
+  lane Lane_Czytelnik "Czytelnik"
+    start Start_Potrzeba "Potrzeba książki"
+    user Task_Zlozenie "Złożenie zamówienia"
+  lane Lane_System "System biblioteczny"
+    service Task_Rejestracja "Rejestracja zamówienia"
+    service Task_Powiadomienie "Powiadomienie czytelnika"
+  lane Lane_Bibliotekarz "Bibliotekarz wypożyczalni międzybibliotecznej"
+    user Task_Sprawdzenie "Sprawdzenie katalogów"
+    send Task_Wyslanie "Wysłanie zamówienia" message="Zamówienie"
+    catch Catch_Egzemplarz "Egzemplarz otrzymany" message="Przesyłka z egzemplarzem"
+    user Task_Wypozyczenie "Wypożyczenie egzemplarza czytelnikowi"
+    end End_Wypozyczona "Książka wypożyczona"
+  data DOR_Zamowienie_zlozone "Zamówienie" state="złożone"
+  data DOR_Zamowienie_wyslane "Zamówienie" state="wysłane"
+  store DSR_Katalog "Katalog NUKAT"
+  store DSR_Rejestr "Rejestr wypożyczeń"
+
+pool Participant_Udostepniajaca "Biblioteka udostępniająca"
+
+flow Start_Potrzeba -> Task_Zlozenie -> Task_Rejestracja -> Task_Sprawdzenie -> Task_Wyslanie -> Catch_Egzemplarz -> Task_Powiadomienie -> Task_Wypozyczenie -> End_Wypozyczona
+
+message Task_Wyslanie -> Participant_Udostepniajaca "Zamówienie"
+message Participant_Udostepniajaca -> Catch_Egzemplarz "Przesyłka z egzemplarzem"
+
+writes Task_Zlozenie DOR_Zamowienie_zlozone
+reads Task_Rejestracja DOR_Zamowienie_zlozone
+writes Task_Rejestracja DSR_Rejestr
+reads Task_Sprawdzenie DSR_Katalog
+writes Task_Wyslanie DOR_Zamowienie_wyslane
+writes Task_Wypozyczenie DSR_Rejestr

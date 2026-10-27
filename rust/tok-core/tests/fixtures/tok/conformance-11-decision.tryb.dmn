@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="tryb-definitions" name="Tryb" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <decision id="tryb" name="Tryb">
+    <decisionTable id="tryb-table" hitPolicy="UNIQUE">
+      <input id="tryb-input-1" label="rodzaj">
+        <inputExpression id="tryb-input-1-expr" typeRef="string">
+          <text>rodzaj</text>
+        </inputExpression>
+      </input>
+      <output id="tryb-output-1" label="tryb" name="tryb" typeRef="string" />
+      <rule id="tryb-rule-1">
+        <inputEntry id="tryb-rule-1-in-1">
+          <text>"e-book"</text>
+        </inputEntry>
+        <outputEntry id="tryb-rule-1-out-1">
+          <text>"kierownik"</text>
+        </outputEntry>
+      </rule>
+      <rule id="tryb-rule-2">
+        <inputEntry id="tryb-rule-2-in-1">
+          <text>"druk|ebook"</text>
+        </inputEntry>
+        <outputEntry id="tryb-rule-2-out-1">
+          <text>"auto"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

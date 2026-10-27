@@ -1,0 +1,9 @@
+[
+  {
+    "code": "R002",
+    "severity": "error",
+    "line": 4,
+    "id": "bibliotekarz",
+    "message": "unknown resource 'bibliotekarz'"
+  }
+]

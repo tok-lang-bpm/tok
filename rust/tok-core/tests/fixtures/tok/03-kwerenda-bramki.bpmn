@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="definitions" name="Kwerenda w archiwum" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:process id="process" name="Kwerenda w archiwum" isExecutable="false">
+    <bpmn:startEvent id="wplynela" name="Wniosek o kwerendę wpłynął" />
+    <bpmn:userTask id="ocena" name="Ocena wniosku" />
+    <bpmn:exclusiveGateway id="kompletny" name="Czy wniosek kompletny?" default="f-kompletny-wezwanie" />
+    <bpmn:userTask id="wezwanie" name="Wezwanie do uzupełnienia" />
+    <bpmn:parallelGateway id="poszukiwania" />
+    <bpmn:userTask id="inwentarz" name="Przeszukanie inwentarzy" />
+    <bpmn:userTask id="ewidencja" name="Przeszukanie ewidencji kwerend" />
+    <bpmn:parallelGateway id="wyniki" />
+    <bpmn:userTask id="odpowiedz" name="Opracowanie odpowiedzi" />
+    <bpmn:inclusiveGateway id="forma" name="Jak przekazać odpowiedź?" default="f-forma-osobiscie" />
+    <bpmn:sendTask id="email" name="Wysłanie odpowiedzi e-mailem" messageRef="Message_Odpowiedz" />
+    <bpmn:sendTask id="list" name="Wysłanie odpowiedzi listem" messageRef="Message_Odpowiedz" />
+    <bpmn:manualTask id="osobiscie" name="Wydanie odpowiedzi w kancelarii" />
+    <bpmn:inclusiveGateway id="przekazano" />
+    <bpmn:endEvent id="zakonczona" name="Kwerenda zakończona" />
+    <bpmn:sequenceFlow id="f-wplynela-ocena" sourceRef="wplynela" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-kompletny" sourceRef="ocena" targetRef="kompletny" />
+    <bpmn:sequenceFlow id="f-kompletny-poszukiwania" name="tak" sourceRef="kompletny" targetRef="poszukiwania">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">kompletny = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-kompletny-wezwanie" name="nie" sourceRef="kompletny" targetRef="wezwanie" />
+    <bpmn:sequenceFlow id="f-wezwanie-ocena" sourceRef="wezwanie" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-poszukiwania-inwentarz" sourceRef="poszukiwania" targetRef="inwentarz" />
+    <bpmn:sequenceFlow id="f-inwentarz-wyniki" sourceRef="inwentarz" targetRef="wyniki" />
+    <bpmn:sequenceFlow id="f-poszukiwania-ewidencja" sourceRef="poszukiwania" targetRef="ewidencja" />
+    <bpmn:sequenceFlow id="f-ewidencja-wyniki" sourceRef="ewidencja" targetRef="wyniki" />
+    <bpmn:sequenceFlow id="f-wyniki-odpowiedz" sourceRef="wyniki" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-forma" sourceRef="odpowiedz" targetRef="forma" />
+    <bpmn:sequenceFlow id="f-forma-email" name="e-mail" sourceRef="forma" targetRef="email">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">email != null</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-forma-list" name="list" sourceRef="forma" targetRef="list">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">adres != null and kopie = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-forma-osobiscie" name="osobiście" sourceRef="forma" targetRef="osobiscie" />
+    <bpmn:sequenceFlow id="f-email-przekazano" sourceRef="email" targetRef="przekazano" />
+    <bpmn:sequenceFlow id="f-list-przekazano" sourceRef="list" targetRef="przekazano" />
+    <bpmn:sequenceFlow id="f-osobiscie-przekazano" sourceRef="osobiscie" targetRef="przekazano" />
+    <bpmn:sequenceFlow id="f-przekazano-zakonczona" sourceRef="przekazano" targetRef="zakonczona" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="wplynela_di" bpmnElement="wplynela">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ocena_di" bpmnElement="ocena">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kompletny_di" bpmnElement="kompletny" isMarkerVisible="true">
+        <dc:Bounds x="266" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wezwanie_di" bpmnElement="wezwanie">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="poszukiwania_di" bpmnElement="poszukiwania">
+        <dc:Bounds x="391" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inwentarz_di" bpmnElement="inwentarz">
+        <dc:Bounds x="516" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ewidencja_di" bpmnElement="ewidencja">
+        <dc:Bounds x="516" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyniki_di" bpmnElement="wyniki">
+        <dc:Bounds x="666" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odpowiedz_di" bpmnElement="odpowiedz">
+        <dc:Bounds x="766" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="forma_di" bpmnElement="forma">
+        <dc:Bounds x="916" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="email_di" bpmnElement="email">
+        <dc:Bounds x="1016" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="list_di" bpmnElement="list">
+        <dc:Bounds x="1016" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="osobiscie_di" bpmnElement="osobiscie">
+        <dc:Bounds x="1016" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przekazano_di" bpmnElement="przekazano">
+        <dc:Bounds x="1166" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zakonczona_di" bpmnElement="zakonczona">
+        <dc:Bounds x="1266" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-wplynela-ocena_di" bpmnElement="f-wplynela-ocena">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ocena-kompletny_di" bpmnElement="f-ocena-kompletny">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-kompletny-poszukiwania_di" bpmnElement="f-kompletny-poszukiwania">
+        <di:waypoint x="316" y="70" />
+        <di:waypoint x="391" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-kompletny-wezwanie_di" bpmnElement="f-kompletny-wezwanie">
+        <di:waypoint x="291" y="95" />
+        <di:waypoint x="291" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wezwanie-ocena_di" bpmnElement="f-wezwanie-ocena">
+        <di:waypoint x="416" y="160" />
+        <di:waypoint x="416" y="130" />
+        <di:waypoint x="166" y="130" />
+        <di:waypoint x="166" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-poszukiwania-inwentarz_di" bpmnElement="f-poszukiwania-inwentarz">
+        <di:waypoint x="441" y="70" />
+        <di:waypoint x="516" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-inwentarz-wyniki_di" bpmnElement="f-inwentarz-wyniki">
+        <di:waypoint x="616" y="70" />
+        <di:waypoint x="666" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-poszukiwania-ewidencja_di" bpmnElement="f-poszukiwania-ewidencja">
+        <di:waypoint x="441" y="70" />
+        <di:waypoint x="491" y="70" />
+        <di:waypoint x="491" y="200" />
+        <di:waypoint x="516" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ewidencja-wyniki_di" bpmnElement="f-ewidencja-wyniki">
+        <di:waypoint x="616" y="200" />
+        <di:waypoint x="691" y="200" />
+        <di:waypoint x="691" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyniki-odpowiedz_di" bpmnElement="f-wyniki-odpowiedz">
+        <di:waypoint x="716" y="70" />
+        <di:waypoint x="766" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odpowiedz-forma_di" bpmnElement="f-odpowiedz-forma">
+        <di:waypoint x="866" y="70" />
+        <di:waypoint x="916" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-forma-email_di" bpmnElement="f-forma-email">
+        <di:waypoint x="966" y="70" />
+        <di:waypoint x="1016" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-forma-list_di" bpmnElement="f-forma-list">
+        <di:waypoint x="941" y="95" />
+        <di:waypoint x="941" y="200" />
+        <di:waypoint x="1016" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-forma-osobiscie_di" bpmnElement="f-forma-osobiscie">
+        <di:waypoint x="941" y="95" />
+        <di:waypoint x="941" y="330" />
+        <di:waypoint x="1016" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-email-przekazano_di" bpmnElement="f-email-przekazano">
+        <di:waypoint x="1116" y="70" />
+        <di:waypoint x="1166" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-list-przekazano_di" bpmnElement="f-list-przekazano">
+        <di:waypoint x="1116" y="200" />
+        <di:waypoint x="1191" y="200" />
+        <di:waypoint x="1191" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-osobiscie-przekazano_di" bpmnElement="f-osobiscie-przekazano">
+        <di:waypoint x="1116" y="330" />
+        <di:waypoint x="1191" y="330" />
+        <di:waypoint x="1191" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przekazano-zakonczona_di" bpmnElement="f-przekazano-zakonczona">
+        <di:waypoint x="1216" y="70" />
+        <di:waypoint x="1266" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

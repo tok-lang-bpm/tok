@@ -1,0 +1,9 @@
+[
+  {
+    "code": "R001",
+    "severity": "error",
+    "line": 23,
+    "id": "jednostka",
+    "message": "identyfikator „jednostka” jest już użyty w wierszu 9"
+  }
+]

@@ -1,0 +1,32 @@
+tok 0.1 "Rejestracja pisma przychodzącego — jak jest" id=Definitions_PismoJakJest namespace=https://codeberg.org/MarekDeja/ipm/diagramy/07 collaboration=Collaboration_PismoJakJest
+
+pool Participant_Uczelnia "Uczelnia" process=Process_PismoJakJest
+  lane Lane_Kancelaria "Kancelaria ogólna"
+    start Start_Wplynelo "Pismo wpłynęło"
+    manual Task_Dziennik "Wpis do dziennika podawczego"
+    manual Task_Skanowanie "Skanowanie pisma"
+    user Task_EZD "Rejestracja pisma w EZD"
+    xor Gw_Scalenie
+    manual Task_Przekazanie "Przekazanie oryginału do sekretariatu"
+    manual Task_Ustalenie "Ustalenie właściwej jednostki"
+  lane Lane_Sekretariat "Sekretariat jednostki"
+    user Task_RejestrSekretariatu "Wpis do rejestru sekretariatu"
+    manual Task_Przedlozenie "Przedłożenie pisma kierownikowi"
+  lane Lane_Kierownik "Kierownik jednostki"
+    manual Task_Dekretacja "Dekretacja pisma na papierze"
+    xor Gw_Wlasciwa "Czy pismo trafiło do właściwej jednostki?"
+    manual Task_Zalatwienie "Przekazanie pisma do załatwienia"
+    end End_Przekazane "Pismo przekazane do załatwienia"
+  store DataStoreRef_Dziennik "Dziennik podawczy (papierowy)"
+  store DataStoreRef_EZD "System EZD"
+  store DataStoreRef_RejestrSekretariatu "Rejestr sekretariatu (arkusz)"
+
+flow Start_Wplynelo -> Task_Dziennik -> Task_Skanowanie -> Task_EZD -> Gw_Scalenie -> Task_Przekazanie -> Task_RejestrSekretariatu -> Task_Przedlozenie -> Task_Dekretacja -> Gw_Wlasciwa
+flow Gw_Wlasciwa -> Task_Zalatwienie "tak"
+flow Gw_Wlasciwa -> Task_Ustalenie "nie"
+flow Task_Ustalenie -> Gw_Scalenie
+flow Task_Zalatwienie -> End_Przekazane
+
+writes Task_Dziennik DataStoreRef_Dziennik
+writes Task_EZD DataStoreRef_EZD
+writes Task_RejestrSekretariatu DataStoreRef_RejestrSekretariatu

@@ -1,0 +1,30 @@
+[
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "„lane” nie może wystąpić w bloku top"
+  },
+  {
+    "code": "T002",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "tabulator we wcięciu; używaj spacji"
+  },
+  {
+    "code": "P003",
+    "severity": "error",
+    "line": 5,
+    "id": null,
+    "message": "„lane” nie może mieć wciętego bloku"
+  },
+  {
+    "code": "T002",
+    "severity": "error",
+    "line": 6,
+    "id": null,
+    "message": "tabulator we wcięciu; używaj spacji"
+  }
+]

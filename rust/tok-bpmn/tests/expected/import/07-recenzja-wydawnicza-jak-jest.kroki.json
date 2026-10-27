@@ -1,0 +1,116 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Maszynopis",
+  "komunikat": "„Maszynopis wpłynął” (Start_Maszynopis): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Rejestracja",
+  "komunikat": "„Rejestracja maszynopisu w arkuszu” (Task_Rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wydruk",
+  "komunikat": "„Wydruk maszynopisu dla rady” (Task_Wydruk): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Posiedzenie1",
+  "komunikat": "„Najbliższe posiedzenie rady” (Catch_Posiedzenie1): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Kwalifikacja",
+  "komunikat": "„Kwalifikacja maszynopisu na posiedzeniu” (Task_Kwalifikacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Recenzja",
+  "komunikat": "„Czy skierować do recenzji?” (Gw_Recenzja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "End_Odmowa",
+  "komunikat": "„Autor powiadomiony o odmowie” (End_Odmowa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Poszukiwanie",
+  "komunikat": "„Poszukiwanie recenzenta” (Task_Poszukiwanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zaproszenie",
+  "komunikat": "„Wysłanie zaproszenia do recenzji” (Task_Zaproszenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Zgoda",
+  "komunikat": "„Zgoda recenzenta otrzymana” (Catch_Zgoda): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wysylka",
+  "komunikat": "„Wysłanie wydruku pocztą” (Task_Wysylka): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Recenzja",
+  "komunikat": "„Recenzja otrzymana” (Catch_Recenzja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przepisanie",
+  "komunikat": "„Przepisanie uwag recenzenta do arkusza” (Task_Przepisanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Uwagi",
+  "komunikat": "„Przekazanie uwag autorowi” (Task_Uwagi): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Poprawiony",
+  "komunikat": "„Poprawiony maszynopis otrzymany” (Catch_Poprawiony): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Porownanie",
+  "komunikat": "„Porównanie poprawek z uwagami” (Task_Porownanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Posiedzenie2",
+  "komunikat": "„Kolejne posiedzenie rady” (Catch_Posiedzenie2): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zatwierdzenie",
+  "komunikat": "„Zatwierdzenie do druku na posiedzeniu” (Task_Zatwierdzenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "End_Druk",
+  "komunikat": "„Maszynopis zatwierdzony do druku” (End_Druk): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

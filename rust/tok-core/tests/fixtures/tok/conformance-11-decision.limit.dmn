@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="limit-definitions" name="Limit wypożyczeń" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <decision id="limit" name="Limit wypożyczeń">
+    <decisionTable id="limit-table" hitPolicy="FIRST">
+      <input id="limit-input-1" label="wiek">
+        <inputExpression id="limit-input-1-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <input id="limit-input-2" label="typ">
+        <inputExpression id="limit-input-2-expr" typeRef="string">
+          <text>typ</text>
+        </inputExpression>
+      </input>
+      <output id="limit-output-1" label="limit" name="limit" typeRef="number" />
+      <rule id="limit-rule-1">
+        <description>niepełnoletni</description>
+        <inputEntry id="limit-rule-1-in-1">
+          <text>&lt; 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-1-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-1-out-1">
+          <text>5</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-2">
+        <inputEntry id="limit-rule-2-in-1">
+          <text>&gt;= 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-2-in-2">
+          <text>"student","doktorant"</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-2-out-1">
+          <text>15</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-3">
+        <description>pracownicy uczelni</description>
+        <inputEntry id="limit-rule-3-in-1">
+          <text>&gt;= 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-3-in-2">
+          <text>"pracownik"</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-3-out-1">
+          <text>30</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-4">
+        <description>pozostali</description>
+        <inputEntry id="limit-rule-4-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-4-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-4-out-1">
+          <text>10</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

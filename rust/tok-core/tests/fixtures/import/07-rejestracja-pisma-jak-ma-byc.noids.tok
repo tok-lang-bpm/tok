@@ -1,0 +1,30 @@
+tok 0.1 "Rejestracja pisma przychodzącego — jak ma być" id=Definitions_PismoJakMaByc namespace=https://codeberg.org/MarekDeja/ipm/diagramy/07 collaboration=Collaboration_PismoJakMaByc
+
+pool Participant_Uczelnia "Uczelnia" process=Process_PismoJakMaByc
+  lane Lane_Kancelaria "Kancelaria ogólna"
+    start Start_Wplynelo "Pismo wpłynęło"
+    user Task_Rejestracja "Skanowanie i rejestracja pisma w EZD"
+    and Gw_Rozwidlenie
+    manual Task_Sklad "Odłożenie oryginału do składu chronologicznego"
+    user Task_Korekta "Korekta przydziału w EZD"
+    and Gw_Zlaczenie
+    end End_Przekazane "Pismo przekazane do załatwienia"
+  lane Lane_System "System EZD"
+    rule Task_Wstepna "Wstępny przydział według wykazu jednostek"
+  lane Lane_Kierownik "Kierownik jednostki"
+    xor Gw_Scalenie
+    user Task_Dekretacja "Dekretacja pisma w EZD"
+    xor Gw_Wlasciwa "Czy pismo trafiło do właściwej jednostki?"
+  store DataStoreRef_EZD "System EZD"
+  store DataStoreRef_Sklad "Skład chronologiczny"
+
+flow Start_Wplynelo -> Task_Rejestracja -> Gw_Rozwidlenie
+flow Gw_Rozwidlenie -> Task_Sklad
+flow Gw_Rozwidlenie -> Task_Wstepna -> Gw_Scalenie -> Task_Dekretacja -> Gw_Wlasciwa
+flow Gw_Wlasciwa -> Task_Korekta "nie"
+flow Task_Korekta -> Gw_Scalenie
+flow Gw_Wlasciwa -> Gw_Zlaczenie "tak"
+flow Task_Sklad -> Gw_Zlaczenie -> End_Przekazane
+
+writes Task_Rejestracja DataStoreRef_EZD
+writes Task_Sklad DataStoreRef_Sklad

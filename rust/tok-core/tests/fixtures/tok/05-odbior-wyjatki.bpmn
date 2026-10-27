@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="definitions" name="Odbiór książki z wypożyczalni międzybibliotecznej" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:error id="Error_Blad_zapisu" name="Błąd zapisu" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="biblioteka-process" />
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" name="Odbiór książki z wypożyczalni międzybibliotecznej" isExecutable="false">
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="bibliotekarz" name="Bibliotekarz wypożyczalni międzybibliotecznej">
+        <bpmn:flowNodeRef>dotarla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>blad-zapisu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>reczna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>powiadomienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odeslanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zwrocona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>odbior</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przypomnienie-czas</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>termin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odebrana</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="system" name="System biblioteczny">
+        <bpmn:flowNodeRef>przypomnienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przypomniano</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="dotarla" name="Książka dotarła" />
+    <bpmn:serviceTask id="rejestracja" name="Rejestracja egzemplarza w systemie" />
+    <bpmn:boundaryEvent id="blad-zapisu" name="Błąd zapisu" attachedToRef="rejestracja">
+      <bpmn:errorEventDefinition id="blad-zapisu-def" errorRef="Error_Blad_zapisu" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="reczna" name="Rejestracja ręczna" />
+    <bpmn:userTask id="powiadomienie" name="Powiadomienie czytelnika" />
+    <bpmn:userTask id="odeslanie" name="Odesłanie książki" />
+    <bpmn:endEvent id="zwrocona" name="Książka zwrócona bibliotece udostępniającej" />
+    <bpmn:userTask id="odbior" name="Odbiór książki" />
+    <bpmn:boundaryEvent id="przypomnienie-czas" name="Minęły 3 dni" attachedToRef="odbior" cancelActivity="false">
+      <bpmn:timerEventDefinition id="przypomnienie-czas-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="termin" name="Minęło 7 dni" attachedToRef="odbior">
+      <bpmn:timerEventDefinition id="termin-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="odebrana" name="Książka odebrana" />
+    <bpmn:serviceTask id="przypomnienie" name="Wysłanie przypomnienia" />
+    <bpmn:endEvent id="przypomniano" name="Przypomnienie wysłane" />
+    <bpmn:sequenceFlow id="f-dotarla-rejestracja" sourceRef="dotarla" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-powiadomienie" sourceRef="rejestracja" targetRef="powiadomienie" />
+    <bpmn:sequenceFlow id="f-powiadomienie-odbior" sourceRef="powiadomienie" targetRef="odbior" />
+    <bpmn:sequenceFlow id="f-odbior-odebrana" sourceRef="odbior" targetRef="odebrana" />
+    <bpmn:sequenceFlow id="f-blad-zapisu-reczna" sourceRef="blad-zapisu" targetRef="reczna" />
+    <bpmn:sequenceFlow id="f-reczna-powiadomienie" sourceRef="reczna" targetRef="powiadomienie" />
+    <bpmn:sequenceFlow id="f-przypomnienie-czas-przypomnienie" sourceRef="przypomnienie-czas" targetRef="przypomnienie" />
+    <bpmn:sequenceFlow id="f-przypomnienie-przypomniano" sourceRef="przypomnienie" targetRef="przypomniano" />
+    <bpmn:sequenceFlow id="f-termin-odeslanie" sourceRef="termin" targetRef="odeslanie" />
+    <bpmn:sequenceFlow id="f-odeslanie-zwrocona" sourceRef="odeslanie" targetRef="zwrocona" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="biblioteka_di" bpmnElement="biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1000" height="550" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bibliotekarz_di" bpmnElement="bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="970" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czytelnik_di" bpmnElement="czytelnik" isHorizontal="true">
+        <dc:Bounds x="30" y="270" width="970" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="system_di" bpmnElement="system" isHorizontal="true">
+        <dc:Bounds x="30" y="410" width="970" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dotarla_di" bpmnElement="dotarla">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="reczna_di" bpmnElement="reczna">
+        <dc:Bounds x="326" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="powiadomienie_di" bpmnElement="powiadomienie">
+        <dc:Bounds x="476" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odeslanie_di" bpmnElement="odeslanie">
+        <dc:Bounds x="776" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zwrocona_di" bpmnElement="zwrocona">
+        <dc:Bounds x="926" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odbior_di" bpmnElement="odbior">
+        <dc:Bounds x="626" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odebrana_di" bpmnElement="odebrana">
+        <dc:Bounds x="808" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przypomnienie_di" bpmnElement="przypomnienie">
+        <dc:Bounds x="776" y="440" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przypomniano_di" bpmnElement="przypomniano">
+        <dc:Bounds x="926" y="462" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="blad-zapisu_di" bpmnElement="blad-zapisu">
+        <dc:Bounds x="228" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przypomnienie-czas_di" bpmnElement="przypomnienie-czas">
+        <dc:Bounds x="678" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="termin_di" bpmnElement="termin">
+        <dc:Bounds x="634" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-dotarla-rejestracja_di" bpmnElement="f-dotarla-rejestracja">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-powiadomienie_di" bpmnElement="f-rejestracja-powiadomienie">
+        <di:waypoint x="276" y="62" />
+        <di:waypoint x="476" y="62" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-powiadomienie-odbior_di" bpmnElement="f-powiadomienie-odbior">
+        <di:waypoint x="576" y="70" />
+        <di:waypoint x="601" y="70" />
+        <di:waypoint x="601" y="340" />
+        <di:waypoint x="626" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odbior-odebrana_di" bpmnElement="f-odbior-odebrana">
+        <di:waypoint x="726" y="340" />
+        <di:waypoint x="808" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-blad-zapisu-reczna_di" bpmnElement="f-blad-zapisu-reczna">
+        <di:waypoint x="246" y="128" />
+        <di:waypoint x="246" y="200" />
+        <di:waypoint x="326" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-reczna-powiadomienie_di" bpmnElement="f-reczna-powiadomienie">
+        <di:waypoint x="426" y="200" />
+        <di:waypoint x="451" y="200" />
+        <di:waypoint x="451" y="78" />
+        <di:waypoint x="476" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przypomnienie-czas-przypomnienie_di" bpmnElement="f-przypomnienie-czas-przypomnienie">
+        <di:waypoint x="696" y="398" />
+        <di:waypoint x="696" y="480" />
+        <di:waypoint x="776" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przypomnienie-przypomniano_di" bpmnElement="f-przypomnienie-przypomniano">
+        <di:waypoint x="876" y="480" />
+        <di:waypoint x="926" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-termin-odeslanie_di" bpmnElement="f-termin-odeslanie">
+        <di:waypoint x="652" y="398" />
+        <di:waypoint x="652" y="418" />
+        <di:waypoint x="756" y="418" />
+        <di:waypoint x="756" y="70" />
+        <di:waypoint x="776" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odeslanie-zwrocona_di" bpmnElement="f-odeslanie-zwrocona">
+        <di:waypoint x="876" y="70" />
+        <di:waypoint x="926" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

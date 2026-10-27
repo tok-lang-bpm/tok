@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Koniec linii CRLF" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:process id="process" name="Koniec linii CRLF" isExecutable="false">
+    <bpmn:startEvent id="s" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-e" sourceRef="s" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="116" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-e_di" bpmnElement="f-s-e">
+        <di:waypoint x="66" y="48" />
+        <di:waypoint x="116" y="48" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

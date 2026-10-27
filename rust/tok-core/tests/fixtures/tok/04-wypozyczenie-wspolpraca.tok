@@ -1,0 +1,33 @@
+tok 0.1 "Wypożyczenie międzybiblioteczne: współpraca"
+
+pool biblioteka "Biblioteka uczelniana"
+  lane czytelnik "Czytelnik"
+    start potrzeba "Potrzeba książki"
+    user zamowienie "Złożenie zamówienia"
+    user odbior "Odbiór książki"
+    end wypozyczona "Książka wypożyczona"
+  lane bibliotekarz "Bibliotekarz wypożyczalni międzybibliotecznej"
+    user katalogi "Sprawdzenie katalogów"
+    send wyslanie "Wysłanie zamówienia" message="Zamówienie"
+    receive przesylka "Odbiór przesyłki" message="Przesyłka z egzemplarzem"
+  lane system "System biblioteczny"
+    service rejestracja "Rejestracja wypożyczenia"
+  data zam-zlozone "Zamówienie" state="złożone"
+  data zam-wyslane "Zamówienie" state="wysłane"
+  store katalog "Katalog NUKAT"
+  store rejestr "Rejestr wypożyczeń"
+
+pool udostepniajaca "Biblioteka udostępniająca"
+
+flow potrzeba -> zamowienie -> katalogi -> wyslanie -> przesylka -> rejestracja -> odbior -> wypozyczona
+
+message wyslanie -> udostepniajaca "Zamówienie"
+message udostepniajaca -> przesylka "Przesyłka z egzemplarzem"
+
+writes zamowienie zam-zlozone
+reads katalogi zam-zlozone
+reads katalogi katalog
+writes wyslanie zam-wyslane
+writes rejestracja rejestr
+
+note podstawa "Regulamin wypożyczeń międzybibliotecznych, § 4" on=wyslanie

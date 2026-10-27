@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Wypożyczenie międzybiblioteczne: współpraca" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Przesylka_z_egzemplarzem" name="Przesyłka z egzemplarzem" />
+  <bpmn:dataStore id="katalog-store" name="Katalog NUKAT" />
+  <bpmn:dataStore id="rejestr-store" name="Rejestr wypożyczeń" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="biblioteka-process" />
+    <bpmn:participant id="udostepniajaca" name="Biblioteka udostępniająca" />
+    <bpmn:messageFlow id="m-wyslanie-udostepniajaca" name="Zamówienie" sourceRef="wyslanie" targetRef="udostepniajaca" messageRef="Message_Zamowienie" />
+    <bpmn:messageFlow id="m-udostepniajaca-przesylka" name="Przesyłka z egzemplarzem" sourceRef="udostepniajaca" targetRef="przesylka" messageRef="Message_Przesylka_z_egzemplarzem" />
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" name="Wypożyczenie międzybiblioteczne: współpraca" isExecutable="false">
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>potrzeba</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odbior</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wypozyczona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="bibliotekarz" name="Bibliotekarz wypożyczalni międzybibliotecznej">
+        <bpmn:flowNodeRef>katalogi</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wyslanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przesylka</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="system" name="System biblioteczny">
+        <bpmn:flowNodeRef>rejestracja</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="potrzeba" name="Potrzeba książki" />
+    <bpmn:userTask id="zamowienie" name="Złożenie zamówienia">
+      <bpmn:dataOutputAssociation id="zamowienie-doa-1">
+        <bpmn:targetRef>zam-zlozone</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:userTask id="odbior" name="Odbiór książki" />
+    <bpmn:endEvent id="wypozyczona" name="Książka wypożyczona" />
+    <bpmn:userTask id="katalogi" name="Sprawdzenie katalogów">
+      <bpmn:property id="katalogi-in-3" name="__targetRef_placeholder" />
+      <bpmn:property id="katalogi-in-2" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="katalogi-dia-2">
+        <bpmn:sourceRef>zam-zlozone</bpmn:sourceRef>
+        <bpmn:targetRef>katalogi-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="katalogi-dia-3">
+        <bpmn:sourceRef>katalog</bpmn:sourceRef>
+        <bpmn:targetRef>katalogi-in-3</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:sendTask id="wyslanie" name="Wysłanie zamówienia" messageRef="Message_Zamowienie">
+      <bpmn:dataOutputAssociation id="wyslanie-doa-4">
+        <bpmn:targetRef>zam-wyslane</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="przesylka" name="Odbiór przesyłki" messageRef="Message_Przesylka_z_egzemplarzem" />
+    <bpmn:serviceTask id="rejestracja" name="Rejestracja wypożyczenia">
+      <bpmn:dataOutputAssociation id="rejestracja-doa-5">
+        <bpmn:targetRef>rejestr</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="f-potrzeba-zamowienie" sourceRef="potrzeba" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-zamowienie-katalogi" sourceRef="zamowienie" targetRef="katalogi" />
+    <bpmn:sequenceFlow id="f-katalogi-wyslanie" sourceRef="katalogi" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-przesylka" sourceRef="wyslanie" targetRef="przesylka" />
+    <bpmn:sequenceFlow id="f-przesylka-rejestracja" sourceRef="przesylka" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-odbior" sourceRef="rejestracja" targetRef="odbior" />
+    <bpmn:sequenceFlow id="f-odbior-wypozyczona" sourceRef="odbior" targetRef="wypozyczona" />
+    <bpmn:dataObject id="zam-zlozone-object" name="Zamówienie" />
+    <bpmn:dataObjectReference id="zam-zlozone" name="Zamówienie" dataObjectRef="zam-zlozone-object">
+      <bpmn:dataState id="zam-zlozone-state" name="złożone" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="zam-wyslane-object" name="Zamówienie" />
+    <bpmn:dataObjectReference id="zam-wyslane" name="Zamówienie" dataObjectRef="zam-wyslane-object">
+      <bpmn:dataState id="zam-wyslane-state" name="wysłane" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataStoreReference id="katalog" name="Katalog NUKAT" dataStoreRef="katalog-store" />
+    <bpmn:dataStoreReference id="rejestr" name="Rejestr wypożyczeń" dataStoreRef="rejestr-store" />
+    <bpmn:textAnnotation id="podstawa">
+      <bpmn:text>Regulamin wypożyczeń międzybibliotecznych, § 4</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="podstawa-assoc" sourceRef="podstawa" targetRef="wyslanie" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="biblioteka_di" bpmnElement="biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1180" height="840" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="udostepniajaca_di" bpmnElement="udostepniajaca" isHorizontal="true">
+        <dc:Bounds x="0" y="880" width="1180" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czytelnik_di" bpmnElement="czytelnik" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1150" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bibliotekarz_di" bpmnElement="bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="240" width="1150" height="360" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="system_di" bpmnElement="system" isHorizontal="true">
+        <dc:Bounds x="30" y="600" width="1150" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="potrzeba_di" bpmnElement="potrzeba">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowienie_di" bpmnElement="zamowienie">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odbior_di" bpmnElement="odbior">
+        <dc:Bounds x="956" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wypozyczona_di" bpmnElement="wypozyczona">
+        <dc:Bounds x="1106" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="katalogi_di" bpmnElement="katalogi">
+        <dc:Bounds x="326" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslanie_di" bpmnElement="wyslanie">
+        <dc:Bounds x="491" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przesylka_di" bpmnElement="przesylka">
+        <dc:Bounds x="656" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="806" y="630" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zam-zlozone_di" bpmnElement="zam-zlozone">
+        <dc:Bounds x="208" y="160" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zam-wyslane_di" bpmnElement="zam-wyslane">
+        <dc:Bounds x="523" y="400" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="katalog_di" bpmnElement="katalog">
+        <dc:Bounds x="351" y="400" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestr_di" bpmnElement="rejestr">
+        <dc:Bounds x="831" y="760" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="podstawa_di" bpmnElement="podstawa">
+        <dc:Bounds x="476" y="500" width="130" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="m-wyslanie-udostepniajaca_di" bpmnElement="m-wyslanie-udostepniajaca">
+        <di:waypoint x="591" y="318" />
+        <di:waypoint x="605" y="318" />
+        <di:waypoint x="605" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-udostepniajaca-przesylka_di" bpmnElement="m-udostepniajaca-przesylka">
+        <di:waypoint x="706" y="880" />
+        <di:waypoint x="706" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="zamowienie-doa-1_di" bpmnElement="zamowienie-doa-1">
+        <di:waypoint x="226" y="110" />
+        <di:waypoint x="226" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="katalogi-dia-2_di" bpmnElement="katalogi-dia-2">
+        <di:waypoint x="244" y="200" />
+        <di:waypoint x="328" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="katalogi-dia-3_di" bpmnElement="katalogi-dia-3">
+        <di:waypoint x="376" y="400" />
+        <di:waypoint x="376" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="wyslanie-doa-4_di" bpmnElement="wyslanie-doa-4">
+        <di:waypoint x="541" y="350" />
+        <di:waypoint x="541" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="rejestracja-doa-5_di" bpmnElement="rejestracja-doa-5">
+        <di:waypoint x="856" y="710" />
+        <di:waypoint x="856" y="760" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-potrzeba-zamowienie_di" bpmnElement="f-potrzeba-zamowienie">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zamowienie-katalogi_di" bpmnElement="f-zamowienie-katalogi">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="301" y="70" />
+        <di:waypoint x="301" y="310" />
+        <di:waypoint x="326" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-katalogi-wyslanie_di" bpmnElement="f-katalogi-wyslanie">
+        <di:waypoint x="426" y="310" />
+        <di:waypoint x="491" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyslanie-przesylka_di" bpmnElement="f-wyslanie-przesylka">
+        <di:waypoint x="591" y="310" />
+        <di:waypoint x="656" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przesylka-rejestracja_di" bpmnElement="f-przesylka-rejestracja">
+        <di:waypoint x="756" y="310" />
+        <di:waypoint x="781" y="310" />
+        <di:waypoint x="781" y="670" />
+        <di:waypoint x="806" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-odbior_di" bpmnElement="f-rejestracja-odbior">
+        <di:waypoint x="906" y="670" />
+        <di:waypoint x="931" y="670" />
+        <di:waypoint x="931" y="70" />
+        <di:waypoint x="956" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odbior-wypozyczona_di" bpmnElement="f-odbior-wypozyczona">
+        <di:waypoint x="1056" y="70" />
+        <di:waypoint x="1106" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="podstawa-assoc_di" bpmnElement="podstawa-assoc">
+        <di:waypoint x="541" y="500" />
+        <di:waypoint x="541" y="350" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="definitions" name="Oczekiwanie na uzupełnienie wniosku" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Uzupelnienie_wniosku" name="Uzupełnienie wniosku" />
+  <bpmn:process id="process" name="Oczekiwanie na uzupełnienie wniosku" isExecutable="false">
+    <bpmn:startEvent id="wezwano" name="Wezwanie wysłane" />
+    <bpmn:eventBasedGateway id="czekanie" name="Co nastąpi pierwsze?" />
+    <bpmn:intermediateCatchEvent id="uzupelnienie" name="Uzupełnienie otrzymane">
+      <bpmn:messageEventDefinition id="uzupelnienie-def" messageRef="Message_Uzupelnienie_wniosku" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="termin" name="Minęło 14 dni">
+      <bpmn:timerEventDefinition id="termin-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P14D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="ocena" name="Ponowna ocena wniosku" />
+    <bpmn:userTask id="pozostawienie" name="Pozostawienie wniosku bez rozpatrzenia" />
+    <bpmn:endEvent id="oceniony" name="Wniosek oceniony ponownie" />
+    <bpmn:endEvent id="bez-rozpatrzenia" name="Wniosek bez rozpatrzenia" />
+    <bpmn:sequenceFlow id="f-wezwano-czekanie" sourceRef="wezwano" targetRef="czekanie" />
+    <bpmn:sequenceFlow id="f-czekanie-uzupelnienie" sourceRef="czekanie" targetRef="uzupelnienie" />
+    <bpmn:sequenceFlow id="f-czekanie-termin" sourceRef="czekanie" targetRef="termin" />
+    <bpmn:sequenceFlow id="f-uzupelnienie-ocena" sourceRef="uzupelnienie" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-oceniony" sourceRef="ocena" targetRef="oceniony" />
+    <bpmn:sequenceFlow id="f-termin-pozostawienie" sourceRef="termin" targetRef="pozostawienie" />
+    <bpmn:sequenceFlow id="f-pozostawienie-bez-rozpatrzenia" sourceRef="pozostawienie" targetRef="bez-rozpatrzenia" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="wezwano_di" bpmnElement="wezwano">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czekanie_di" bpmnElement="czekanie">
+        <dc:Bounds x="116" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="uzupelnienie_di" bpmnElement="uzupelnienie">
+        <dc:Bounds x="216" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="termin_di" bpmnElement="termin">
+        <dc:Bounds x="216" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ocena_di" bpmnElement="ocena">
+        <dc:Bounds x="302" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pozostawienie_di" bpmnElement="pozostawienie">
+        <dc:Bounds x="302" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="oceniony_di" bpmnElement="oceniony">
+        <dc:Bounds x="452" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bez-rozpatrzenia_di" bpmnElement="bez-rozpatrzenia">
+        <dc:Bounds x="452" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-wezwano-czekanie_di" bpmnElement="f-wezwano-czekanie">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-czekanie-uzupelnienie_di" bpmnElement="f-czekanie-uzupelnienie">
+        <di:waypoint x="166" y="70" />
+        <di:waypoint x="216" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-czekanie-termin_di" bpmnElement="f-czekanie-termin">
+        <di:waypoint x="141" y="95" />
+        <di:waypoint x="141" y="200" />
+        <di:waypoint x="216" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-uzupelnienie-ocena_di" bpmnElement="f-uzupelnienie-ocena">
+        <di:waypoint x="252" y="70" />
+        <di:waypoint x="302" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ocena-oceniony_di" bpmnElement="f-ocena-oceniony">
+        <di:waypoint x="402" y="70" />
+        <di:waypoint x="452" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-termin-pozostawienie_di" bpmnElement="f-termin-pozostawienie">
+        <di:waypoint x="252" y="200" />
+        <di:waypoint x="302" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-pozostawienie-bez-rozpatrzenia_di" bpmnElement="f-pozostawienie-bez-rozpatrzenia">
+        <di:waypoint x="402" y="200" />
+        <di:waypoint x="452" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

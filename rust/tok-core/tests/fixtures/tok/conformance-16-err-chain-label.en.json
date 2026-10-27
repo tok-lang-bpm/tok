@@ -1,0 +1,79 @@
+[
+  {
+    "code": "R001",
+    "severity": "error",
+    "line": 5,
+    "id": "a",
+    "message": "identifier 'a' is already used on line 4"
+  },
+  {
+    "code": "R004",
+    "severity": "error",
+    "line": 6,
+    "id": "ą",
+    "message": "identifier 'ą' must use only ASCII letters, digits, '_' and '-'"
+  },
+  {
+    "code": "R004",
+    "severity": "error",
+    "line": 7,
+    "id": "9x",
+    "message": "identifier '9x' must use only ASCII letters, digits, '_' and '-'"
+  },
+  {
+    "code": "R020",
+    "severity": "error",
+    "line": 9,
+    "id": null,
+    "message": "a flow line with a label or attributes must contain exactly one arrow"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 10,
+    "id": null,
+    "message": "malformed attribute near '->'"
+  },
+  {
+    "code": "R011",
+    "severity": "error",
+    "line": 11,
+    "id": null,
+    "message": "unknown flag 'bad' on message"
+  },
+  {
+    "code": "R011",
+    "severity": "error",
+    "line": 13,
+    "id": null,
+    "message": "unknown flag 'extra' on decision"
+  },
+  {
+    "code": "D004",
+    "severity": "error",
+    "line": 14,
+    "id": "d",
+    "message": "header cell 'x: liczba' must be 'name: type' with type string, number, boolean or date"
+  },
+  {
+    "code": "D004",
+    "severity": "error",
+    "line": 14,
+    "id": "d",
+    "message": "header cell 'y' must be 'name: type' with type string, number, boolean or date"
+  },
+  {
+    "code": "D002",
+    "severity": "error",
+    "line": 15,
+    "id": "d",
+    "message": "rule has 3 cells, the header has 1"
+  },
+  {
+    "code": "D002",
+    "severity": "error",
+    "line": 16,
+    "id": "d",
+    "message": "rule has 3 cells, the header has 1"
+  }
+]

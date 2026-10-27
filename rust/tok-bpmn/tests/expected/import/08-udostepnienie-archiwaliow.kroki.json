@@ -1,0 +1,86 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Wniosek",
+  "komunikat": "„Wniosek wpłynął” (Start_Wniosek): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Weryfikacja",
+  "komunikat": "„Weryfikacja kompletności wniosku” (Task_Weryfikacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Tryb",
+  "komunikat": "„Ustalenie trybu udostępnienia” (Task_Tryb): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Tryb",
+  "komunikat": "„Jaki tryb udostępnienia?” (Gw_Tryb): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Anonimizacja",
+  "komunikat": "„Anonimizacja kopii” (Task_Anonimizacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Kontrola",
+  "komunikat": "„Kontrola anonimizacji” (Task_Kontrola): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Kontrola",
+  "komunikat": "„Czy anonimizacja kompletna?” (Gw_Kontrola): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zgoda",
+  "komunikat": "„Decyzja o zgodzie” (Task_Zgoda): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Zgoda",
+  "komunikat": "„Czy zgoda udzielona?” (Gw_Zgoda): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przygotowanie",
+  "komunikat": "„Przygotowanie materiałów w czytelni” (Task_Przygotowanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Rejestracja",
+  "komunikat": "„Rejestracja udostępnienia” (Task_Rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "End_Udostepnione",
+  "komunikat": "„Materiały udostępnione” (End_Udostepnione): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Uzasadnienie",
+  "komunikat": "„Przygotowanie uzasadnienia odmowy” (Task_Uzasadnienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "End_Odmowa",
+  "komunikat": "„Odmowa wysłana” (End_Odmowa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

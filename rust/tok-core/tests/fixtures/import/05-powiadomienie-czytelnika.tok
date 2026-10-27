@@ -1,0 +1,23 @@
+tok 0.1 "Powiadomienie czytelnika o egzemplarzu do odbioru" id=Definitions_Powiadomienie namespace=https://codeberg.org/MarekDeja/ipm/diagramy/05 collaboration=Collaboration_Powiadomienie
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Powiadomienie
+  lane Lane_System "System biblioteczny"
+    start Start_Gotowy "Egzemplarz gotowy do odbioru"
+    service Task_Kontakt "Sprawdzenie danych kontaktowych"
+    or Gw_Kanaly "Którymi kanałami powiadomić?"
+    service Task_Email "Wysłanie e-maila"
+    service Task_Sms "Wysłanie SMS-a"
+    or Gw_Kanaly_join
+    end End_Powiadomiony "Czytelnik powiadomiony"
+  lane Lane_Bibliotekarz "Bibliotekarz wypożyczalni"
+    user Task_List "Przygotowanie listu"
+
+flow Start_Gotowy -> Task_Kontakt id=F1
+flow Task_Kontakt -> Gw_Kanaly id=F2
+flow Gw_Kanaly -> Task_Email "podany e-mail" when="czytelnik podał adres e-mail" id=F_Email
+flow Gw_Kanaly -> Task_Sms "zgoda na SMS" when="czytelnik zgodził się na SMS" id=F_Sms
+flow Gw_Kanaly -> Task_List "brak e-maila i zgody na SMS" default id=F_List
+flow Task_Email -> Gw_Kanaly_join id=F3
+flow Task_Sms -> Gw_Kanaly_join id=F4
+flow Task_List -> Gw_Kanaly_join id=F5
+flow Gw_Kanaly_join -> End_Powiadomiony id=F6

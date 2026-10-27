@@ -1,0 +1,14 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C001",
+  "id": "Definitions_Oczekiwanie",
+  "komunikat": "Brak atrybutu modeler:executionPlatform=\"Camunda Cloud\" w <bpmn:definitions>. Camunda Modeler otworzy plik jako model Camunda 7."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "C002",
+  "id": null,
+  "komunikat": "Żaden proces nie ma isExecutable=\"true\". Silnik nie wdroży modelu."
+ }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "code": "R002",
+    "severity": "error",
+    "line": 5,
+    "id": "f-propozycja",
+    "message": "nieznany element (formularz): „f-propozycja”"
+  },
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 19,
+    "id": "zamowienie",
+    "message": "Zadanie użytkownika „zamowienie” nie ma formularza (form=)."
+  }
+]

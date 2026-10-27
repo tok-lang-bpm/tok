@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Obieg pisma na wydziale" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:dataStore id="ezd-store" name="System EZD" />
+  <bpmn:category id="categories">
+    <bpmn:categoryValue id="obsluga-value" value="Obsługa merytoryczna" />
+  </bpmn:category>
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="uczelnia" name="Uczelnia" processRef="obieg-pisma" />
+    <bpmn:group id="obsluga" categoryValueRef="obsluga-value" />
+  </bpmn:collaboration>
+  <bpmn:process id="obieg-pisma" name="Obieg pisma na wydziale" isExecutable="false">
+    <bpmn:laneSet id="uczelnia-lanes">
+      <bpmn:lane id="kancelaria" name="Kancelaria ogólna">
+        <bpmn:flowNodeRef>wplyw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rejestracja</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="wydzial" name="Wydział">
+        <bpmn:childLaneSet id="wydzial-lanes">
+          <bpmn:lane id="dziekanat" name="Dziekanat">
+            <bpmn:flowNodeRef>dekretacja</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>odpowiedz</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="dziekan" name="Dziekan">
+            <bpmn:flowNodeRef>podpis</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>wyslana</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="wplyw" name="Pismo wpłynęło" />
+    <bpmn:userTask id="rejestracja" name="Rejestracja pisma w EZD">
+      <bpmn:dataOutputAssociation id="rejestracja-doa-1">
+        <bpmn:targetRef>ezd</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:userTask id="dekretacja" name="Dekretacja pisma">
+      <bpmn:property id="dekretacja-in-2" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="dekretacja-dia-2">
+        <bpmn:sourceRef>ezd</bpmn:sourceRef>
+        <bpmn:targetRef>dekretacja-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:userTask>
+    <bpmn:userTask id="odpowiedz" name="Przygotowanie odpowiedzi" />
+    <bpmn:userTask id="podpis" name="Podpisanie odpowiedzi" />
+    <bpmn:endEvent id="wyslana" name="Odpowiedź wysłana" />
+    <bpmn:sequenceFlow id="f-wplyw-rejestracja" sourceRef="wplyw" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-dekretacja" sourceRef="rejestracja" targetRef="dekretacja" />
+    <bpmn:sequenceFlow id="f-dekretacja-odpowiedz" sourceRef="dekretacja" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-podpis" sourceRef="odpowiedz" targetRef="podpis" />
+    <bpmn:sequenceFlow id="f-podpis-wyslana" sourceRef="podpis" targetRef="wyslana" />
+    <bpmn:dataStoreReference id="ezd" name="System EZD" dataStoreRef="ezd-store" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="uczelnia_di" bpmnElement="uczelnia" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="880" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kancelaria_di" bpmnElement="kancelaria" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="850" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wydzial_di" bpmnElement="wydzial" isHorizontal="true">
+        <dc:Bounds x="30" y="240" width="850" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dziekanat_di" bpmnElement="dziekanat" isHorizontal="true">
+        <dc:Bounds x="60" y="240" width="820" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dziekan_di" bpmnElement="dziekan" isHorizontal="true">
+        <dc:Bounds x="60" y="380" width="820" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wplyw_di" bpmnElement="wplyw">
+        <dc:Bounds x="120" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="206" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dekretacja_di" bpmnElement="dekretacja">
+        <dc:Bounds x="356" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odpowiedz_di" bpmnElement="odpowiedz">
+        <dc:Bounds x="506" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="podpis_di" bpmnElement="podpis">
+        <dc:Bounds x="656" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslana_di" bpmnElement="wyslana">
+        <dc:Bounds x="806" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ezd_di" bpmnElement="ezd">
+        <dc:Bounds x="231" y="160" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="rejestracja-doa-1_di" bpmnElement="rejestracja-doa-1">
+        <di:waypoint x="256" y="110" />
+        <di:waypoint x="256" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="dekretacja-dia-2_di" bpmnElement="dekretacja-dia-2">
+        <di:waypoint x="281" y="206" />
+        <di:waypoint x="358" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wplyw-rejestracja_di" bpmnElement="f-wplyw-rejestracja">
+        <di:waypoint x="156" y="70" />
+        <di:waypoint x="206" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-dekretacja_di" bpmnElement="f-rejestracja-dekretacja">
+        <di:waypoint x="306" y="70" />
+        <di:waypoint x="331" y="70" />
+        <di:waypoint x="331" y="310" />
+        <di:waypoint x="356" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-dekretacja-odpowiedz_di" bpmnElement="f-dekretacja-odpowiedz">
+        <di:waypoint x="456" y="310" />
+        <di:waypoint x="506" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odpowiedz-podpis_di" bpmnElement="f-odpowiedz-podpis">
+        <di:waypoint x="606" y="310" />
+        <di:waypoint x="631" y="310" />
+        <di:waypoint x="631" y="450" />
+        <di:waypoint x="656" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-podpis-wyslana_di" bpmnElement="f-podpis-wyslana">
+        <di:waypoint x="756" y="450" />
+        <di:waypoint x="806" y="450" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

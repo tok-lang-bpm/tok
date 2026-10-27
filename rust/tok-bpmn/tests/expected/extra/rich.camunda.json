@@ -1,0 +1,50 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C001",
+  "id": "D2",
+  "komunikat": "Brak atrybutu modeler:executionPlatform=\"Camunda Cloud\" w <bpmn:definitions>. Camunda Modeler otworzy plik jako model Camunda 7."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C010",
+  "id": "T1",
+  "komunikat": "Zadanie użytkownika „Rejestracja” (T1) nie ma <zeebe:userTask/>. Bez niego nie trafi do Tasklist jako zadanie Camunda."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "C011",
+  "id": "T1",
+  "komunikat": "Zadanie użytkownika „Rejestracja” (T1) nie ma formularza (zeebe:formDefinition). W Tasklist można je tylko zakończyć bez danych."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "C080",
+  "id": "BT",
+  "komunikat": "Zdarzenie czasowe „Czas” (BT) nie ma wartości (timeDuration, timeDate albo timeCycle)."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "C030",
+  "id": "T2",
+  "komunikat": "Zadanie reguły biznesowej „Decyzja” (T2) wymaga <zeebe:calledDecision decisionId=\"…\" resultVariable=\"…\"/>."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C060",
+  "id": "Cx",
+  "komunikat": "Bramka złożona „Złożona” (Cx) nie jest wykonywany przez Camunda 8."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "C020",
+  "id": "Send",
+  "komunikat": "Zadanie wysyłania „Wysyłka” (Send) wymaga <zeebe:taskDefinition type=\"…\"/>. Bez niego wdrożenie się nie powiedzie."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C060",
+  "id": "Tx",
+  "komunikat": "Transakcja „Transakcja” (Tx) nie jest wykonywany przez Camunda 8."
+ }
+]

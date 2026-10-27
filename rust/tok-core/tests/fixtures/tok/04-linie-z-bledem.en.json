@@ -1,0 +1,30 @@
+[
+  {
+    "code": "R031",
+    "severity": "error",
+    "line": 3,
+    "id": "wplyw",
+    "message": "'wplyw' is declared at top level, but the document has pools; move it into a pool"
+  },
+  {
+    "code": "R030",
+    "severity": "error",
+    "line": 6,
+    "id": "rejestracja",
+    "message": "'rejestracja' is in a pool with lanes but outside every lane"
+  },
+  {
+    "code": "R021",
+    "severity": "error",
+    "line": 11,
+    "id": "f-wplyw-rejestracja",
+    "message": "sequence flow wplyw -> rejestracja crosses a process or sub-process boundary"
+  },
+  {
+    "code": "R022",
+    "severity": "error",
+    "line": 12,
+    "id": "m-rejestracja-dekretacja",
+    "message": "message flow rejestracja -> dekretacja must connect two different pools"
+  }
+]

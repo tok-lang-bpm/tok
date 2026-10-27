@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -20 1236 716" width="1236" height="716" font-family="Arial, Helvetica, sans-serif">
+<title>model.bpmn</title>
+<defs><marker id="seqEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2328"/></marker><marker id="msgEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0.5,0.5 L9.5,5 L0.5,9.5 z" fill="#fff" stroke="#1f2328"/></marker><marker id="msgStart" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"><circle cx="5" cy="5" r="4" fill="#fff" stroke="#1f2328"/></marker><marker id="assocEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#1f2328"/></marker></defs>
+<rect x="-20" y="-20" width="1236" height="716" fill="#fff"/>
+<rect x="0.0" y="0.0" width="1150.0" height="640.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/>
+<rect x="0.0" y="0.0" width="30" height="640.0" fill="#f2f4f7" stroke="#1f2328" stroke-width="1.3"/>
+<g transform="rotate(-90 15.0 320.0)"><text x="15.0" y="320.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 0.0)">Biblioteka uczelniana</text></g>
+<rect x="30.0" y="0.0" width="1120.0" height="130.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/>
+<rect x="30.0" y="0.0" width="30" height="130.0" fill="#f8f9fb" stroke="#1f2328" stroke-width="1.3"/>
+<g transform="rotate(-90 45.0 65.0)"><text x="45.0" y="65.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 0.0)">Czytelnik</text></g>
+<rect x="30.0" y="130.0" width="1120.0" height="140.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/>
+<rect x="30.0" y="130.0" width="30" height="140.0" fill="#f8f9fb" stroke="#1f2328" stroke-width="1.3"/>
+<g transform="rotate(-90 45.0 200.0)"><text x="45.0" y="200.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 0.0)">System biblioteczny</text></g>
+<rect x="30.0" y="270.0" width="1120.0" height="230.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/>
+<rect x="30.0" y="270.0" width="30" height="230.0" fill="#f8f9fb" stroke="#1f2328" stroke-width="1.3"/>
+<g transform="rotate(-90 45.0 385.0)"><text x="45.0" y="385.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 0.0)">Kierownik Oddziału Gromadzenia</text></g>
+<rect x="30.0" y="500.0" width="1120.0" height="140.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/>
+<rect x="30.0" y="500.0" width="30" height="140.0" fill="#f8f9fb" stroke="#1f2328" stroke-width="1.3"/>
+<g transform="rotate(-90 45.0 570.0)"><text x="45.0" y="570.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 -7.2)">Bibliotekarz</text><text x="45.0" y="570.0" font-size="12" text-anchor="middle" dominant-baseline="middle" transform="translate(0 7.2)">gromadzenia</text></g>
+<polyline points="126.0,48.0 151.0,48.0 151.0,200.0 176.0,200.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="276.0,200.0 326.0,200.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="351.0,225.0 351.0,340.0 426.0,340.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="376.0,200.0 676.0,200.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<line x1="381.0" y1="205.0" x2="391.0" y2="195.0" stroke="#1f2328" stroke-width="1.5"/>
+<polyline points="526.0,340.0 576.0,340.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="601.0,315.0 601.0,200.0 676.0,200.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="626.0,340.0 683.0,340.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<line x1="631.0" y1="345.0" x2="641.0" y2="335.0" stroke="#1f2328" stroke-width="1.5"/>
+<polyline points="496.0,398.0 496.0,448.0 583.0,448.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="726.0,200.0 776.0,200.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="876.0,200.0 901.0,200.0 901.0,570.0 926.0,570.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="1026.0,570.0 1076.0,570.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<circle cx="108.0" cy="48.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<rect x="176.0" y="160.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><rect x="182.0" y="168.0" width="18" height="13" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><rect x="182.0" y="168.0" width="18" height="4" fill="#9aa1a9"/><line x1="182.0" y1="176.5" x2="200.0" y2="176.5" stroke="#1f2328" stroke-width="1"/><line x1="187.0" y1="172.0" x2="187.0" y2="181.0" stroke="#1f2328" stroke-width="1"/><text x="226.0" y="195.5" font-size="11" text-anchor="middle" ><tspan x="226.0" dy="0.0">Ustalenie</tspan><tspan x="226.0" dy="13.2">trybu</tspan><tspan x="226.0" dy="13.2">akceptacji</tspan></text>
+<polygon points="351.0,175.0 376.0,200.0 351.0,225.0 326.0,200.0" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><path d="M343.0,192.0 L359.0,208.0 M359.0,192.0 L343.0,208.0" stroke="#1f2328" stroke-width="4"/>
+<rect x="426.0" y="300.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><circle cx="440.0" cy="312.0" r="4" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><path d="M432.0,326.0 Q432.0,317.0 440.0,317.0 Q448.0,317.0 448.0,326.0 Z" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><text x="476.0" y="342.2" font-size="11" text-anchor="middle" ><tspan x="476.0" dy="0.0">Akceptacja</tspan><tspan x="476.0" dy="13.2">propozycji</tspan></text>
+<polygon points="601.0,315.0 626.0,340.0 601.0,365.0 576.0,340.0" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><path d="M593.0,332.0 L609.0,348.0 M609.0,332.0 L593.0,348.0" stroke="#1f2328" stroke-width="4"/>
+<polygon points="701.0,175.0 726.0,200.0 701.0,225.0 676.0,200.0" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><path d="M693.0,192.0 L709.0,208.0 M709.0,192.0 L693.0,208.0" stroke="#1f2328" stroke-width="4"/>
+<rect x="776.0" y="160.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><path d="M785.0,167.0 h11 c-4,4 4,9 0,13 h-11 c4,-4 -4,-9 0,-13 z" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><line x1="785.5" y1="170.5" x2="792.5" y2="170.5" stroke="#1f2328" stroke-width="1"/><line x1="785.5" y1="173.5" x2="792.5" y2="173.5" stroke="#1f2328" stroke-width="1"/><line x1="785.5" y1="176.5" x2="792.5" y2="176.5" stroke="#1f2328" stroke-width="1"/><text x="826.0" y="202.2" font-size="11" text-anchor="middle" ><tspan x="826.0" dy="0.0">Wyliczenie</tspan><tspan x="826.0" dy="13.2">kosztu zakupu</tspan></text>
+<rect x="926.0" y="530.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><circle cx="940.0" cy="542.0" r="4" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><path d="M932.0,556.0 Q932.0,547.0 940.0,547.0 Q948.0,547.0 948.0,556.0 Z" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><text x="976.0" y="565.6" font-size="11" text-anchor="middle" ><tspan x="976.0" dy="0.0">Złożenie</tspan><tspan x="976.0" dy="13.2">zamówienia u</tspan><tspan x="976.0" dy="13.2">dostawcy</tspan></text>
+<circle cx="1094.0" cy="570.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<circle cx="701.0" cy="340.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<circle cx="601.0" cy="448.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<circle cx="496.0" cy="380.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.3"/><circle cx="496.0" cy="380.0" r="15" fill="none" stroke="#1f2328" stroke-width="1.3"/><circle cx="496.0" cy="380.0" r="11" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><line x1="503.5" y1="380.0" x2="506.5" y2="380.0" stroke="#1f2328" stroke-width="1"/><line x1="503.4" y1="384.2" x2="505.1" y2="385.2" stroke="#1f2328" stroke-width="1"/><line x1="500.2" y1="387.4" x2="501.2" y2="389.1" stroke="#1f2328" stroke-width="1"/><line x1="496.0" y1="387.5" x2="496.0" y2="390.5" stroke="#1f2328" stroke-width="1"/><line x1="491.8" y1="387.4" x2="490.8" y2="389.1" stroke="#1f2328" stroke-width="1"/><line x1="488.6" y1="384.2" x2="486.9" y2="385.2" stroke="#1f2328" stroke-width="1"/><line x1="488.5" y1="380.0" x2="485.5" y2="380.0" stroke="#1f2328" stroke-width="1"/><line x1="488.6" y1="375.8" x2="486.9" y2="374.8" stroke="#1f2328" stroke-width="1"/><line x1="491.8" y1="372.6" x2="490.8" y2="370.9" stroke="#1f2328" stroke-width="1"/><line x1="496.0" y1="372.5" x2="496.0" y2="369.5" stroke="#1f2328" stroke-width="1"/><line x1="500.2" y1="372.6" x2="501.2" y2="370.9" stroke="#1f2328" stroke-width="1"/><line x1="503.4" y1="375.8" x2="505.1" y2="374.8" stroke="#1f2328" stroke-width="1"/><polyline points="496.0,373.0 496.0,380.0 501.0,382.0" fill="none" stroke="#1f2328" stroke-width="1.5"/>
+<text x="359.0" y="333.0" font-size="10" text-anchor="start" ><tspan x="359.0" dy="0.0">tak</tspan></text>
+<text x="384.0" y="193.0" font-size="10" text-anchor="start" ><tspan x="384.0" dy="0.0">nie</tspan></text>
+<text x="609.0" y="193.0" font-size="10" text-anchor="start" ><tspan x="609.0" dy="0.0">tak</tspan></text>
+<text x="634.0" y="333.0" font-size="10" text-anchor="start" ><tspan x="634.0" dy="0.0">nie</tspan></text>
+<text x="108.0" y="79.0" font-size="10" text-anchor="middle" ><tspan x="108.0" dy="0.0">Propozycja złożona</tspan></text>
+<text x="351.0" y="238.0" font-size="10" text-anchor="middle" ><tspan x="351.0" dy="0.0">Czy potrzebna</tspan><tspan x="351.0" dy="12.0">akceptacja</tspan><tspan x="351.0" dy="12.0">kierownika?</tspan></text>
+<text x="601.0" y="378.0" font-size="10" text-anchor="middle" ><tspan x="601.0" dy="0.0">Czy kierownik się</tspan><tspan x="601.0" dy="12.0">zgodził?</tspan></text>
+<text x="1094.0" y="601.0" font-size="10" text-anchor="middle" ><tspan x="1094.0" dy="0.0">Książka zamówiona</tspan></text>
+<text x="701.0" y="371.0" font-size="10" text-anchor="middle" ><tspan x="701.0" dy="0.0">Propozycja</tspan><tspan x="701.0" dy="12.0">odrzucona</tspan></text>
+<text x="601.0" y="479.0" font-size="10" text-anchor="middle" ><tspan x="601.0" dy="0.0">Propozycja wygasła</tspan></text>
+<text x="496.0" y="411.0" font-size="10" text-anchor="middle" ><tspan x="496.0" dy="0.0">Minęło 7 dni</tspan></text>
+</svg>

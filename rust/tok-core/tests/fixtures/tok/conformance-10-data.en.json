@@ -1,0 +1,9 @@
+[
+  {
+    "code": "R003",
+    "severity": "error",
+    "line": 28,
+    "id": "s",
+    "message": "'s' is a 'start' element; required here: activity"
+  }
+]

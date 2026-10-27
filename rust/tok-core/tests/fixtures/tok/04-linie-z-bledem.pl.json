@@ -1,0 +1,30 @@
+[
+  {
+    "code": "R031",
+    "severity": "error",
+    "line": 3,
+    "id": "wplyw",
+    "message": "„wplyw” zadeklarowano poza basenem, a dokument ma baseny; przenieś go do basenu"
+  },
+  {
+    "code": "R030",
+    "severity": "error",
+    "line": 6,
+    "id": "rejestracja",
+    "message": "„rejestracja” leży w basenie z liniami, ale poza liniami"
+  },
+  {
+    "code": "R021",
+    "severity": "error",
+    "line": 11,
+    "id": "f-wplyw-rejestracja",
+    "message": "przepływ sekwencji wplyw -> rejestracja przekracza granicę procesu lub podprocesu"
+  },
+  {
+    "code": "R022",
+    "severity": "error",
+    "line": 12,
+    "id": "m-rejestracja-dekretacja",
+    "message": "przepływ komunikatów rejestracja -> dekretacja musi łączyć dwa różne baseny"
+  }
+]

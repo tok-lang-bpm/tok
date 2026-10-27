@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs-xor" name="Rozgałęzienie XOR" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:process id="wypozyczenie" name="Rozgałęzienie XOR" isExecutable="false">
+    <bpmn:startEvent id="s" />
+    <bpmn:userTask id="k" name="Sprawdzenie &quot;katalogu&quot; i C:\dane" />
+    <bpmn:exclusiveGateway id="g" name="Czy książka dostępna lokalnie?" default="f-g-z" />
+    <bpmn:task id="w" name="Wskazanie egzemplarza" />
+    <bpmn:task id="z" name="Zamówienie w innej bibliotece" />
+    <bpmn:endEvent id="e1" name="Egzemplarz wskazany" />
+    <bpmn:endEvent id="e2" />
+    <bpmn:sequenceFlow id="f-s-k" sourceRef="s" targetRef="k" />
+    <bpmn:sequenceFlow id="f-k-g" sourceRef="k" targetRef="g" />
+    <bpmn:sequenceFlow id="f-tak" name="tak" sourceRef="g" targetRef="w">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">dostepna = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-z" name="nie" sourceRef="g" targetRef="z" />
+    <bpmn:sequenceFlow id="f-w-e1" sourceRef="w" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-z-e2" sourceRef="z" targetRef="e2" />
+    <bpmn:sequenceFlow id="f-z-e2-2" sourceRef="z" targetRef="e2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="wypozyczenie">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="k_di" bpmnElement="k">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g" isMarkerVisible="true">
+        <dc:Bounds x="266" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w_di" bpmnElement="w">
+        <dc:Bounds x="366" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z">
+        <dc:Bounds x="366" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e1_di" bpmnElement="e1">
+        <dc:Bounds x="516" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="516" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-k_di" bpmnElement="f-s-k">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-k-g_di" bpmnElement="f-k-g">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-tak_di" bpmnElement="f-tak">
+        <di:waypoint x="316" y="70" />
+        <di:waypoint x="366" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-z_di" bpmnElement="f-g-z">
+        <di:waypoint x="291" y="95" />
+        <di:waypoint x="291" y="200" />
+        <di:waypoint x="366" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-w-e1_di" bpmnElement="f-w-e1">
+        <di:waypoint x="466" y="70" />
+        <di:waypoint x="516" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-z-e2_di" bpmnElement="f-z-e2">
+        <di:waypoint x="466" y="192" />
+        <di:waypoint x="516" y="192" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-z-e2-2_di" bpmnElement="f-z-e2-2">
+        <di:waypoint x="466" y="208" />
+        <di:waypoint x="516" y="208" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

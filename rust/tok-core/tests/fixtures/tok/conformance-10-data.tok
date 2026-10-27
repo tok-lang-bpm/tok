@@ -1,0 +1,32 @@
+tok 0.1 "Dane i artefakty"
+
+start s
+user z "Złożenie wniosku"
+sub p "Ocena"
+  start ps
+  task a "Analiza"
+  end pe
+  data dp "Notatka"
+  flow ps -> a -> pe
+task r "Rejestracja"
+end e
+data w "Wniosek" state="złożony"
+data w2 "Wniosek" state="zarejestrowany"
+data lista "Lista pozycji" collection
+store kat "Katalog"
+store kat2 "Katalog"
+store rej
+
+flow s -> z -> p -> r -> e
+
+writes z w
+reads r w
+writes r w2
+reads r kat
+writes r kat2
+reads a dp
+writes s lista
+
+note n1 "Podstawa: regulamin biblioteki" on=z
+note n2 "Uwaga ogólna"
+group g1 "Etap przyjęcia" members="z r"

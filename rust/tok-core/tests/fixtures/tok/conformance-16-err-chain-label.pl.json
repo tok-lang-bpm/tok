@@ -1,0 +1,79 @@
+[
+  {
+    "code": "R001",
+    "severity": "error",
+    "line": 5,
+    "id": "a",
+    "message": "identyfikator „a” jest już użyty w wierszu 4"
+  },
+  {
+    "code": "R004",
+    "severity": "error",
+    "line": 6,
+    "id": "ą",
+    "message": "identyfikator „ą” może zawierać tylko litery ASCII, cyfry, „_” i „-”"
+  },
+  {
+    "code": "R004",
+    "severity": "error",
+    "line": 7,
+    "id": "9x",
+    "message": "identyfikator „9x” może zawierać tylko litery ASCII, cyfry, „_” i „-”"
+  },
+  {
+    "code": "R020",
+    "severity": "error",
+    "line": 9,
+    "id": null,
+    "message": "wiersz flow z etykietą lub atrybutami musi mieć dokładnie jedną strzałkę"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 10,
+    "id": null,
+    "message": "niepoprawny atrybut w pobliżu „->”"
+  },
+  {
+    "code": "R011",
+    "severity": "error",
+    "line": 11,
+    "id": null,
+    "message": "nieznana flaga „bad” w elemencie message"
+  },
+  {
+    "code": "R011",
+    "severity": "error",
+    "line": 13,
+    "id": null,
+    "message": "nieznana flaga „extra” w elemencie decision"
+  },
+  {
+    "code": "D004",
+    "severity": "error",
+    "line": 14,
+    "id": "d",
+    "message": "komórka nagłówka „x: liczba” musi mieć postać „nazwa: typ” (string, number, boolean, date)"
+  },
+  {
+    "code": "D004",
+    "severity": "error",
+    "line": 14,
+    "id": "d",
+    "message": "komórka nagłówka „y” musi mieć postać „nazwa: typ” (string, number, boolean, date)"
+  },
+  {
+    "code": "D002",
+    "severity": "error",
+    "line": 15,
+    "id": "d",
+    "message": "reguła ma 3 komórek, a nagłówek 1"
+  },
+  {
+    "code": "D002",
+    "severity": "error",
+    "line": 16,
+    "id": "d",
+    "message": "reguła ma 3 komórek, a nagłówek 1"
+  }
+]

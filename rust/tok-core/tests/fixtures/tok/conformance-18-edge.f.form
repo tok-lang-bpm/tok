@@ -1,0 +1,24 @@
+{
+  "id": "f",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_1",
+      "text": "Pierwsza linia\nDruga linia"
+    },
+    {
+      "type": "textfield",
+      "id": "Field_k",
+      "key": "k",
+      "label": "Pole"
+    }
+  ],
+  "schemaVersion": 18
+}

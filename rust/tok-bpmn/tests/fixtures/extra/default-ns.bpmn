@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- default namespace, foreign prefix for xsi, comments and CDATA -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:x="http://www.w3.org/2001/XMLSchema-instance" xmlns:foo="http://example.org/foo" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="D1" targetNamespace="http://example.org">
+  <process id="P1" isExecutable="false">
+    <startEvent id="S" name="1. Start"/>
+    <task id="A" name="2. Zadanie &amp; &lt;test&gt;"><documentation><![CDATA[text <b>bold</b>]]> more</documentation></task>
+    <!-- a comment between elements -->
+    <exclusiveGateway id="G" name="3. Czy dalej?" default="F3"/>
+    <task id="B" name="4a Druga" foo:custom="x&#10;y	z"/>
+    <endEvent id="E" name="5. Koniec"/>
+    <endEvent id="E2"/>
+    <sequenceFlow id="F1" sourceRef="S" targetRef="A"/>
+    <sequenceFlow id="F2" sourceRef="A" targetRef="G"/>
+    <sequenceFlow id="F3" sourceRef="G" targetRef="B"/>
+    <sequenceFlow id="F4" sourceRef="G" targetRef="E2"><conditionExpression x:type="tFormalExpression" foo:lang="xsd:string">a &gt; 1</conditionExpression></sequenceFlow>
+    <sequenceFlow id="F5" sourceRef="B" targetRef="E"/>
+    <sequenceFlow id="F6" sourceRef="B" targetRef="A"/>
+  </process>
+</definitions>

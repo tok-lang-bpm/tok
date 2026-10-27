@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="tryb-udostepnienia-definitions" name="Tryb udostępnienia" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <decision id="tryb-udostepnienia" name="Tryb udostępnienia">
+    <decisionTable id="tryb-udostepnienia-table" hitPolicy="FIRST">
+      <input id="tryb-udostepnienia-input-1" label="cel">
+        <inputExpression id="tryb-udostepnienia-input-1-expr" typeRef="string">
+          <text>cel</text>
+        </inputExpression>
+      </input>
+      <input id="tryb-udostepnienia-input-2" label="wiek">
+        <inputExpression id="tryb-udostepnienia-input-2-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <input id="tryb-udostepnienia-input-3" label="dane">
+        <inputExpression id="tryb-udostepnienia-input-3-expr" typeRef="boolean">
+          <text>dane</text>
+        </inputExpression>
+      </input>
+      <output id="tryb-udostepnienia-output-1" label="tryb" name="tryb" typeRef="string" />
+      <rule id="tryb-udostepnienia-rule-1">
+        <description>ochrona danych osobowych</description>
+        <inputEntry id="tryb-udostepnienia-rule-1-in-1">
+          <text>"prywatny"</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-1-in-2">
+          <text>&lt; 30</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-1-in-3">
+          <text>true</text>
+        </inputEntry>
+        <outputEntry id="tryb-udostepnienia-rule-1-out-1">
+          <text>"odmowa"</text>
+        </outputEntry>
+      </rule>
+      <rule id="tryb-udostepnienia-rule-2">
+        <description>dane osobowe, materiał młodszy niż 30 lat</description>
+        <inputEntry id="tryb-udostepnienia-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-2-in-2">
+          <text>&lt; 30</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-2-in-3">
+          <text>true</text>
+        </inputEntry>
+        <outputEntry id="tryb-udostepnienia-rule-2-out-1">
+          <text>"zgoda kierownika"</text>
+        </outputEntry>
+      </rule>
+      <rule id="tryb-udostepnienia-rule-3">
+        <description>pozostałe wnioski</description>
+        <inputEntry id="tryb-udostepnienia-rule-3-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-3-in-2">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="tryb-udostepnienia-rule-3-in-3">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="tryb-udostepnienia-rule-3-out-1">
+          <text>"czytelnia"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

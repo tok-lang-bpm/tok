@@ -1,0 +1,25 @@
+tok 0.1 "Rejestracja pisma (model z błędami)" id=Definitions_PismoBledy namespace=https://codeberg.org/MarekDeja/ipm/diagramy/03 collaboration=Collaboration_PismoBledy
+
+pool Participant_Kancelaria "Kancelaria uczelni" process=Process_PismoBledy
+  lane Lane_Kancelaria "Pracownik kancelarii"
+    start Start "Pismo wpłynęło"
+    user Task_Rejestracja "Rejestracja pisma w EZD"
+    and Gw_Rozwidlenie
+    user Task_Skan "Skanowanie pisma"
+    user Task_Numer "Powiadomienie adresata pisma"
+    xor Gw_Zlaczenie
+  lane Lane_Kierownik "Kierownik jednostki"
+    user Task_Dekretacja "Dekretacja pisma"
+    xor Gw_Odpowiedz "Czy pismo wymaga odpowiedzi?"
+    user Task_Odpowiedz "Przygotowanie odpowiedzi"
+    end End_Wyslana "Odpowiedź wysłana"
+    user Task_Archiwizacja "Przekazanie pisma do akt"
+
+flow Start -> Task_Rejestracja -> Gw_Rozwidlenie
+flow Gw_Rozwidlenie -> Task_Skan
+flow Gw_Rozwidlenie -> Task_Numer
+flow Task_Skan -> Gw_Zlaczenie
+flow Task_Numer -> Gw_Zlaczenie -> Task_Dekretacja -> Gw_Odpowiedz
+flow Gw_Odpowiedz -> Task_Odpowiedz "tak"
+flow Task_Odpowiedz -> End_Wyslana
+flow Gw_Odpowiedz -> Task_Archiwizacja

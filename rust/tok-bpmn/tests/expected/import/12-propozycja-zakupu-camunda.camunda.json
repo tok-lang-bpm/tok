@@ -1,0 +1,26 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C012",
+  "id": "Start_Propozycja",
+  "komunikat": "Formularza startowego „formularz-propozycja” nie ma w żadnym pliku .form w folderze modelu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C032",
+  "id": "Task_Tryb",
+  "komunikat": "Decyzji „tryb-akceptacji” (zadanie „Ustalenie trybu akceptacji” (Task_Tryb)) nie ma w żadnym pliku .dmn w folderze modelu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C012",
+  "id": "Task_Akceptacja",
+  "komunikat": "Formularza „formularz-akceptacja” (zadanie „Akceptacja propozycji” (Task_Akceptacja)) nie ma w żadnym pliku .form w folderze modelu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C012",
+  "id": "Task_Zamowienie",
+  "komunikat": "Formularza „formularz-zamowienie” (zadanie „Złożenie zamówienia u dostawcy” (Task_Zamowienie)) nie ma w żadnym pliku .form w folderze modelu."
+ }
+]

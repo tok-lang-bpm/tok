@@ -1,0 +1,19 @@
+[package]
+name = "tok-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Parser, checker, printer and exporters of the tok process language"
+
+[dependencies]
+indexmap = "2"
+roxmltree = "0.21.2"
+
+[dev-dependencies]
+tok-bpmn = { path = "../tok-bpmn" }
+
+[lints]
+workspace = true

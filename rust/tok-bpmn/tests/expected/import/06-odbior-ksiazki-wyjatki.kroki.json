@@ -1,0 +1,44 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Dotarla",
+  "komunikat": "„Książka dotarła” (Start_Dotarla): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Rejestracja",
+  "komunikat": "„Rejestracja egzemplarza w systemie” (Task_Rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_RejestracjaReczna",
+  "komunikat": "„Rejestracja ręczna egzemplarza” (Task_RejestracjaReczna): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Powiadomienie",
+  "komunikat": "„Powiadomienie czytelnika” (Task_Powiadomienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wydanie",
+  "komunikat": "„Wydanie książki czytelnikowi” (Task_Wydanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przypomnienie",
+  "komunikat": "„Wysłanie przypomnienia” (Task_Przypomnienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Odeslanie",
+  "komunikat": "„Odesłanie książki do biblioteki udostępniającej” (Task_Odeslanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

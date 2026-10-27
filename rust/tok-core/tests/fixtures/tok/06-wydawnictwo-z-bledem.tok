@@ -1,0 +1,28 @@
+tok 0.1 "Recenzja wydawnicza"
+
+pool wydawnictwo "Wydawnictwo uczelniane"
+  lane redakcja "Redakcja"
+    start wplynal "Maszynopis wpłynął"
+    usr ocena "Ocena wstępna maszynopisu"
+    xor przyjety "Czy maszynopis przyjęty do recenzji?"
+    and recenzje "Wysłanie do recenzentów"
+    xor zebrane "Recenzje zebrane"
+    rule decyzja "Decyzja o publikacji" decision=publikacja
+    end wydany "Skierowano do druku"
+    end odrzucony "Maszynopis odrzucony"
+  lane rada "Rada wydawnicza"
+    user zatwierdzenie "Zatwierdzenie planu"
+pool recenzent "Recenzenci"
+
+flow wplynal -> ocena -> przyjety
+flow przyjety -> recenzje -> zebrane "tak"
+flow przyjety -> odrzucony "nie"
+flow recenzje -> zebrane
+flow zebrane -> decyzja -> zatwierdzenie -> wydany
+message recenzje -> recenzent "Maszynopis do recenzji"
+
+decision publikacja "Publikacja" hit=first
+  | recenzja1: string | recenzja2: string || decyzja: string |
+  | "pozytywna"       | "pozytywna"       || "druk"          |
+  | "negatywna"       | "negatywna"       |
+  | -                 | -                 || "trzecia recenzja" |

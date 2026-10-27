@@ -1,0 +1,74 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Przyjete",
+  "komunikat": "„Zamówienie przyjęte do realizacji” (Start_Przyjete): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wyslanie",
+  "komunikat": "„Wysłanie zamówienia” (Task_Wyslanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Odpowiedz",
+  "komunikat": "„Co nastąpi pierwsze?” (Gw_Odpowiedz): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Egzemplarz",
+  "komunikat": "„Egzemplarz otrzymany” (Catch_Egzemplarz): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_Odmowa",
+  "komunikat": "„Odmowa otrzymana” (Catch_Odmowa): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Catch_14dni",
+  "komunikat": "„Minęło 14 dni” (Catch_14dni): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Przyjecie",
+  "komunikat": "„Przyjęcie egzemplarza” (Task_Przyjecie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Ponaglono",
+  "komunikat": "„Czy wysłano już ponaglenie?” (Gw_Ponaglono): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Ponaglenie",
+  "komunikat": "„Wysłanie ponaglenia” (Task_Ponaglenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Gw_Inna",
+  "komunikat": "„Czy inna biblioteka ma egzemplarz?” (Gw_Inna): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wybor",
+  "komunikat": "„Wybór innej biblioteki” (Task_Wybor): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Informacja",
+  "komunikat": "„Powiadomienie czytelnika o niepowodzeniu” (Task_Informacja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

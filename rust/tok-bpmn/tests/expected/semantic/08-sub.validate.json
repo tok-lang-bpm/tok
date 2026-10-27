@@ -1,0 +1,8 @@
+[
+ {
+  "poziom": "błąd",
+  "kod": "E014",
+  "id": "c",
+  "komunikat": "„Wydanie kopii” (c): czynność kompensacyjna nie ma przepływów sekwencji."
+ }
+]

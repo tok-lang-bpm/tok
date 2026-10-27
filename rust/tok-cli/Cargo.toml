@@ -1,0 +1,20 @@
+[package]
+name = "tok-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Command line interface of the tok process language"
+
+[[bin]]
+name = "tok"
+path = "src/main.rs"
+
+[dependencies]
+tok-core = { path = "../tok-core" }
+tok-bpmn = { path = "../tok-bpmn" }
+
+[lints]
+workspace = true

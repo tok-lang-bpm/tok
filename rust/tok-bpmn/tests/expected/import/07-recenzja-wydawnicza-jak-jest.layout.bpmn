@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Recenzja" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/07">
+  <bpmn:message id="Msg_Maszynopis" name="Maszynopis" />
+  <bpmn:message id="Msg_Odmowa" name="Odmowa wydania" />
+  <bpmn:message id="Msg_Zaproszenie" name="Zaproszenie do recenzji" />
+  <bpmn:message id="Msg_Zgoda" name="Zgoda na recenzję" />
+  <bpmn:message id="Msg_Wydruk" name="Wydruk maszynopisu" />
+  <bpmn:message id="Msg_Recenzja" name="Recenzja" />
+  <bpmn:message id="Msg_Uwagi" name="Uwagi recenzenta" />
+  <bpmn:message id="Msg_Poprawiony" name="Poprawiony maszynopis" />
+  <bpmn:message id="Msg_Decyzja" name="Decyzja o druku" />
+  <bpmn:dataStore id="DataStore_Arkusz" name="Arkusz publikacji" />
+  <bpmn:collaboration id="Collaboration_Recenzja">
+    <bpmn:participant id="Participant_Wydawnictwo" name="Wydawnictwo uczelniane" processRef="Process_Recenzja" />
+    <bpmn:participant id="Participant_Autor" name="Autor" />
+    <bpmn:participant id="Participant_Recenzent" name="Recenzent" />
+    <bpmn:messageFlow id="MF_Maszynopis" name="Maszynopis" sourceRef="Participant_Autor" targetRef="Start_Maszynopis" messageRef="Msg_Maszynopis" />
+    <bpmn:messageFlow id="MF_Odmowa" name="Odmowa" sourceRef="End_Odmowa" targetRef="Participant_Autor" messageRef="Msg_Odmowa" />
+    <bpmn:messageFlow id="MF_Zaproszenie" name="Zaproszenie" sourceRef="Task_Zaproszenie" targetRef="Participant_Recenzent" messageRef="Msg_Zaproszenie" />
+    <bpmn:messageFlow id="MF_Zgoda" name="Zgoda" sourceRef="Participant_Recenzent" targetRef="Catch_Zgoda" messageRef="Msg_Zgoda" />
+    <bpmn:messageFlow id="MF_Wydruk" name="Wydruk pocztą" sourceRef="Task_Wysylka" targetRef="Participant_Recenzent" messageRef="Msg_Wydruk" />
+    <bpmn:messageFlow id="MF_Recenzja" name="Recenzja" sourceRef="Participant_Recenzent" targetRef="Catch_Recenzja" messageRef="Msg_Recenzja" />
+    <bpmn:messageFlow id="MF_Uwagi" name="Uwagi" sourceRef="Task_Uwagi" targetRef="Participant_Autor" messageRef="Msg_Uwagi" />
+    <bpmn:messageFlow id="MF_Poprawiony" name="Poprawiony maszynopis" sourceRef="Participant_Autor" targetRef="Catch_Poprawiony" messageRef="Msg_Poprawiony" />
+    <bpmn:messageFlow id="MF_Decyzja" name="Decyzja" sourceRef="End_Druk" targetRef="Participant_Autor" messageRef="Msg_Decyzja" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Recenzja" name="Recenzja wydawnicza — jak jest" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Recenzja">
+      <bpmn:lane id="Lane_Redaktor" name="Redaktor prowadzący">
+        <bpmn:flowNodeRef>Start_Maszynopis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wydruk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Przepisanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Uwagi</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_Poprawiony</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Porownanie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sekretarz" name="Sekretarz rady wydawniczej">
+        <bpmn:flowNodeRef>Catch_Posiedzenie1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Poszukiwanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zaproszenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_Zgoda</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wysylka</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_Recenzja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Catch_Posiedzenie2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Rada" name="Rada wydawnicza">
+        <bpmn:flowNodeRef>Task_Kwalifikacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Recenzja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Odmowa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zatwierdzenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Druk</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Maszynopis" name="Maszynopis wpłynął">
+      <bpmn:messageEventDefinition id="Start_Maszynopis_def" messageRef="Msg_Maszynopis" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Rejestracja" name="Rejestracja maszynopisu w arkuszu">
+      <bpmn:dataOutputAssociation id="DOA_Arkusz1">
+        <bpmn:targetRef>DataStoreRef_Arkusz</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_Wydruk" name="Wydruk maszynopisu dla rady" />
+    <bpmn:intermediateCatchEvent id="Catch_Posiedzenie1" name="Najbliższe posiedzenie rady">
+      <bpmn:timerEventDefinition id="Catch_Posiedzenie1_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_Kwalifikacja" name="Kwalifikacja maszynopisu na posiedzeniu" />
+    <bpmn:exclusiveGateway id="Gw_Recenzja" name="Czy skierować do recenzji?" />
+    <bpmn:endEvent id="End_Odmowa" name="Autor powiadomiony o odmowie">
+      <bpmn:messageEventDefinition id="End_Odmowa_def" messageRef="Msg_Odmowa" />
+    </bpmn:endEvent>
+    <bpmn:manualTask id="Task_Poszukiwanie" name="Poszukiwanie recenzenta" />
+    <bpmn:sendTask id="Task_Zaproszenie" name="Wysłanie zaproszenia do recenzji" messageRef="Msg_Zaproszenie" />
+    <bpmn:intermediateCatchEvent id="Catch_Zgoda" name="Zgoda recenzenta otrzymana">
+      <bpmn:messageEventDefinition id="Catch_Zgoda_def" messageRef="Msg_Zgoda" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_Wysylka" name="Wysłanie wydruku pocztą" />
+    <bpmn:intermediateCatchEvent id="Catch_Recenzja" name="Recenzja otrzymana">
+      <bpmn:messageEventDefinition id="Catch_Recenzja_def" messageRef="Msg_Recenzja" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Przepisanie" name="Przepisanie uwag recenzenta do arkusza">
+      <bpmn:dataOutputAssociation id="DOA_Arkusz2">
+        <bpmn:targetRef>DataStoreRef_Arkusz</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_Uwagi" name="Przekazanie uwag autorowi" messageRef="Msg_Uwagi" />
+    <bpmn:intermediateCatchEvent id="Catch_Poprawiony" name="Poprawiony maszynopis otrzymany">
+      <bpmn:messageEventDefinition id="Catch_Poprawiony_def" messageRef="Msg_Poprawiony" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_Porownanie" name="Porównanie poprawek z uwagami" />
+    <bpmn:intermediateCatchEvent id="Catch_Posiedzenie2" name="Kolejne posiedzenie rady">
+      <bpmn:timerEventDefinition id="Catch_Posiedzenie2_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P30D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_Zatwierdzenie" name="Zatwierdzenie do druku na posiedzeniu" />
+    <bpmn:endEvent id="End_Druk" name="Maszynopis zatwierdzony do druku">
+      <bpmn:messageEventDefinition id="End_Druk_def" messageRef="Msg_Decyzja" />
+    </bpmn:endEvent>
+    <bpmn:dataStoreReference id="DataStoreRef_Arkusz" name="Arkusz publikacji" dataStoreRef="DataStore_Arkusz" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Maszynopis" targetRef="Task_Rejestracja" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Rejestracja" targetRef="Task_Wydruk" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_Wydruk" targetRef="Catch_Posiedzenie1" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Catch_Posiedzenie1" targetRef="Task_Kwalifikacja" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Task_Kwalifikacja" targetRef="Gw_Recenzja" />
+    <bpmn:sequenceFlow id="F6" name="nie" sourceRef="Gw_Recenzja" targetRef="End_Odmowa" />
+    <bpmn:sequenceFlow id="F7" name="tak" sourceRef="Gw_Recenzja" targetRef="Task_Poszukiwanie" />
+    <bpmn:sequenceFlow id="F8" sourceRef="Task_Poszukiwanie" targetRef="Task_Zaproszenie" />
+    <bpmn:sequenceFlow id="F9" sourceRef="Task_Zaproszenie" targetRef="Catch_Zgoda" />
+    <bpmn:sequenceFlow id="F10" sourceRef="Catch_Zgoda" targetRef="Task_Wysylka" />
+    <bpmn:sequenceFlow id="F11" sourceRef="Task_Wysylka" targetRef="Catch_Recenzja" />
+    <bpmn:sequenceFlow id="F12" sourceRef="Catch_Recenzja" targetRef="Task_Przepisanie" />
+    <bpmn:sequenceFlow id="F13" sourceRef="Task_Przepisanie" targetRef="Task_Uwagi" />
+    <bpmn:sequenceFlow id="F14" sourceRef="Task_Uwagi" targetRef="Catch_Poprawiony" />
+    <bpmn:sequenceFlow id="F15" sourceRef="Catch_Poprawiony" targetRef="Task_Porownanie" />
+    <bpmn:sequenceFlow id="F16" sourceRef="Task_Porownanie" targetRef="Catch_Posiedzenie2" />
+    <bpmn:sequenceFlow id="F17" sourceRef="Catch_Posiedzenie2" targetRef="Task_Zatwierdzenie" />
+    <bpmn:sequenceFlow id="F18" sourceRef="Task_Zatwierdzenie" targetRef="End_Druk" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Recenzja">
+      <bpmndi:BPMNShape id="Participant_Wydawnictwo_di" bpmnElement="Participant_Wydawnictwo" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="2280" height="520" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Autor_di" bpmnElement="Participant_Autor" isHorizontal="true">
+        <dc:Bounds x="0" y="560" width="2280" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Recenzent_di" bpmnElement="Participant_Recenzent" isHorizontal="true">
+        <dc:Bounds x="0" y="670" width="2280" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Redaktor_di" bpmnElement="Lane_Redaktor" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="2250" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sekretarz_di" bpmnElement="Lane_Sekretarz" isHorizontal="true">
+        <dc:Bounds x="30" y="240" width="2250" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Rada_di" bpmnElement="Lane_Rada" isHorizontal="true">
+        <dc:Bounds x="30" y="380" width="2250" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Maszynopis_di" bpmnElement="Start_Maszynopis">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Rejestracja_di" bpmnElement="Task_Rejestracja">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wydruk_di" bpmnElement="Task_Wydruk">
+        <dc:Bounds x="326" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Posiedzenie1_di" bpmnElement="Catch_Posiedzenie1">
+        <dc:Bounds x="476" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kwalifikacja_di" bpmnElement="Task_Kwalifikacja">
+        <dc:Bounds x="562" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Recenzja_di" bpmnElement="Gw_Recenzja" isMarkerVisible="true">
+        <dc:Bounds x="712" y="425" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Odmowa_di" bpmnElement="End_Odmowa">
+        <dc:Bounds x="844" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Poszukiwanie_di" bpmnElement="Task_Poszukiwanie">
+        <dc:Bounds x="812" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zaproszenie_di" bpmnElement="Task_Zaproszenie">
+        <dc:Bounds x="962" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Zgoda_di" bpmnElement="Catch_Zgoda">
+        <dc:Bounds x="1112" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wysylka_di" bpmnElement="Task_Wysylka">
+        <dc:Bounds x="1198" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Recenzja_di" bpmnElement="Catch_Recenzja">
+        <dc:Bounds x="1348" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Przepisanie_di" bpmnElement="Task_Przepisanie">
+        <dc:Bounds x="1434" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Uwagi_di" bpmnElement="Task_Uwagi">
+        <dc:Bounds x="1584" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Poprawiony_di" bpmnElement="Catch_Poprawiony">
+        <dc:Bounds x="1734" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Porownanie_di" bpmnElement="Task_Porownanie">
+        <dc:Bounds x="1820" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Posiedzenie2_di" bpmnElement="Catch_Posiedzenie2">
+        <dc:Bounds x="1970" y="292" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zatwierdzenie_di" bpmnElement="Task_Zatwierdzenie">
+        <dc:Bounds x="2056" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Druk_di" bpmnElement="End_Druk">
+        <dc:Bounds x="2206" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_Arkusz_di" bpmnElement="DataStoreRef_Arkusz">
+        <dc:Bounds x="201" y="160" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MF_Maszynopis_di" bpmnElement="MF_Maszynopis">
+        <di:waypoint x="108" y="560" />
+        <di:waypoint x="108" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Odmowa_di" bpmnElement="MF_Odmowa">
+        <di:waypoint x="862" y="468" />
+        <di:waypoint x="862" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Zaproszenie_di" bpmnElement="MF_Zaproszenie">
+        <di:waypoint x="1012" y="350" />
+        <di:waypoint x="1012" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Zgoda_di" bpmnElement="MF_Zgoda">
+        <di:waypoint x="1130" y="670" />
+        <di:waypoint x="1130" y="328" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Wydruk_di" bpmnElement="MF_Wydruk">
+        <di:waypoint x="1248" y="350" />
+        <di:waypoint x="1248" y="670" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Recenzja_di" bpmnElement="MF_Recenzja">
+        <di:waypoint x="1366" y="670" />
+        <di:waypoint x="1366" y="328" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Uwagi_di" bpmnElement="MF_Uwagi">
+        <di:waypoint x="1634" y="110" />
+        <di:waypoint x="1634" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Poprawiony_di" bpmnElement="MF_Poprawiony">
+        <di:waypoint x="1752" y="560" />
+        <di:waypoint x="1752" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Decyzja_di" bpmnElement="MF_Decyzja">
+        <di:waypoint x="2224" y="468" />
+        <di:waypoint x="2224" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_Arkusz1_di" bpmnElement="DOA_Arkusz1">
+        <di:waypoint x="226" y="110" />
+        <di:waypoint x="226" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_Arkusz2_di" bpmnElement="DOA_Arkusz2">
+        <di:waypoint x="1434" y="75" />
+        <di:waypoint x="251" y="183" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="326" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="426" y="70" />
+        <di:waypoint x="451" y="70" />
+        <di:waypoint x="451" y="310" />
+        <di:waypoint x="476" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="512" y="310" />
+        <di:waypoint x="537" y="310" />
+        <di:waypoint x="537" y="450" />
+        <di:waypoint x="562" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="662" y="450" />
+        <di:waypoint x="712" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="762" y="450" />
+        <di:waypoint x="844" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7">
+        <di:waypoint x="737" y="425" />
+        <di:waypoint x="737" y="310" />
+        <di:waypoint x="812" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8">
+        <di:waypoint x="912" y="310" />
+        <di:waypoint x="962" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9">
+        <di:waypoint x="1062" y="310" />
+        <di:waypoint x="1112" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10">
+        <di:waypoint x="1148" y="310" />
+        <di:waypoint x="1198" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11">
+        <di:waypoint x="1298" y="310" />
+        <di:waypoint x="1348" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F12_di" bpmnElement="F12">
+        <di:waypoint x="1384" y="310" />
+        <di:waypoint x="1409" y="310" />
+        <di:waypoint x="1409" y="70" />
+        <di:waypoint x="1434" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F13_di" bpmnElement="F13">
+        <di:waypoint x="1534" y="70" />
+        <di:waypoint x="1584" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F14_di" bpmnElement="F14">
+        <di:waypoint x="1684" y="70" />
+        <di:waypoint x="1734" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F15_di" bpmnElement="F15">
+        <di:waypoint x="1770" y="70" />
+        <di:waypoint x="1820" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F16_di" bpmnElement="F16">
+        <di:waypoint x="1920" y="70" />
+        <di:waypoint x="1945" y="70" />
+        <di:waypoint x="1945" y="310" />
+        <di:waypoint x="1970" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F17_di" bpmnElement="F17">
+        <di:waypoint x="2006" y="310" />
+        <di:waypoint x="2031" y="310" />
+        <di:waypoint x="2031" y="450" />
+        <di:waypoint x="2056" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F18_di" bpmnElement="F18">
+        <di:waypoint x="2156" y="450" />
+        <di:waypoint x="2206" y="450" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

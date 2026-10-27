@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1" id="definitions" name="Pusty model" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Pusty model" />
+</bpmn:definitions>

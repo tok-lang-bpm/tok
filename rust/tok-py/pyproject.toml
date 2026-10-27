@@ -1,0 +1,16 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "tok-engine"
+version = "0.2.0.dev0"
+description = "Python bindings of the tok Rust engine, used to test parity with the pure-Python implementation (not published)"
+requires-python = ">=3.8"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Marek Deja" }]
+classifiers = ["Private :: Do Not Upload"]
+
+[tool.maturin]
+module-name = "tok_engine"
+features = ["pyo3/extension-module"]

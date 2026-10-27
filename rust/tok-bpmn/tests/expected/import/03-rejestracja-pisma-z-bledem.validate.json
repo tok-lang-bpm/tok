@@ -1,0 +1,20 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W021",
+  "id": "F11",
+  "komunikat": "Gałąź F11 bramki „Czy pismo wymaga odpowiedzi?” (Gw_Odpowiedz) nie ma ani etykiety, ani warunku, ani statusu przepływu domyślnego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W042",
+  "id": "Task_Archiwizacja",
+  "komunikat": "„Przekazanie pisma do akt” (Task_Archiwizacja) nie ma przepływu wychodzącego — ścieżka powinna kończyć się zdarzeniem końcowym."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "Gw_Zlaczenie",
+  "komunikat": "Gw_Zlaczenie (bramka wykluczająca (XOR)) łączy gałęzie rozwidlone przez Gw_Rozwidlenie (bramka równoległa (AND)): wszystkie gałęzie dotrą do złączenia, więc dalsza część procesu wykona się kilka razy."
+ }
+]

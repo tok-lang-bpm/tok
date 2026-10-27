@@ -1,0 +1,92 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Start_Wniosek",
+  "komunikat": "„Wniosek wpłynął” (Start_Wniosek): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Rejestracja",
+  "komunikat": "„Rejestracja wniosku” (Task_Rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Poszukiwania",
+  "komunikat": "„Poszukiwania w zasobie” (Sub_Poszukiwania): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Task_Inwentarze",
+  "komunikat": "„Przegląd inwentarzy i katalogów” (Sub_Task_Inwentarze): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Gw_Odnalezione",
+  "komunikat": "„Czy akta odnalezione w inwentarzach?” (Sub_Gw_Odnalezione): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Throw_Szersze",
+  "komunikat": "„Zgłoszenie szerszych poszukiwań” (Sub_Throw_Szersze): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Task_Pokrewne",
+  "komunikat": "„Przeszukanie zespołów pokrewnych” (Sub_Task_Pokrewne): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Sub_Task_Wyniki",
+  "komunikat": "„Sporządzenie wyników kwerendy” (Sub_Task_Wyniki): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_NowyTermin",
+  "komunikat": "„Wyznaczenie nowego terminu odpowiedzi” (Task_NowyTermin): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Zawiadomienie",
+  "komunikat": "„Zawiadomienie wnioskodawcy o nowym terminie” (Task_Zawiadomienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Odpowiedz",
+  "komunikat": "„Przygotowanie odpowiedzi” (Task_Odpowiedz): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "Task_Wyslanie",
+  "komunikat": "„Wysłanie odpowiedzi” (Task_Wyslanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "EventSub_Wycofanie",
+  "komunikat": "„Wycofanie wniosku” (EventSub_Wycofanie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "EventSub_Start",
+  "komunikat": "„Wycofanie otrzymane” (EventSub_Start): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "EventSub_Task_Zamkniecie",
+  "komunikat": "„Zamknięcie sprawy w rejestrze” (EventSub_Task_Zamkniecie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

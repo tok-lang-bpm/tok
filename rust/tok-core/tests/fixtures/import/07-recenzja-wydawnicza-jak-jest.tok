@@ -1,0 +1,62 @@
+tok 0.1 "Recenzja wydawnicza — jak jest" id=Definitions_Recenzja namespace=https://codeberg.org/MarekDeja/ipm/diagramy/07 collaboration=Collaboration_Recenzja
+
+pool Participant_Wydawnictwo "Wydawnictwo uczelniane" process=Process_Recenzja
+  lane Lane_Redaktor "Redaktor prowadzący"
+    start Start_Maszynopis "Maszynopis wpłynął" message="Maszynopis"
+    user Task_Rejestracja "Rejestracja maszynopisu w arkuszu"
+    manual Task_Wydruk "Wydruk maszynopisu dla rady"
+    user Task_Przepisanie "Przepisanie uwag recenzenta do arkusza"
+    send Task_Uwagi "Przekazanie uwag autorowi" message="Uwagi recenzenta"
+    catch Catch_Poprawiony "Poprawiony maszynopis otrzymany" message="Poprawiony maszynopis"
+    manual Task_Porownanie "Porównanie poprawek z uwagami"
+  lane Lane_Sekretarz "Sekretarz rady wydawniczej"
+    catch Catch_Posiedzenie1 "Najbliższe posiedzenie rady" timer=P30D
+    manual Task_Poszukiwanie "Poszukiwanie recenzenta"
+    send Task_Zaproszenie "Wysłanie zaproszenia do recenzji" message="Zaproszenie do recenzji"
+    catch Catch_Zgoda "Zgoda recenzenta otrzymana" message="Zgoda na recenzję"
+    manual Task_Wysylka "Wysłanie wydruku pocztą"
+    catch Catch_Recenzja "Recenzja otrzymana" message="Recenzja"
+    catch Catch_Posiedzenie2 "Kolejne posiedzenie rady" timer=P30D
+  lane Lane_Rada "Rada wydawnicza"
+    manual Task_Kwalifikacja "Kwalifikacja maszynopisu na posiedzeniu"
+    xor Gw_Recenzja "Czy skierować do recenzji?"
+    end End_Odmowa "Autor powiadomiony o odmowie" message="Odmowa wydania"
+    manual Task_Zatwierdzenie "Zatwierdzenie do druku na posiedzeniu"
+    end End_Druk "Maszynopis zatwierdzony do druku" message="Decyzja o druku"
+  store DataStoreRef_Arkusz "Arkusz publikacji"
+
+pool Participant_Autor "Autor"
+
+pool Participant_Recenzent "Recenzent"
+
+flow Start_Maszynopis -> Task_Rejestracja id=F1
+flow Task_Rejestracja -> Task_Wydruk id=F2
+flow Task_Wydruk -> Catch_Posiedzenie1 id=F3
+flow Catch_Posiedzenie1 -> Task_Kwalifikacja id=F4
+flow Task_Kwalifikacja -> Gw_Recenzja id=F5
+flow Gw_Recenzja -> End_Odmowa "nie" id=F6
+flow Gw_Recenzja -> Task_Poszukiwanie "tak" id=F7
+flow Task_Poszukiwanie -> Task_Zaproszenie id=F8
+flow Task_Zaproszenie -> Catch_Zgoda id=F9
+flow Catch_Zgoda -> Task_Wysylka id=F10
+flow Task_Wysylka -> Catch_Recenzja id=F11
+flow Catch_Recenzja -> Task_Przepisanie id=F12
+flow Task_Przepisanie -> Task_Uwagi id=F13
+flow Task_Uwagi -> Catch_Poprawiony id=F14
+flow Catch_Poprawiony -> Task_Porownanie id=F15
+flow Task_Porownanie -> Catch_Posiedzenie2 id=F16
+flow Catch_Posiedzenie2 -> Task_Zatwierdzenie id=F17
+flow Task_Zatwierdzenie -> End_Druk id=F18
+
+message Participant_Autor -> Start_Maszynopis "Maszynopis" id=MF_Maszynopis
+message End_Odmowa -> Participant_Autor "Odmowa" message="Odmowa wydania" id=MF_Odmowa
+message Task_Zaproszenie -> Participant_Recenzent "Zaproszenie" message="Zaproszenie do recenzji" id=MF_Zaproszenie
+message Participant_Recenzent -> Catch_Zgoda "Zgoda" message="Zgoda na recenzję" id=MF_Zgoda
+message Task_Wysylka -> Participant_Recenzent "Wydruk pocztą" message="Wydruk maszynopisu" id=MF_Wydruk
+message Participant_Recenzent -> Catch_Recenzja "Recenzja" id=MF_Recenzja
+message Task_Uwagi -> Participant_Autor "Uwagi" message="Uwagi recenzenta" id=MF_Uwagi
+message Participant_Autor -> Catch_Poprawiony "Poprawiony maszynopis" id=MF_Poprawiony
+message End_Druk -> Participant_Autor "Decyzja" message="Decyzja o druku" id=MF_Decyzja
+
+writes Task_Rejestracja DataStoreRef_Arkusz
+writes Task_Przepisanie DataStoreRef_Arkusz

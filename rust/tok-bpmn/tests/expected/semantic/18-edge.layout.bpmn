@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="tok" exporterVersion="0.1" id="definitions" name="Edge cases" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_List" name="List" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="p" name="Organizacja" processRef="p-process" />
+    <bpmn:participant id="q" name="Odbiorca" />
+    <bpmn:messageFlow id="m-w-q" messageRef="Message_List" name="List" sourceRef="w" targetRef="q" />
+    <bpmn:messageFlow id="m-w-q-2" messageRef="Message_List" name="List" sourceRef="w" targetRef="q" />
+  </bpmn:collaboration>
+  <bpmn:process id="p-process" isExecutable="false" name="Edge cases">
+    <bpmn:startEvent id="s" />
+    <bpmn:sendTask id="w" messageRef="Message_List" name="Wysłanie" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-w" sourceRef="s" targetRef="w" />
+    <bpmn:sequenceFlow id="f-w-e" sourceRef="w" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="p_di" bpmnElement="p" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="600" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="q_di" bpmnElement="q" isHorizontal="true">
+        <dc:Bounds x="0" y="180" width="600" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="60" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w_di" bpmnElement="w">
+        <dc:Bounds x="146" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="296" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="m-w-q_di" bpmnElement="m-w-q">
+        <di:waypoint x="188" y="110" />
+        <di:waypoint x="188" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-w-q-2_di" bpmnElement="m-w-q-2">
+        <di:waypoint x="204" y="110" />
+        <di:waypoint x="204" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-w_di" bpmnElement="f-s-w">
+        <di:waypoint x="96" y="70" />
+        <di:waypoint x="146" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-w-e_di" bpmnElement="f-w-e">
+        <di:waypoint x="246" y="70" />
+        <di:waypoint x="296" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

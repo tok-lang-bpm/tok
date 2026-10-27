@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_TrybAkceptacji" name="Tryb akceptacji propozycji zakupu" namespace="https://codeberg.org/MarekDeja/ipm/pakiety/camunda-start" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <decision id="tryb-akceptacji" name="Tryb akceptacji">
+    <decisionTable id="DecisionTable_Tryb" hitPolicy="FIRST">
+      <input id="Input_Rodzaj" label="Rodzaj publikacji">
+        <inputExpression id="InputExpression_Rodzaj" typeRef="string">
+          <text>rodzaj</text>
+        </inputExpression>
+      </input>
+      <input id="Input_Cena" label="Cena (zł)">
+        <inputExpression id="InputExpression_Cena" typeRef="number">
+          <text>cena</text>
+        </inputExpression>
+      </input>
+      <output id="Output_Tryb" label="Tryb akceptacji" name="tryb" typeRef="string" />
+      <rule id="Rule_Ebook">
+        <description>e-booki zawsze akceptuje kierownik (licencje)</description>
+        <inputEntry id="Rule_Ebook_Rodzaj"><text>"e-book"</text></inputEntry>
+        <inputEntry id="Rule_Ebook_Cena"><text>-</text></inputEntry>
+        <outputEntry id="Rule_Ebook_Out"><text>"kierownik"</text></outputEntry>
+      </rule>
+      <rule id="Rule_Tania">
+        <description>tania książka drukowana bez akceptacji</description>
+        <inputEntry id="Rule_Tania_Rodzaj"><text>"drukowana"</text></inputEntry>
+        <inputEntry id="Rule_Tania_Cena"><text>&lt;= 150</text></inputEntry>
+        <outputEntry id="Rule_Tania_Out"><text>"automatyczny"</text></outputEntry>
+      </rule>
+      <rule id="Rule_Pozostale">
+        <description>pozostałe propozycje</description>
+        <inputEntry id="Rule_Pozostale_Rodzaj"><text>-</text></inputEntry>
+        <inputEntry id="Rule_Pozostale_Cena"><text>-</text></inputEntry>
+        <outputEntry id="Rule_Pozostale_Out"><text>"kierownik"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

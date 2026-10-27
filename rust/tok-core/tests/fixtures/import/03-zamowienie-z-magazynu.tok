@@ -1,0 +1,32 @@
+tok 0.1 "Zamówienie książki z magazynu" id=Definitions_Magazyn namespace=https://codeberg.org/MarekDeja/ipm/diagramy/03 collaboration=Collaboration_Magazyn
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Magazyn
+  lane Lane_Czytelnik "Czytelnik"
+    start Start "Potrzeba książki z magazynu"
+    user Task_Zlozenie "Złożenie zamówienia"
+  lane Lane_System "System biblioteczny"
+    service Task_Status "Sprawdzenie statusu egzemplarza"
+    xor Gw_Dostepny "Czy egzemplarz dostępny?"
+    service Task_Odmowa "Powiadomienie o niedostępności"
+    end End_Odrzucone "Zamówienie odrzucone"
+    and Gw_Rozwidlenie
+    service Task_Powiadomienie "Powiadomienie o terminie odbioru"
+    and Gw_Zlaczenie
+  lane Lane_Magazynier "Magazynier"
+    manual Task_Pobranie "Pobranie książki z magazynu"
+  lane Lane_Bibliotekarz "Bibliotekarz"
+    user Task_Wydanie "Wydanie książki"
+    end End_Wypozyczona "Książka wypożyczona"
+
+flow Start -> Task_Zlozenie id=F1
+flow Task_Zlozenie -> Task_Status id=F2
+flow Task_Status -> Gw_Dostepny id=F3
+flow Gw_Dostepny -> Task_Odmowa "nie" id=F4
+flow Task_Odmowa -> End_Odrzucone id=F5
+flow Gw_Dostepny -> Gw_Rozwidlenie "tak" id=F6
+flow Gw_Rozwidlenie -> Task_Pobranie id=F7
+flow Gw_Rozwidlenie -> Task_Powiadomienie id=F8
+flow Task_Pobranie -> Gw_Zlaczenie id=F9
+flow Task_Powiadomienie -> Gw_Zlaczenie id=F10
+flow Gw_Zlaczenie -> Task_Wydanie id=F11
+flow Task_Wydanie -> End_Wypozyczona id=F12

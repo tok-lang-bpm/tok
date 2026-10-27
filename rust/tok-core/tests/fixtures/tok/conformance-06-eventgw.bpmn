@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="definitions" name="Oczekiwanie na odpowiedź" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Ksiazka" name="Książka" />
+  <bpmn:message id="Message_Odmowa" name="Odmowa" />
+  <bpmn:process id="process" name="Oczekiwanie na odpowiedź" isExecutable="false">
+    <bpmn:startEvent id="s" />
+    <bpmn:sendTask id="z" name="Wysłanie zamówienia" messageRef="Message_Zamowienie" />
+    <bpmn:eventBasedGateway id="g" name="Co nastąpi pierwsze?" />
+    <bpmn:intermediateCatchEvent id="k" name="Książka dotarła">
+      <bpmn:messageEventDefinition id="k-def" messageRef="Message_Ksiazka" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="o" name="Odmowa">
+      <bpmn:messageEventDefinition id="o-def" messageRef="Message_Odmowa" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="t" name="Minęło 14 dni">
+      <bpmn:timerEventDefinition id="t-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P14D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="c" name="Zmiana statusu">
+      <bpmn:conditionalEventDefinition id="c-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">status = "zamknięte"</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="l1" name="Do strony 2">
+      <bpmn:linkEventDefinition id="l1-def" name="strona2" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e1" />
+    <bpmn:endEvent id="e2" name="Koniec bez książki">
+      <bpmn:terminateEventDefinition id="e2-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-z" sourceRef="s" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-g" sourceRef="z" targetRef="g" />
+    <bpmn:sequenceFlow id="f-g-k" sourceRef="g" targetRef="k" />
+    <bpmn:sequenceFlow id="f-g-o" sourceRef="g" targetRef="o" />
+    <bpmn:sequenceFlow id="f-g-t" sourceRef="g" targetRef="t" />
+    <bpmn:sequenceFlow id="f-g-c" sourceRef="g" targetRef="c" />
+    <bpmn:sequenceFlow id="f-k-e1" sourceRef="k" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-o-e2" sourceRef="o" targetRef="e2" />
+    <bpmn:sequenceFlow id="f-t-l1" sourceRef="t" targetRef="l1" />
+    <bpmn:sequenceFlow id="f-c-e2" sourceRef="c" targetRef="e2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g">
+        <dc:Bounds x="266" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="k_di" bpmnElement="k">
+        <dc:Bounds x="366" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="o_di" bpmnElement="o">
+        <dc:Bounds x="366" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_di" bpmnElement="t">
+        <dc:Bounds x="366" y="246" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_di" bpmnElement="c">
+        <dc:Bounds x="366" y="332" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="l1_di" bpmnElement="l1">
+        <dc:Bounds x="452" y="246" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e1_di" bpmnElement="e1">
+        <dc:Bounds x="452" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="452" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-z_di" bpmnElement="f-s-z">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-z-g_di" bpmnElement="f-z-g">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-k_di" bpmnElement="f-g-k">
+        <di:waypoint x="316" y="70" />
+        <di:waypoint x="366" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-o_di" bpmnElement="f-g-o">
+        <di:waypoint x="291" y="95" />
+        <di:waypoint x="291" y="178" />
+        <di:waypoint x="366" y="178" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-t_di" bpmnElement="f-g-t">
+        <di:waypoint x="291" y="95" />
+        <di:waypoint x="291" y="264" />
+        <di:waypoint x="366" y="264" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-c_di" bpmnElement="f-g-c">
+        <di:waypoint x="291" y="95" />
+        <di:waypoint x="291" y="350" />
+        <di:waypoint x="366" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-k-e1_di" bpmnElement="f-k-e1">
+        <di:waypoint x="402" y="70" />
+        <di:waypoint x="452" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-o-e2_di" bpmnElement="f-o-e2">
+        <di:waypoint x="402" y="178" />
+        <di:waypoint x="452" y="178" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-t-l1_di" bpmnElement="f-t-l1">
+        <di:waypoint x="402" y="264" />
+        <di:waypoint x="452" y="264" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-c-e2_di" bpmnElement="f-c-e2">
+        <di:waypoint x="402" y="350" />
+        <di:waypoint x="427" y="350" />
+        <di:waypoint x="427" y="178" />
+        <di:waypoint x="452" y="178" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

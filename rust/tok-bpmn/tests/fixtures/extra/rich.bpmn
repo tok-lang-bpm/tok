@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="D2" targetNamespace="http://example.org">
+  <bpmn:message id="M1" name="Wniosek"/>
+  <bpmn:escalation id="Esc" name="E" escalationCode="E"/>
+  <bpmn:error id="Err" name="Err"/>
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="Org" name="Organizacja z bardzo długą nazwą, która się zawija w kilku liniach" processRef="P"/>
+    <bpmn:participant id="Ext" name="Klient"/>
+    <bpmn:messageFlow id="MF1" name="Wniosek" sourceRef="Ext" targetRef="S" messageRef="M1"/>
+    <bpmn:messageFlow id="MF2" name="Odpowiedź do klienta" sourceRef="Send" targetRef="Ext"/>
+    <bpmn:messageFlow id="MF3" sourceRef="T1" targetRef="T2"/>
+    <bpmn:messageFlow id="MF4" sourceRef="Ext" targetRef="L12"/>
+  </bpmn:collaboration>
+  <bpmn:process id="P" isExecutable="true">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Dział">
+        <bpmn:childLaneSet id="CLS">
+          <bpmn:lane id="L11" name="Sekretariat"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T1</bpmn:flowNodeRef><bpmn:flowNodeRef>Par</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L12" name="Kierownik"><bpmn:flowNodeRef>Sub</bpmn:flowNodeRef><bpmn:flowNodeRef>T2</bpmn:flowNodeRef><bpmn:flowNodeRef>Join</bpmn:flowNodeRef><bpmn:flowNodeRef>T1</bpmn:flowNodeRef></bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane id="L2" name="System"><bpmn:flowNodeRef>Send</bpmn:flowNodeRef><bpmn:flowNodeRef>Cx</bpmn:flowNodeRef><bpmn:flowNodeRef>LinkT</bpmn:flowNodeRef><bpmn:flowNodeRef>LinkC</bpmn:flowNodeRef><bpmn:flowNodeRef>End</bpmn:flowNodeRef><bpmn:flowNodeRef>Tx</bpmn:flowNodeRef><bpmn:flowNodeRef>Comp</bpmn:flowNodeRef><bpmn:flowNodeRef>Ev</bpmn:flowNodeRef><bpmn:flowNodeRef>ST</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:dataObject id="DO" isCollection="true"/>
+    <bpmn:dataObjectReference id="DOR" name="Lista" dataObjectRef="DO"><bpmn:dataState id="DS1" name="nowa"/></bpmn:dataObjectReference>
+    <bpmn:dataStore id="Store" name="Rejestr"/>
+    <bpmn:dataStoreReference id="DSR" dataStoreRef="Store"/>
+    <bpmn:startEvent id="S" name="Start"><bpmn:messageEventDefinition messageRef="M1"/></bpmn:startEvent>
+    <bpmn:userTask id="T1" name="Rejestracja"><bpmn:dataOutputAssociation><bpmn:targetRef>DSR</bpmn:targetRef></bpmn:dataOutputAssociation><bpmn:multiInstanceLoopCharacteristics isSequential="true"/></bpmn:userTask>
+    <bpmn:parallelGateway id="Par" default="F4"/>
+    <bpmn:subProcess id="Sub" name="Ocena">
+      <bpmn:startEvent id="SS"/>
+      <bpmn:task id="ST" name="Sprawdzenie"><bpmn:standardLoopCharacteristics/></bpmn:task>
+      <bpmn:intermediateThrowEvent id="Th" name="Eskaluj"><bpmn:escalationEventDefinition escalationRef="Esc"/></bpmn:intermediateThrowEvent>
+      <bpmn:endEvent id="SE"><bpmn:errorEventDefinition errorRef="Err"/></bpmn:endEvent>
+      <bpmn:sequenceFlow id="SF1" sourceRef="SS" targetRef="ST"/>
+      <bpmn:sequenceFlow id="SF2" sourceRef="ST" targetRef="Th"/>
+      <bpmn:sequenceFlow id="SF3" sourceRef="Th" targetRef="SE"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="BE" name="Eskalacja" attachedToRef="Sub" cancelActivity="false"><bpmn:escalationEventDefinition escalationRef="Esc"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="BErr" attachedToRef="Sub" cancelActivity="false"><bpmn:errorEventDefinition errorRef="Err"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="BT" name="Czas" attachedToRef="Sub"><bpmn:timerEventDefinition/></bpmn:boundaryEvent>
+    <bpmn:businessRuleTask id="T2" name="Decyzja"><bpmn:property id="T2p" name="__targetRef_placeholder"/><bpmn:dataInputAssociation><bpmn:sourceRef>DOR</bpmn:sourceRef><bpmn:targetRef>T2p</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:businessRuleTask>
+    <bpmn:inclusiveGateway id="Join"/>
+    <bpmn:complexGateway id="Cx" name="Złożona"/>
+    <bpmn:sendTask id="Send" name="Wysyłka" messageRef="M1"/>
+    <bpmn:intermediateThrowEvent id="LinkT" name="Do B"><bpmn:linkEventDefinition name="B"/></bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="LinkC" name="B"><bpmn:linkEventDefinition name="B"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End" name="Koniec"><bpmn:terminateEventDefinition/></bpmn:endEvent>
+    <bpmn:transaction id="Tx" name="Transakcja"><bpmn:startEvent id="TS"/><bpmn:endEvent id="TE"><bpmn:cancelEventDefinition/></bpmn:endEvent><bpmn:sequenceFlow id="TF" sourceRef="TS" targetRef="TE"/></bpmn:transaction>
+    <bpmn:boundaryEvent id="BC" attachedToRef="Tx"><bpmn:compensateEventDefinition/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="BCa" attachedToRef="T2"><bpmn:cancelEventDefinition/></bpmn:boundaryEvent>
+    <bpmn:task id="Comp" name="Cofnięcie" isForCompensation="true"/>
+    <bpmn:subProcess id="Ev" triggeredByEvent="true"><bpmn:startEvent id="EvS" isInterrupting="false"><bpmn:messageEventDefinition messageRef="M1"/><bpmn:timerEventDefinition><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1D</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:startEvent><bpmn:endEvent id="EvE"/><bpmn:sequenceFlow id="EvF" sourceRef="EvS" targetRef="EvE"/></bpmn:subProcess>
+    <bpmn:textAnnotation id="Ann"><bpmn:text>Uwaga: to jest dłuższa adnotacja, która zostanie złamana na kilka wierszy tekstu w rysunku.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As" associationDirection="One" sourceRef="Ann" targetRef="T1"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T1"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T1" targetRef="Par"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="Par" targetRef="Sub"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">x</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F4" sourceRef="Par" targetRef="T2"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="Sub" targetRef="Join"/>
+    <bpmn:sequenceFlow id="F6" name="ok" sourceRef="T2" targetRef="Join"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">y</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F7" sourceRef="Join" targetRef="Cx"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="Cx" targetRef="Send"/>
+    <bpmn:sequenceFlow id="F9" sourceRef="Cx" targetRef="LinkT"/>
+    <bpmn:sequenceFlow id="F10" sourceRef="LinkC" targetRef="End"/>
+    <bpmn:sequenceFlow id="F11" sourceRef="Send" targetRef="Tx"/>
+    <bpmn:sequenceFlow id="F12" sourceRef="Tx" targetRef="End"/>
+    <bpmn:sequenceFlow id="F13" sourceRef="BT" targetRef="End"/>
+    <bpmn:sequenceFlow id="F14" sourceRef="BE" targetRef="End"/>
+    <bpmn:sequenceFlow id="F15" sourceRef="BErr" targetRef="Comp"/>
+    <bpmn:sequenceFlow id="F16" sourceRef="End" targetRef="S"/>
+    <bpmn:sequenceFlow id="F17" sourceRef="Missing" targetRef="End"/>
+    <bpmn:sequenceFlow id="F18" sourceRef="T1"/>
+    <bpmn:sequenceFlow id="F19" sourceRef="BC" targetRef="End"/>
+    <bpmn:sequenceFlow id="F20" sourceRef="T1" targetRef="ST"/>
+  </bpmn:process>
+</bpmn:definitions>

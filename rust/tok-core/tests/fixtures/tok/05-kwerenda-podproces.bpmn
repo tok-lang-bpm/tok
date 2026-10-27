@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Kwerenda archiwalna z podprocesem" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Wniosek_o_kwerende" name="Wniosek o kwerendę" />
+  <bpmn:message id="Message_Odpowiedz_na_kwerende" name="Odpowiedź na kwerendę" />
+  <bpmn:message id="Message_Wycofanie_wniosku" name="Wycofanie wniosku" />
+  <bpmn:escalation id="Escalation_Trudna_kwerenda" name="Trudna kwerenda" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="archiwum" name="Archiwum Państwowe" processRef="archiwum-process" />
+    <bpmn:participant id="wnioskodawca" name="Wnioskodawca" />
+    <bpmn:messageFlow id="m-wnioskodawca-wniosek" name="Wniosek o kwerendę" sourceRef="wnioskodawca" targetRef="wniosek" messageRef="Message_Wniosek_o_kwerende" />
+    <bpmn:messageFlow id="m-wyslana-wnioskodawca" name="Odpowiedź na kwerendę" sourceRef="wyslana" targetRef="wnioskodawca" messageRef="Message_Odpowiedz_na_kwerende" />
+    <bpmn:messageFlow id="m-wnioskodawca-w-start" name="Wycofanie wniosku" sourceRef="wnioskodawca" targetRef="w-start" messageRef="Message_Wycofanie_wniosku" />
+  </bpmn:collaboration>
+  <bpmn:process id="archiwum-process" name="Kwerenda archiwalna z podprocesem" isExecutable="false">
+    <bpmn:laneSet id="archiwum-lanes">
+      <bpmn:lane id="kancelaria" name="Kancelaria">
+        <bpmn:flowNodeRef>wniosek</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zakres</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>bezprzedmiotowy</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wycofanie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="archiwista" name="Archiwista">
+        <bpmn:flowNodeRef>poszukiwania</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>eskalacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odpowiedz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wyslana</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="kierownik" name="Kierownik oddziału">
+        <bpmn:flowNodeRef>decyzja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rozstrzygnieto</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="wniosek" name="Wniosek o kwerendę wpłynął">
+      <bpmn:messageEventDefinition id="wniosek-def" messageRef="Message_Wniosek_o_kwerende" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="rejestracja" name="Rejestracja wniosku" />
+    <bpmn:exclusiveGateway id="zakres" name="Czy wniosek dotyczy zasobu archiwum?" />
+    <bpmn:endEvent id="bezprzedmiotowy" name="Wniosek bezprzedmiotowy">
+      <bpmn:terminateEventDefinition id="bezprzedmiotowy-def" />
+    </bpmn:endEvent>
+    <bpmn:subProcess id="wycofanie" name="Wycofanie wniosku" triggeredByEvent="true">
+      <bpmn:startEvent id="w-start" name="Wniosek wycofany">
+        <bpmn:messageEventDefinition id="w-start-def" messageRef="Message_Wycofanie_wniosku" />
+      </bpmn:startEvent>
+      <bpmn:userTask id="zamkniecie" name="Zamknięcie sprawy" />
+      <bpmn:endEvent id="w-koniec" name="Sprawa zamknięta" />
+      <bpmn:sequenceFlow id="f-w-start-zamkniecie" sourceRef="w-start" targetRef="zamkniecie" />
+      <bpmn:sequenceFlow id="f-zamkniecie-w-koniec" sourceRef="zamkniecie" targetRef="w-koniec" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="poszukiwania" name="Poszukiwania w zasobie">
+      <bpmn:startEvent id="p-start" />
+      <bpmn:userTask id="inwentarze" name="Przegląd inwentarzy" />
+      <bpmn:exclusiveGateway id="znaleziono" name="Czy znaleziono akta?" />
+      <bpmn:userTask id="akta" name="Analiza akt" />
+      <bpmn:intermediateThrowEvent id="trudnosc" name="Kwerenda wymaga decyzji kierownika">
+        <bpmn:escalationEventDefinition id="trudnosc-def" escalationRef="Escalation_Trudna_kwerenda" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:endEvent id="p-koniec" name="Poszukiwania zakończone" />
+      <bpmn:sequenceFlow id="f-p-start-inwentarze" sourceRef="p-start" targetRef="inwentarze" />
+      <bpmn:sequenceFlow id="f-inwentarze-znaleziono" sourceRef="inwentarze" targetRef="znaleziono" />
+      <bpmn:sequenceFlow id="f-znaleziono-akta" name="tak" sourceRef="znaleziono" targetRef="akta" />
+      <bpmn:sequenceFlow id="f-znaleziono-trudnosc" name="nie" sourceRef="znaleziono" targetRef="trudnosc" />
+      <bpmn:sequenceFlow id="f-trudnosc-akta" sourceRef="trudnosc" targetRef="akta" />
+      <bpmn:sequenceFlow id="f-akta-p-koniec" sourceRef="akta" targetRef="p-koniec" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="eskalacja" name="Trudna kwerenda" attachedToRef="poszukiwania" cancelActivity="false">
+      <bpmn:escalationEventDefinition id="eskalacja-def" escalationRef="Escalation_Trudna_kwerenda" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="odpowiedz" name="Przygotowanie odpowiedzi" />
+    <bpmn:endEvent id="wyslana" name="Odpowiedź wysłana">
+      <bpmn:messageEventDefinition id="wyslana-def" messageRef="Message_Odpowiedz_na_kwerende" />
+    </bpmn:endEvent>
+    <bpmn:userTask id="decyzja" name="Decyzja o dalszych poszukiwaniach" />
+    <bpmn:endEvent id="rozstrzygnieto" name="Sprawa rozstrzygnięta" />
+    <bpmn:sequenceFlow id="f-wniosek-rejestracja" sourceRef="wniosek" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-zakres" sourceRef="rejestracja" targetRef="zakres" />
+    <bpmn:sequenceFlow id="f-zakres-poszukiwania" name="tak" sourceRef="zakres" targetRef="poszukiwania" />
+    <bpmn:sequenceFlow id="f-zakres-bezprzedmiotowy" name="nie" sourceRef="zakres" targetRef="bezprzedmiotowy" />
+    <bpmn:sequenceFlow id="f-poszukiwania-odpowiedz" sourceRef="poszukiwania" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-wyslana" sourceRef="odpowiedz" targetRef="wyslana" />
+    <bpmn:sequenceFlow id="f-eskalacja-decyzja" sourceRef="eskalacja" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-rozstrzygnieto" sourceRef="decyzja" targetRef="rozstrzygnieto" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="archiwum_di" bpmnElement="archiwum" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1370" height="690" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wnioskodawca_di" bpmnElement="wnioskodawca" isHorizontal="true">
+        <dc:Bounds x="0" y="730" width="1370" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kancelaria_di" bpmnElement="kancelaria" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1340" height="340" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archiwista_di" bpmnElement="archiwista" isHorizontal="true">
+        <dc:Bounds x="30" y="340" width="1340" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kierownik_di" bpmnElement="kierownik" isHorizontal="true">
+        <dc:Bounds x="30" y="550" width="1340" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wniosek_di" bpmnElement="wniosek">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zakres_di" bpmnElement="zakres" isMarkerVisible="true">
+        <dc:Bounds x="326" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bezprzedmiotowy_di" bpmnElement="bezprzedmiotowy">
+        <dc:Bounds x="743" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wycofanie_di" bpmnElement="wycofanie" isExpanded="true">
+        <dc:Bounds x="90" y="160" width="340" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w-start_di" bpmnElement="w-start">
+        <dc:Bounds x="120" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamkniecie_di" bpmnElement="zamkniecie">
+        <dc:Bounds x="206" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w-koniec_di" bpmnElement="w-koniec">
+        <dc:Bounds x="356" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="poszukiwania_di" bpmnElement="poszukiwania" isExpanded="true">
+        <dc:Bounds x="426" y="370" width="670" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p-start_di" bpmnElement="p-start">
+        <dc:Bounds x="456" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inwentarze_di" bpmnElement="inwentarze">
+        <dc:Bounds x="542" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="znaleziono_di" bpmnElement="znaleziono" isMarkerVisible="true">
+        <dc:Bounds x="692" y="425" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="akta_di" bpmnElement="akta">
+        <dc:Bounds x="878" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="trudnosc_di" bpmnElement="trudnosc">
+        <dc:Bounds x="792" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p-koniec_di" bpmnElement="p-koniec">
+        <dc:Bounds x="1028" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odpowiedz_di" bpmnElement="odpowiedz">
+        <dc:Bounds x="1146" y="405" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslana_di" bpmnElement="wyslana">
+        <dc:Bounds x="1296" y="427" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="decyzja_di" bpmnElement="decyzja">
+        <dc:Bounds x="1146" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rozstrzygnieto_di" bpmnElement="rozstrzygnieto">
+        <dc:Bounds x="1296" y="602" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="eskalacja_di" bpmnElement="eskalacja">
+        <dc:Bounds x="1048" y="502" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="m-wnioskodawca-wniosek_di" bpmnElement="m-wnioskodawca-wniosek">
+        <di:waypoint x="76" y="730" />
+        <di:waypoint x="76" y="78" />
+        <di:waypoint x="92" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-wyslana-wnioskodawca_di" bpmnElement="m-wyslana-wnioskodawca">
+        <di:waypoint x="1330" y="453" />
+        <di:waypoint x="1346" y="453" />
+        <di:waypoint x="1346" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-wnioskodawca-w-start_di" bpmnElement="m-wnioskodawca-w-start">
+        <di:waypoint x="138" y="730" />
+        <di:waypoint x="138" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-w-start-zamkniecie_di" bpmnElement="f-w-start-zamkniecie">
+        <di:waypoint x="156" y="240" />
+        <di:waypoint x="206" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zamkniecie-w-koniec_di" bpmnElement="f-zamkniecie-w-koniec">
+        <di:waypoint x="306" y="240" />
+        <di:waypoint x="356" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-p-start-inwentarze_di" bpmnElement="f-p-start-inwentarze">
+        <di:waypoint x="492" y="450" />
+        <di:waypoint x="542" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-inwentarze-znaleziono_di" bpmnElement="f-inwentarze-znaleziono">
+        <di:waypoint x="642" y="450" />
+        <di:waypoint x="692" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-znaleziono-akta_di" bpmnElement="f-znaleziono-akta">
+        <di:waypoint x="717" y="425" />
+        <di:waypoint x="717" y="410" />
+        <di:waypoint x="853" y="410" />
+        <di:waypoint x="853" y="442" />
+        <di:waypoint x="878" y="442" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-znaleziono-trudnosc_di" bpmnElement="f-znaleziono-trudnosc">
+        <di:waypoint x="742" y="450" />
+        <di:waypoint x="792" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-trudnosc-akta_di" bpmnElement="f-trudnosc-akta">
+        <di:waypoint x="828" y="458" />
+        <di:waypoint x="878" y="458" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-akta-p-koniec_di" bpmnElement="f-akta-p-koniec">
+        <di:waypoint x="978" y="450" />
+        <di:waypoint x="1028" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wniosek-rejestracja_di" bpmnElement="f-wniosek-rejestracja">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-zakres_di" bpmnElement="f-rejestracja-zakres">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="326" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zakres-poszukiwania_di" bpmnElement="f-zakres-poszukiwania">
+        <di:waypoint x="351" y="95" />
+        <di:waypoint x="351" y="445" />
+        <di:waypoint x="426" y="445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zakres-bezprzedmiotowy_di" bpmnElement="f-zakres-bezprzedmiotowy">
+        <di:waypoint x="376" y="70" />
+        <di:waypoint x="743" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-poszukiwania-odpowiedz_di" bpmnElement="f-poszukiwania-odpowiedz">
+        <di:waypoint x="1096" y="445" />
+        <di:waypoint x="1146" y="445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odpowiedz-wyslana_di" bpmnElement="f-odpowiedz-wyslana">
+        <di:waypoint x="1246" y="445" />
+        <di:waypoint x="1296" y="445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-eskalacja-decyzja_di" bpmnElement="f-eskalacja-decyzja">
+        <di:waypoint x="1066" y="538" />
+        <di:waypoint x="1066" y="620" />
+        <di:waypoint x="1146" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-decyzja-rozstrzygnieto_di" bpmnElement="f-decyzja-rozstrzygnieto">
+        <di:waypoint x="1246" y="620" />
+        <di:waypoint x="1296" y="620" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

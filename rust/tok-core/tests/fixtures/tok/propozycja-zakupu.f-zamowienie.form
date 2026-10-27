@@ -1,0 +1,36 @@
+{
+  "id": "f-zamowienie",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_1",
+      "text": "## Zamówienie: {{tytul}} (koszt z wysyłką: {{koszt}} zł)"
+    },
+    {
+      "type": "textfield",
+      "id": "Field_dostawca",
+      "key": "dostawca",
+      "label": "Dostawca",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_numer_zamowienia",
+      "key": "numer_zamowienia",
+      "label": "Numer zamówienia",
+      "validate": {
+        "required": true
+      }
+    }
+  ],
+  "schemaVersion": 18
+}

@@ -1,0 +1,122 @@
+[
+ {
+  "poziom": "błąd",
+  "kod": "E004",
+  "id": "F17",
+  "komunikat": "sequenceFlow F17: atrybut sourceRef=\"Missing\" wskazuje na nieistniejący element."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E005",
+  "id": "F18",
+  "komunikat": "Przepływ sekwencji F18 musi mieć atrybuty sourceRef i targetRef."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E006",
+  "id": "F20",
+  "komunikat": "Przepływ sekwencji F20 („Rejestracja” (T1) → „Sprawdzenie” (ST)) przekracza granicę procesu lub podprocesu. Między basenami używa się przepływu komunikatów; wnętrze podprocesu ma własne zdarzenie początkowe."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E008",
+  "id": "MF3",
+  "komunikat": "Przepływ komunikatów MF3 łączy elementy tego samego basenu „Organizacja z bardzo długą nazwą, która się zawija w kilku liniach” (Org) („Rejestracja” (T1) → „Decyzja” (T2)). Wewnątrz jednego basenu, także między liniami, używa się przepływu sekwencji; komunikaty płyną tylko między basenami."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E011",
+  "id": "S",
+  "komunikat": "„Start” (S): zdarzenie początkowe nie może mieć przepływu wchodzącego."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E012",
+  "id": "BErr",
+  "komunikat": "BErr: graniczne zdarzenie błędu zawsze przerywa czynność (cancelActivity nie może być false)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W010",
+  "id": "BT",
+  "komunikat": "„Czas” (BT): zdarzenie czasowe bez określenia czasu (timeDuration, timeDate lub timeCycle)."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E011",
+  "id": "End",
+  "komunikat": "„Koniec” (End): zdarzenie końcowe nie może mieć przepływu wychodzącego."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E012",
+  "id": "BC",
+  "komunikat": "BC: graniczne zdarzenie kompensacji łączy się z obsługą asocjacją, nie przepływem sekwencji."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E010",
+  "id": "BCa",
+  "komunikat": "BCa: zdarzenie anulowania dopuszczalne jest tylko w transakcji lub na jej granicy."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E014",
+  "id": "Comp",
+  "komunikat": "„Cofnięcie” (Comp): czynność kompensacyjna nie ma przepływów sekwencji."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E017",
+  "id": "F3",
+  "komunikat": "Przepływ F3 z bramki równoległej Par nie może mieć warunku."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E017",
+  "id": "Par",
+  "komunikat": "Par: bramka równoległa nie ma przepływu domyślnego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W021",
+  "id": "F8",
+  "komunikat": "Gałąź F8 bramki „Złożona” (Cx) nie ma ani etykiety, ani warunku, ani statusu przepływu domyślnego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W021",
+  "id": "F9",
+  "komunikat": "Gałąź F9 bramki „Złożona” (Cx) nie ma ani etykiety, ani warunku, ani statusu przepływu domyślnego."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "L020",
+  "id": "Cx",
+  "komunikat": "„Złożona” (Cx): nazwa rozgałęziającej bramki powinna być pytaniem (kończyć się „?”)."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "E030",
+  "id": "T1",
+  "komunikat": "Element „Rejestracja” (T1) jest przypisany do dwóch linii (Sekretariat i Kierownik)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W030",
+  "id": "ST",
+  "komunikat": "Linia System wskazuje element ST, który nie jest bezpośrednim elementem procesu P (elementy wnętrza podprocesu nie należą do linii)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W042",
+  "id": "BCa",
+  "komunikat": "BCa nie ma przepływu wychodzącego — ścieżka powinna kończyć się zdarzeniem końcowym."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "Join",
+  "komunikat": "Join (bramka inkluzywna (OR)) łączy gałęzie rozwidlone przez Par (bramka równoległa (AND)): wszystkie gałęzie dotrą do złączenia, więc dalsza część procesu wykona się kilka razy."
+ }
+]

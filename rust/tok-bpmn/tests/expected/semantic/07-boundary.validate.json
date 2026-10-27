@@ -1,0 +1,20 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W041",
+  "id": "d",
+  "komunikat": "„Data” (d) jest nieosiągalny ze zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W042",
+  "id": "d",
+  "komunikat": "„Data” (d) nie ma przepływu wychodzącego — ścieżka powinna kończyć się zdarzeniem końcowym."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W053",
+  "id": "e4",
+  "komunikat": "e4 rzuca eskalację, której nic nie łapie (brak granicznego zdarzenia eskalacji z tym samym escalationRef na otaczającym podprocesie)."
+ }
+]

@@ -1,0 +1,69 @@
+{
+  "id": "f-propozycja",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_1",
+      "text": "## Propozycja zakupu książki"
+    },
+    {
+      "type": "textfield",
+      "id": "Field_tytul",
+      "key": "tytul",
+      "label": "Tytuł",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textfield",
+      "id": "Field_autor",
+      "key": "autor",
+      "label": "Autor"
+    },
+    {
+      "type": "select",
+      "id": "Field_rodzaj",
+      "key": "rodzaj",
+      "label": "Rodzaj publikacji",
+      "values": [
+        {
+          "label": "książka drukowana",
+          "value": "drukowana"
+        },
+        {
+          "label": "e-book",
+          "value": "e-book"
+        }
+      ],
+      "defaultValue": "drukowana",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "number",
+      "id": "Field_cena",
+      "key": "cena",
+      "label": "Przybliżona cena (zł)",
+      "validate": {
+        "required": true,
+        "min": 0
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Field_uzasadnienie",
+      "key": "uzasadnienie",
+      "label": "Uzasadnienie"
+    }
+  ],
+  "schemaVersion": 18
+}

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1" id="definitions" name="Bramka OR" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Powiadomienie_e_mail" name="Powiadomienie e-mail" />
+  <bpmn:message id="Message_Powiadomienie_SMS" name="Powiadomienie SMS" />
+  <bpmn:process id="process" isExecutable="false" name="Bramka OR">
+    <bpmn:startEvent id="s" />
+    <bpmn:inclusiveGateway default="f-g-l" id="g" name="Jakie powiadomienia?" />
+    <bpmn:sendTask id="m" messageRef="Message_Powiadomienie_e_mail" name="E-mail" />
+    <bpmn:sendTask id="t" messageRef="Message_Powiadomienie_SMS" name="SMS" />
+    <bpmn:task id="l" name="List" />
+    <bpmn:inclusiveGateway id="j" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-g" sourceRef="s" targetRef="g" />
+    <bpmn:sequenceFlow id="f-g-m" name="e-mail" sourceRef="g" targetRef="m">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">kanal.email</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-t" name="sms" sourceRef="g" targetRef="t">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">kanal.sms</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-l" name="list" sourceRef="g" targetRef="l" />
+    <bpmn:sequenceFlow id="f-m-j" sourceRef="m" targetRef="j" />
+    <bpmn:sequenceFlow id="f-t-j" sourceRef="t" targetRef="j" />
+    <bpmn:sequenceFlow id="f-l-j" sourceRef="l" targetRef="j" />
+    <bpmn:sequenceFlow id="f-j-e" sourceRef="j" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g">
+        <dc:Bounds x="116" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="m_di" bpmnElement="m">
+        <dc:Bounds x="216" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_di" bpmnElement="t">
+        <dc:Bounds x="216" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="l_di" bpmnElement="l">
+        <dc:Bounds x="216" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="j_di" bpmnElement="j">
+        <dc:Bounds x="366" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="466" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-g_di" bpmnElement="f-s-g">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-m_di" bpmnElement="f-g-m">
+        <di:waypoint x="166" y="70" />
+        <di:waypoint x="216" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-t_di" bpmnElement="f-g-t">
+        <di:waypoint x="141" y="95" />
+        <di:waypoint x="141" y="200" />
+        <di:waypoint x="216" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-l_di" bpmnElement="f-g-l">
+        <di:waypoint x="141" y="95" />
+        <di:waypoint x="141" y="330" />
+        <di:waypoint x="216" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-m-j_di" bpmnElement="f-m-j">
+        <di:waypoint x="316" y="70" />
+        <di:waypoint x="366" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-t-j_di" bpmnElement="f-t-j">
+        <di:waypoint x="316" y="200" />
+        <di:waypoint x="391" y="200" />
+        <di:waypoint x="391" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-l-j_di" bpmnElement="f-l-j">
+        <di:waypoint x="316" y="330" />
+        <di:waypoint x="391" y="330" />
+        <di:waypoint x="391" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-j-e_di" bpmnElement="f-j-e">
+        <di:waypoint x="416" y="70" />
+        <di:waypoint x="466" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

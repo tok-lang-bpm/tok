@@ -1,0 +1,33 @@
+tok 0.1 "Odbiór książki z wypożyczenia międzybibliotecznego" id=Definitions_OdbiorKsiazki namespace=https://codeberg.org/MarekDeja/ipm/diagramy/06 collaboration=Collaboration_OdbiorKsiazki
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_OdbiorKsiazki
+  lane Lane_Bibliotekarz "Bibliotekarz wypożyczalni"
+    start Start_Dotarla "Książka dotarła" message="Paczka z książką"
+    user Task_RejestracjaReczna "Rejestracja ręczna egzemplarza"
+    xor Gw_Zarejestrowano
+    user Task_Wydanie "Wydanie książki czytelnikowi"
+    boundary Boundary_Przypomnienie "Minęły 4 dni" noninterrupting on=Task_Wydanie timer=P4D
+    boundary Boundary_Termin "Minęło 7 dni" on=Task_Wydanie timer=P7D
+    end End_Wydana "Książka wydana"
+    manual Task_Odeslanie "Odesłanie książki do biblioteki udostępniającej"
+    end End_Zwrocona "Książka zwrócona bez wypożyczenia"
+  lane Lane_System "System biblioteczny"
+    service Task_Rejestracja "Rejestracja egzemplarza w systemie"
+    boundary Boundary_BladZapisu "Błąd zapisu rekordu" on=Task_Rejestracja error="Błąd zapisu rekordu" code="ZAPIS"
+    send Task_Powiadomienie "Powiadomienie czytelnika" message="Powiadomienie o książce"
+    send Task_Przypomnienie "Wysłanie przypomnienia" message="Przypomnienie o odbiorze"
+    end End_Przypomniano "Przypomnienie wysłane"
+
+pool Participant_Udostepniajaca "Biblioteka udostępniająca"
+
+pool Participant_Czytelnik "Czytelnik"
+
+flow Start_Dotarla -> Task_Rejestracja -> Gw_Zarejestrowano
+flow Boundary_BladZapisu -> Task_RejestracjaReczna -> Gw_Zarejestrowano -> Task_Powiadomienie -> Task_Wydanie -> End_Wydana
+flow Boundary_Przypomnienie -> Task_Przypomnienie -> End_Przypomniano
+flow Boundary_Termin -> Task_Odeslanie -> End_Zwrocona
+
+message Participant_Udostepniajaca -> Start_Dotarla "Paczka z książką"
+message Task_Powiadomienie -> Participant_Czytelnik "Powiadomienie" message="Powiadomienie o książce"
+message Task_Przypomnienie -> Participant_Czytelnik "Przypomnienie" message="Przypomnienie o odbiorze"
+message Task_Odeslanie -> Participant_Udostepniajaca "Zwracana książka"

@@ -1,0 +1,9 @@
+[
+  {
+    "code": "E014",
+    "severity": "error",
+    "line": 10,
+    "id": "c",
+    "message": "compensation activity with sequence flows (c)"
+  }
+]

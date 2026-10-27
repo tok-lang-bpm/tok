@@ -1,0 +1,14 @@
+{
+  "id": "formularz-akceptacja",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "components": [
+    { "type": "text", "id": "Text_Propozycja", "text": "## Propozycja: {{tytul}}\nAutor: {{autor}} · rodzaj: {{rodzaj}} · cena: {{cena}} zł\n\nUzasadnienie: {{uzasadnienie}}" },
+    { "type": "radio", "id": "Field_Zgoda", "key": "zgoda", "label": "Decyzja",
+      "values": [ { "label": "zgoda na zakup", "value": true }, { "label": "odmowa", "value": false } ],
+      "validate": { "required": true } },
+    { "type": "textarea", "id": "Field_Komentarz", "key": "komentarz", "label": "Komentarz dla czytelnika" }
+  ],
+  "schemaVersion": 18
+}

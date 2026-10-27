@@ -34,7 +34,7 @@ message wyslanie -> inna "Zamówienie"
 - **Made for people and for AI agents.** The whole language fits on one page (`tok cheatsheet`). An agent can write a model, run `tok check --json`, read the line-numbered diagnostics and fix them, without ever touching XML or coordinates.
 - **Standards on the outside.** tok is a notation for BPMN 2.0 and DMN, not a replacement. Everything you write is exported to the OMG formats that modelling tools and process engines read; `tok import` converts existing BPMN files back to text.
 - **Executable and measurable.** The same file can carry the details Camunda 8 needs to run the process, and the times, resources and probabilities a simulation needs to estimate cycle times and workloads.
-- **Simple to implement.** A line-based grammar with six token types. The reference implementation is in Python; a Julia implementation passes the same conformance corpus.
+- **Simple to implement.** A line-based grammar with six token types. Python, Rust and Julia implementations pass the same conformance corpus byte for byte.
 
 ## Install
 
@@ -46,6 +46,15 @@ tok --version
 ```
 
 Without installation: `PYTHONPATH=python/src python -m tok …`.
+
+Native build from source (Rust 1.99 or newer):
+
+```
+cd rust
+cargo build --release -p tok-cli      # target/release/tok
+```
+
+It gives the same output as the Python command; `sim` and `eval` follow in version 0.4.
 
 ## Use
 
@@ -71,7 +80,7 @@ tok eval model.tok DECISION a=1  # evaluate a decision table
 | [docs/feel.md](docs/feel.md) | the supported subset of FEEL |
 | [docs/simulation.md](docs/simulation.md) | simulation semantics, distributions and outputs |
 | [docs/import.md](docs/import.md) | converting BPMN XML to tok |
-| [docs/roadmap.md](docs/roadmap.md) | plans: Julia to full, one Rust/Zig engine for Python and R |
+| [docs/roadmap.md](docs/roadmap.md) | plans from 0.1 to 1.0: full Camunda 8 and BPMN 2.0.2 coverage, Rust engine for Python and R, Julia standalone |
 | [skills/tok-modelling](skills/tok-modelling/SKILL.md) | a skill that teaches an AI agent to model in tok |
 | [examples/](examples/) | example models |
 
@@ -80,6 +89,7 @@ tok eval model.tok DECISION a=1  # evaluate a decision table
 | Folder | Contents |
 |---|---|
 | `python/` | reference implementation (package `tok-lang`, command `tok`) and its tests |
+| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-cli` (native `tok`), `tok-py` (Python bindings) |
 | `julia/Tok.jl` | Julia implementation of the core |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |
 | `docs/`, `examples/`, `skills/` | documentation, examples, agent skill |

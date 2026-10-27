@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_OdbiorKsiazki" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/06">
+  <bpmn:message id="Msg_Paczka" name="Paczka z książką" />
+  <bpmn:message id="Msg_Powiadomienie" name="Powiadomienie o książce" />
+  <bpmn:message id="Msg_Przypomnienie" name="Przypomnienie o odbiorze" />
+  <bpmn:message id="Msg_Zwrot" name="Zwracana książka" />
+  <bpmn:error id="Err_Zapis" name="Błąd zapisu rekordu" errorCode="ZAPIS" />
+  <bpmn:collaboration id="Collaboration_OdbiorKsiazki">
+    <bpmn:participant id="Participant_Biblioteka" name="Biblioteka uczelniana" processRef="Process_OdbiorKsiazki" />
+    <bpmn:participant id="Participant_Udostepniajaca" name="Biblioteka udostępniająca" />
+    <bpmn:participant id="Participant_Czytelnik" name="Czytelnik" />
+    <bpmn:messageFlow id="MF_Paczka" name="Paczka z książką" sourceRef="Participant_Udostepniajaca" targetRef="Start_Dotarla" messageRef="Msg_Paczka" />
+    <bpmn:messageFlow id="MF_Powiadomienie" name="Powiadomienie" sourceRef="Task_Powiadomienie" targetRef="Participant_Czytelnik" messageRef="Msg_Powiadomienie" />
+    <bpmn:messageFlow id="MF_Przypomnienie" name="Przypomnienie" sourceRef="Task_Przypomnienie" targetRef="Participant_Czytelnik" messageRef="Msg_Przypomnienie" />
+    <bpmn:messageFlow id="MF_Zwrot" name="Zwracana książka" sourceRef="Task_Odeslanie" targetRef="Participant_Udostepniajaca" messageRef="Msg_Zwrot" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_OdbiorKsiazki" name="Odbiór książki z wypożyczenia międzybibliotecznego" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_OdbiorKsiazki">
+      <bpmn:lane id="Lane_Bibliotekarz" name="Bibliotekarz wypożyczalni">
+        <bpmn:flowNodeRef>Start_Dotarla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RejestracjaReczna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Zarejestrowano</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wydanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Przypomnienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Termin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Wydana</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Odeslanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Zwrocona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_System" name="System biblioteczny">
+        <bpmn:flowNodeRef>Task_Rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_BladZapisu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Powiadomienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Przypomnienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Przypomniano</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Dotarla" name="Książka dotarła">
+      <bpmn:messageEventDefinition id="Start_Dotarla_def" messageRef="Msg_Paczka" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Rejestracja" name="Rejestracja egzemplarza w systemie" />
+    <bpmn:boundaryEvent id="Boundary_BladZapisu" name="Błąd zapisu rekordu" attachedToRef="Task_Rejestracja">
+      <bpmn:errorEventDefinition id="Boundary_BladZapisu_def" errorRef="Err_Zapis" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_RejestracjaReczna" name="Rejestracja ręczna egzemplarza" />
+    <bpmn:exclusiveGateway id="Gw_Zarejestrowano" />
+    <bpmn:sendTask id="Task_Powiadomienie" name="Powiadomienie czytelnika" messageRef="Msg_Powiadomienie" />
+    <bpmn:userTask id="Task_Wydanie" name="Wydanie książki czytelnikowi" />
+    <bpmn:boundaryEvent id="Boundary_Przypomnienie" name="Minęły 4 dni" attachedToRef="Task_Wydanie" cancelActivity="false">
+      <bpmn:timerEventDefinition id="Boundary_Przypomnienie_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P4D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_Termin" name="Minęło 7 dni" attachedToRef="Task_Wydanie">
+      <bpmn:timerEventDefinition id="Boundary_Termin_def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sendTask id="Task_Przypomnienie" name="Wysłanie przypomnienia" messageRef="Msg_Przypomnienie" />
+    <bpmn:endEvent id="End_Przypomniano" name="Przypomnienie wysłane" />
+    <bpmn:endEvent id="End_Wydana" name="Książka wydana" />
+    <bpmn:manualTask id="Task_Odeslanie" name="Odesłanie książki do biblioteki udostępniającej" />
+    <bpmn:endEvent id="End_Zwrocona" name="Książka zwrócona bez wypożyczenia" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Dotarla" targetRef="Task_Rejestracja" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Rejestracja" targetRef="Gw_Zarejestrowano" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Boundary_BladZapisu" targetRef="Task_RejestracjaReczna" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Task_RejestracjaReczna" targetRef="Gw_Zarejestrowano" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Gw_Zarejestrowano" targetRef="Task_Powiadomienie" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Task_Powiadomienie" targetRef="Task_Wydanie" />
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_Wydanie" targetRef="End_Wydana" />
+    <bpmn:sequenceFlow id="F8" sourceRef="Boundary_Przypomnienie" targetRef="Task_Przypomnienie" />
+    <bpmn:sequenceFlow id="F9" sourceRef="Task_Przypomnienie" targetRef="End_Przypomniano" />
+    <bpmn:sequenceFlow id="F10" sourceRef="Boundary_Termin" targetRef="Task_Odeslanie" />
+    <bpmn:sequenceFlow id="F11" sourceRef="Task_Odeslanie" targetRef="End_Zwrocona" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_OdbiorKsiazki">
+      <bpmndi:BPMNShape id="Participant_Biblioteka_di" bpmnElement="Participant_Biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1100" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Udostepniajaca_di" bpmnElement="Participant_Udostepniajaca" isHorizontal="true">
+        <dc:Bounds x="0" y="450" width="1100" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Czytelnik_di" bpmnElement="Participant_Czytelnik" isHorizontal="true">
+        <dc:Bounds x="0" y="560" width="1100" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Bibliotekarz_di" bpmnElement="Lane_Bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1070" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_System_di" bpmnElement="Lane_System" isHorizontal="true">
+        <dc:Bounds x="30" y="270" width="1070" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Dotarla_di" bpmnElement="Start_Dotarla">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Rejestracja_di" bpmnElement="Task_Rejestracja">
+        <dc:Bounds x="176" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejestracjaReczna_di" bpmnElement="Task_RejestracjaReczna">
+        <dc:Bounds x="326" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Zarejestrowano_di" bpmnElement="Gw_Zarejestrowano" isMarkerVisible="true">
+        <dc:Bounds x="476" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Powiadomienie_di" bpmnElement="Task_Powiadomienie">
+        <dc:Bounds x="576" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wydanie_di" bpmnElement="Task_Wydanie">
+        <dc:Bounds x="726" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Przypomnienie_di" bpmnElement="Task_Przypomnienie">
+        <dc:Bounds x="876" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Przypomniano_di" bpmnElement="End_Przypomniano">
+        <dc:Bounds x="1026" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Wydana_di" bpmnElement="End_Wydana">
+        <dc:Bounds x="908" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Odeslanie_di" bpmnElement="Task_Odeslanie">
+        <dc:Bounds x="876" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Zwrocona_di" bpmnElement="End_Zwrocona">
+        <dc:Bounds x="1026" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_BladZapisu_di" bpmnElement="Boundary_BladZapisu">
+        <dc:Bounds x="228" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Przypomnienie_di" bpmnElement="Boundary_Przypomnienie">
+        <dc:Bounds x="778" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Termin_di" bpmnElement="Boundary_Termin">
+        <dc:Bounds x="734" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MF_Paczka_di" bpmnElement="MF_Paczka">
+        <di:waypoint x="108" y="450" />
+        <di:waypoint x="108" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Powiadomienie_di" bpmnElement="MF_Powiadomienie">
+        <di:waypoint x="626" y="380" />
+        <di:waypoint x="626" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Przypomnienie_di" bpmnElement="MF_Przypomnienie">
+        <di:waypoint x="926" y="380" />
+        <di:waypoint x="926" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Zwrot_di" bpmnElement="MF_Zwrot">
+        <di:waypoint x="976" y="208" />
+        <di:waypoint x="990" y="208" />
+        <di:waypoint x="990" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="151" y="70" />
+        <di:waypoint x="151" y="340" />
+        <di:waypoint x="176" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="340" />
+        <di:waypoint x="501" y="340" />
+        <di:waypoint x="501" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="246" y="398" />
+        <di:waypoint x="246" y="431" />
+        <di:waypoint x="376" y="431" />
+        <di:waypoint x="376" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="426" y="70" />
+        <di:waypoint x="476" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="526" y="70" />
+        <di:waypoint x="551" y="70" />
+        <di:waypoint x="551" y="340" />
+        <di:waypoint x="576" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="676" y="340" />
+        <di:waypoint x="701" y="340" />
+        <di:waypoint x="701" y="70" />
+        <di:waypoint x="726" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7">
+        <di:waypoint x="826" y="70" />
+        <di:waypoint x="908" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8">
+        <di:waypoint x="796" y="128" />
+        <di:waypoint x="796" y="340" />
+        <di:waypoint x="876" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9">
+        <di:waypoint x="976" y="340" />
+        <di:waypoint x="1026" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10">
+        <di:waypoint x="752" y="128" />
+        <di:waypoint x="752" y="200" />
+        <di:waypoint x="876" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11">
+        <di:waypoint x="976" y="200" />
+        <di:waypoint x="1026" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

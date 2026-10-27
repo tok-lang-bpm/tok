@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D3" targetNamespace="http://example.org">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="S" name="1. Wpływ"/>
+    <bpmn:task id="T1" name="2. Rejestracja"/>
+    <bpmn:task id="T2" name="3.1. Ocena"/>
+    <bpmn:task id="T3" name="5a Interwencja"/>
+    <bpmn:task id="T4" name="7–9 Obsługa zbiorcza"/>
+    <bpmn:task id="T5" name="1.5Nazwa bez spacji"/>
+    <bpmn:task id="T6" name="Bez numeru"/>
+    <bpmn:task id="T7" name="12"/>
+    <bpmn:endEvent id="E"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T1"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T1" targetRef="T2"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T2" targetRef="T3"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="T3" targetRef="T4"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="T4" targetRef="T5"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="T5" targetRef="T6"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="T6" targetRef="T7"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="T7" targetRef="E"/>
+  </bpmn:process>
+</bpmn:definitions>

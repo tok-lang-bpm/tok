@@ -1,0 +1,30 @@
+[
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "'lane' is not allowed inside top"
+  },
+  {
+    "code": "T002",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "tab character in indentation; use spaces"
+  },
+  {
+    "code": "P003",
+    "severity": "error",
+    "line": 5,
+    "id": null,
+    "message": "'lane' cannot have an indented block"
+  },
+  {
+    "code": "T002",
+    "severity": "error",
+    "line": 6,
+    "id": null,
+    "message": "tab character in indentation; use spaces"
+  }
+]

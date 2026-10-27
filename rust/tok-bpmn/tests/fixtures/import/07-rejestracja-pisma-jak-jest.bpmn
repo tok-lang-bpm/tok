@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_PismoJakJest" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/07">
+  <bpmn:dataStore id="DataStore_Dziennik" name="Dziennik podawczy (papierowy)" />
+  <bpmn:dataStore id="DataStore_EZD" name="System EZD" />
+  <bpmn:dataStore id="DataStore_RejestrSekretariatu" name="Rejestr sekretariatu (arkusz)" />
+  <bpmn:collaboration id="Collaboration_PismoJakJest">
+    <bpmn:participant id="Participant_Uczelnia" name="Uczelnia" processRef="Process_PismoJakJest" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_PismoJakJest" name="Rejestracja pisma przychodzącego — jak jest" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_PismoJakJest">
+      <bpmn:lane id="Lane_Kancelaria" name="Kancelaria ogólna">
+        <bpmn:flowNodeRef>Start_Wplynelo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dziennik</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Skanowanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EZD</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Scalenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Przekazanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ustalenie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sekretariat" name="Sekretariat jednostki">
+        <bpmn:flowNodeRef>Task_RejestrSekretariatu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Przedlozenie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kierownik" name="Kierownik jednostki">
+        <bpmn:flowNodeRef>Task_Dekretacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Wlasciwa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zalatwienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Przekazane</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Wplynelo" name="Pismo wpłynęło" />
+    <bpmn:manualTask id="Task_Dziennik" name="Wpis do dziennika podawczego">
+      <bpmn:dataOutputAssociation id="DOA_Dziennik">
+        <bpmn:targetRef>DataStoreRef_Dziennik</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+    <bpmn:manualTask id="Task_Skanowanie" name="Skanowanie pisma" />
+    <bpmn:userTask id="Task_EZD" name="Rejestracja pisma w EZD">
+      <bpmn:dataOutputAssociation id="DOA_EZD">
+        <bpmn:targetRef>DataStoreRef_EZD</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_Scalenie" />
+    <bpmn:manualTask id="Task_Przekazanie" name="Przekazanie oryginału do sekretariatu" />
+    <bpmn:userTask id="Task_RejestrSekretariatu" name="Wpis do rejestru sekretariatu">
+      <bpmn:dataOutputAssociation id="DOA_RejestrSekretariatu">
+        <bpmn:targetRef>DataStoreRef_RejestrSekretariatu</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:manualTask id="Task_Przedlozenie" name="Przedłożenie pisma kierownikowi" />
+    <bpmn:manualTask id="Task_Dekretacja" name="Dekretacja pisma na papierze" />
+    <bpmn:exclusiveGateway id="Gw_Wlasciwa" name="Czy pismo trafiło do właściwej jednostki?" />
+    <bpmn:manualTask id="Task_Ustalenie" name="Ustalenie właściwej jednostki" />
+    <bpmn:manualTask id="Task_Zalatwienie" name="Przekazanie pisma do załatwienia" />
+    <bpmn:endEvent id="End_Przekazane" name="Pismo przekazane do załatwienia" />
+    <bpmn:dataStoreReference id="DataStoreRef_Dziennik" name="Dziennik podawczy (papierowy)" dataStoreRef="DataStore_Dziennik" />
+    <bpmn:dataStoreReference id="DataStoreRef_EZD" name="System EZD" dataStoreRef="DataStore_EZD" />
+    <bpmn:dataStoreReference id="DataStoreRef_RejestrSekretariatu" name="Rejestr sekretariatu (arkusz)" dataStoreRef="DataStore_RejestrSekretariatu" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Wplynelo" targetRef="Task_Dziennik" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Dziennik" targetRef="Task_Skanowanie" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_Skanowanie" targetRef="Task_EZD" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Task_EZD" targetRef="Gw_Scalenie" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Gw_Scalenie" targetRef="Task_Przekazanie" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Task_Przekazanie" targetRef="Task_RejestrSekretariatu" />
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_RejestrSekretariatu" targetRef="Task_Przedlozenie" />
+    <bpmn:sequenceFlow id="F8" sourceRef="Task_Przedlozenie" targetRef="Task_Dekretacja" />
+    <bpmn:sequenceFlow id="F9" sourceRef="Task_Dekretacja" targetRef="Gw_Wlasciwa" />
+    <bpmn:sequenceFlow id="F10" name="tak" sourceRef="Gw_Wlasciwa" targetRef="Task_Zalatwienie" />
+    <bpmn:sequenceFlow id="F11" name="nie" sourceRef="Gw_Wlasciwa" targetRef="Task_Ustalenie" />
+    <bpmn:sequenceFlow id="F12" sourceRef="Task_Ustalenie" targetRef="Gw_Scalenie" />
+    <bpmn:sequenceFlow id="F13" sourceRef="Task_Zalatwienie" targetRef="End_Przekazane" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_PismoJakJest">
+      <bpmndi:BPMNShape id="Participant_Uczelnia_di" bpmnElement="Participant_Uczelnia" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1650" height="620" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kancelaria_di" bpmnElement="Lane_Kancelaria" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1620" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sekretariat_di" bpmnElement="Lane_Sekretariat" isHorizontal="true">
+        <dc:Bounds x="30" y="240" width="1620" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kierownik_di" bpmnElement="Lane_Kierownik" isHorizontal="true">
+        <dc:Bounds x="30" y="480" width="1620" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Wplynelo_di" bpmnElement="Start_Wplynelo">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Dziennik_di" bpmnElement="Task_Dziennik">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Skanowanie_di" bpmnElement="Task_Skanowanie">
+        <dc:Bounds x="326" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EZD_di" bpmnElement="Task_EZD">
+        <dc:Bounds x="476" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Scalenie_di" bpmnElement="Gw_Scalenie" isMarkerVisible="true">
+        <dc:Bounds x="626" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Przekazanie_di" bpmnElement="Task_Przekazanie">
+        <dc:Bounds x="726" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RejestrSekretariatu_di" bpmnElement="Task_RejestrSekretariatu">
+        <dc:Bounds x="876" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Przedlozenie_di" bpmnElement="Task_Przedlozenie">
+        <dc:Bounds x="1026" y="270" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Dekretacja_di" bpmnElement="Task_Dekretacja">
+        <dc:Bounds x="1176" y="510" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Wlasciwa_di" bpmnElement="Gw_Wlasciwa" isMarkerVisible="true">
+        <dc:Bounds x="1326" y="525" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Ustalenie_di" bpmnElement="Task_Ustalenie">
+        <dc:Bounds x="1426" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zalatwienie_di" bpmnElement="Task_Zalatwienie">
+        <dc:Bounds x="1426" y="510" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Przekazane_di" bpmnElement="End_Przekazane">
+        <dc:Bounds x="1576" y="532" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_Dziennik_di" bpmnElement="DataStoreRef_Dziennik">
+        <dc:Bounds x="201" y="160" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_EZD_di" bpmnElement="DataStoreRef_EZD">
+        <dc:Bounds x="501" y="160" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreRef_RejestrSekretariatu_di" bpmnElement="DataStoreRef_RejestrSekretariatu">
+        <dc:Bounds x="901" y="400" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DOA_Dziennik_di" bpmnElement="DOA_Dziennik">
+        <di:waypoint x="226" y="110" />
+        <di:waypoint x="226" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_EZD_di" bpmnElement="DOA_EZD">
+        <di:waypoint x="526" y="110" />
+        <di:waypoint x="526" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_RejestrSekretariatu_di" bpmnElement="DOA_RejestrSekretariatu">
+        <di:waypoint x="926" y="350" />
+        <di:waypoint x="926" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="326" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="426" y="70" />
+        <di:waypoint x="476" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="576" y="70" />
+        <di:waypoint x="626" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="676" y="70" />
+        <di:waypoint x="726" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="826" y="70" />
+        <di:waypoint x="851" y="70" />
+        <di:waypoint x="851" y="310" />
+        <di:waypoint x="876" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7">
+        <di:waypoint x="976" y="310" />
+        <di:waypoint x="1026" y="310" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8">
+        <di:waypoint x="1126" y="310" />
+        <di:waypoint x="1151" y="310" />
+        <di:waypoint x="1151" y="550" />
+        <di:waypoint x="1176" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9">
+        <di:waypoint x="1276" y="550" />
+        <di:waypoint x="1326" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10">
+        <di:waypoint x="1376" y="550" />
+        <di:waypoint x="1426" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11">
+        <di:waypoint x="1351" y="525" />
+        <di:waypoint x="1351" y="70" />
+        <di:waypoint x="1426" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F12_di" bpmnElement="F12">
+        <di:waypoint x="1476" y="110" />
+        <di:waypoint x="1476" y="143" />
+        <di:waypoint x="651" y="143" />
+        <di:waypoint x="651" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F13_di" bpmnElement="F13">
+        <di:waypoint x="1526" y="550" />
+        <di:waypoint x="1576" y="550" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

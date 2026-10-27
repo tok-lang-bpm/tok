@@ -1,0 +1,74 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W041",
+  "id": "d",
+  "komunikat": "„Data” (d) jest nieosiągalny ze zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W042",
+  "id": "d",
+  "komunikat": "„Data” (d) nie ma przepływu wychodzącego — ścieżka powinna kończyć się zdarzeniem końcowym."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W053",
+  "id": "e4",
+  "komunikat": "e4 rzuca eskalację, której nic nie łapie (brak granicznego zdarzenia eskalacji z tym samym escalationRef na otaczającym podprocesie)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "s",
+  "komunikat": "s: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "o",
+  "komunikat": "„Odbiór książki” (o): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "r",
+  "komunikat": "„Rejestracja wypożyczenia” (r): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "x",
+  "komunikat": "„Sygnał” (x): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "e2",
+  "komunikat": "„Zwrot” (e2): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "e3",
+  "komunikat": "„Błąd” (e3): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "e4",
+  "komunikat": "e4: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "e5",
+  "komunikat": "e5: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "d",
+  "komunikat": "„Data” (d): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

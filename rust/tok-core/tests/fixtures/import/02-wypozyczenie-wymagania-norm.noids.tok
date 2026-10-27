@@ -1,0 +1,26 @@
+tok 0.1 "Wypożyczenie międzybiblioteczne" id=Definitions_Normy namespace=https://codeberg.org/MarekDeja/ipm/diagramy/02 collaboration=Collaboration_Normy
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Wypozyczenie
+  lane Lane_Czytelnik "Czytelnik"
+    start Start "Potrzeba książki"
+    user Task_Zlozenie "Złożenie zamówienia"
+  lane Lane_System "System biblioteczny"
+    service Task_Rejestracja "Rejestracja zamówienia"
+  lane Lane_Bibliotekarz "Bibliotekarz"
+    user Task_Sprawdzenie "Sprawdzenie katalogów"
+    xor Gw_Dostepna "Czy książka dostępna lokalnie?"
+    user Task_Wskazanie "Wskazanie egzemplarza"
+    user Task_Zamowienie "Zamówienie w innej bibliotece"
+    end End_Wskazany "Egzemplarz wskazany"
+    end End_Wyslane "Zamówienie wysłane"
+
+flow Start -> Task_Zlozenie -> Task_Rejestracja -> Task_Sprawdzenie -> Gw_Dostepna
+flow Gw_Dostepna -> Task_Wskazanie "tak"
+flow Gw_Dostepna -> Task_Zamowienie "nie"
+flow Task_Wskazanie -> End_Wskazany
+flow Task_Zamowienie -> End_Wyslane
+
+note Ann_Poufnosc "ISO/IEC 27001: dane czytelnika są poufne; formularz dostępny tylko po zalogowaniu" on=Task_Zlozenie
+note Ann_Zapis "ISO 9001 (7.5): zamówienie zapisane jako udokumentowana informacja" on=Task_Rejestracja
+note Ann_Kompetencje "ISO 9001 (7.2): bibliotekarz ma kompetencje do wyszukiwania w NUKAT" on=Task_Sprawdzenie
+note Ann_Przekazanie "ISO/IEC 27001: do innej biblioteki trafiają tylko dane niezbędne do realizacji zamówienia" on=Task_Zamowienie

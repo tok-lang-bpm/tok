@@ -76,6 +76,16 @@ def cmd_fmt(args):
     return EXIT_OK
 
 
+def _nothing_to_draw(doc, args):
+    """A diagram needs at least one flow node or pool."""
+    if not doc.nodes and not doc.pools:
+        msg = ("nie ma czego narysować: model nie zawiera elementów" if args.lang == "pl"
+               else "nothing to draw: the model has no elements")
+        sys.stderr.write("tok: %s\n" % msg)
+        return True
+    return False
+
+
 def _out(args, ext):
     return args.output or os.path.splitext(args.file)[0] + ext
 
@@ -85,6 +95,8 @@ def cmd_bpmn(args):
     doc, diags = _load(args.file)
     if any(d.severity == "error" for d in diags):
         _report(args.file, diags, args)
+        return EXIT_ERRORS
+    if _nothing_to_draw(doc, args):
         return EXIT_ERRORS
     path = _out(args, ".bpmn")
     write_bpmn(doc, path, layout=not args.no_layout)
@@ -97,6 +109,8 @@ def cmd_svg(args):
     doc, diags = _load(args.file)
     if any(d.severity == "error" for d in diags):
         _report(args.file, diags, args)
+        return EXIT_ERRORS
+    if _nothing_to_draw(doc, args):
         return EXIT_ERRORS
     path = _out(args, ".svg")
     write_svg(doc, path)
@@ -111,6 +125,8 @@ def cmd_export(args):
     doc, diags = _load(args.file)
     if any(d.severity == "error" for d in diags):
         _report(args.file, diags, args)
+        return EXIT_ERRORS
+    if _nothing_to_draw(doc, args):
         return EXIT_ERRORS
     folder = args.output or os.path.dirname(os.path.abspath(args.file))
     os.makedirs(folder, exist_ok=True)

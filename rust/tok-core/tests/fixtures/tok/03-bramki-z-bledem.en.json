@@ -1,0 +1,30 @@
+[
+  {
+    "code": "W051",
+    "severity": "warning",
+    "line": 7,
+    "id": "gotowe",
+    "message": "join of a different type than the split (e.g. AND split joined by XOR) (gotowe)"
+  },
+  {
+    "code": "W042",
+    "severity": "warning",
+    "line": 10,
+    "id": "poprawki",
+    "message": "path without an end event (element without outgoing flow) (poprawki)"
+  },
+  {
+    "code": "E017",
+    "severity": "error",
+    "line": 14,
+    "id": "f-przygotowania-wybor",
+    "message": "condition or default flow on a parallel gateway (f-przygotowania-wybor)"
+  },
+  {
+    "code": "W021",
+    "severity": "warning",
+    "line": 20,
+    "id": "f-zgoda-poprawki",
+    "message": "branch of an XOR/OR split without label, condition or default status (f-zgoda-poprawki)"
+  }
+]

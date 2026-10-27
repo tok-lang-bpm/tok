@@ -1,0 +1,54 @@
+tok 0.1 "Kwerenda archiwalna" id=Definitions_Kwerenda namespace=https://codeberg.org/MarekDeja/ipm/diagramy/06 collaboration=Collaboration_Kwerenda
+
+pool Participant_Archiwum "Archiwum" process=Process_Kwerenda
+  lane Lane_Kancelaria "Pracownik kancelarii"
+    start Start_Wniosek "Wniosek wpłynął" message="Wniosek o kwerendę"
+    user Task_Rejestracja "Rejestracja wniosku"
+    send Task_Wyslanie "Wysłanie odpowiedzi" message="Odpowiedź na kwerendę"
+    end End_Wyslana "Odpowiedź wysłana"
+    eventsub EventSub_Wycofanie "Wycofanie wniosku"
+      start EventSub_Start "Wycofanie otrzymane" message="Wycofanie wniosku"
+      user EventSub_Task_Zamkniecie "Zamknięcie sprawy w rejestrze"
+      end EventSub_End "Sprawa zamknięta"
+  lane Lane_Archiwista "Archiwista"
+    sub Sub_Poszukiwania "Poszukiwania w zasobie"
+      start Sub_Start "Poszukiwania rozpoczęte"
+      user Sub_Task_Inwentarze "Przegląd inwentarzy i katalogów"
+      xor Sub_Gw_Odnalezione "Czy akta odnalezione w inwentarzach?"
+      throw Sub_Throw_Szersze "Zgłoszenie szerszych poszukiwań" escalation="Kwerenda wymaga szerszych poszukiwań" code="SZERSZE"
+      user Sub_Task_Pokrewne "Przeszukanie zespołów pokrewnych"
+      xor Sub_Gw_Scalenie
+      user Sub_Task_Wyniki "Sporządzenie wyników kwerendy"
+      end Sub_End "Wyniki gotowe"
+    boundary Boundary_Szersze "Szersze poszukiwania" noninterrupting on=Sub_Poszukiwania escalation="Kwerenda wymaga szerszych poszukiwań" code="SZERSZE"
+    user Task_Odpowiedz "Przygotowanie odpowiedzi"
+  lane Lane_Kierownik "Kierownik oddziału"
+    user Task_NowyTermin "Wyznaczenie nowego terminu odpowiedzi"
+    send Task_Zawiadomienie "Zawiadomienie wnioskodawcy o nowym terminie" message="Zawiadomienie o nowym terminie"
+    end End_Zawiadomiony "Wnioskodawca zawiadomiony"
+
+pool Participant_Wnioskodawca "Wnioskodawca"
+
+flow Sub_Start -> Sub_Task_Inwentarze id=SF1
+flow Sub_Task_Inwentarze -> Sub_Gw_Odnalezione id=SF2
+flow Sub_Gw_Odnalezione -> Sub_Gw_Scalenie "tak" id=SF3
+flow Sub_Gw_Odnalezione -> Sub_Throw_Szersze "nie" id=SF4
+flow Sub_Throw_Szersze -> Sub_Task_Pokrewne id=SF5
+flow Sub_Task_Pokrewne -> Sub_Gw_Scalenie id=SF6
+flow Sub_Gw_Scalenie -> Sub_Task_Wyniki id=SF7
+flow Sub_Task_Wyniki -> Sub_End id=SF8
+flow EventSub_Start -> EventSub_Task_Zamkniecie id=EF1
+flow EventSub_Task_Zamkniecie -> EventSub_End id=EF2
+flow Start_Wniosek -> Task_Rejestracja id=F1
+flow Task_Rejestracja -> Sub_Poszukiwania id=F2
+flow Sub_Poszukiwania -> Task_Odpowiedz id=F3
+flow Task_Odpowiedz -> Task_Wyslanie id=F4
+flow Task_Wyslanie -> End_Wyslana id=F5
+flow Boundary_Szersze -> Task_NowyTermin id=F6
+flow Task_NowyTermin -> Task_Zawiadomienie id=F7
+flow Task_Zawiadomienie -> End_Zawiadomiony id=F8
+
+message Participant_Wnioskodawca -> Start_Wniosek "Wniosek" message="Wniosek o kwerendę" id=MF_Wniosek
+message Task_Zawiadomienie -> Participant_Wnioskodawca "Nowy termin" message="Zawiadomienie o nowym terminie" id=MF_Przedluzenie
+message Task_Wyslanie -> Participant_Wnioskodawca "Odpowiedź" message="Odpowiedź na kwerendę" id=MF_Odpowiedz
+message Participant_Wnioskodawca -> EventSub_Start "Wycofanie" message="Wycofanie wniosku" id=MF_Wycofanie

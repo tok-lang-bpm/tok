@@ -1,0 +1,40 @@
+tok 0.1 "Rejestracja pisma przychodzącego — jak jest" id=Definitions_PismoJakJest namespace=https://codeberg.org/MarekDeja/ipm/diagramy/07 collaboration=Collaboration_PismoJakJest
+
+pool Participant_Uczelnia "Uczelnia" process=Process_PismoJakJest
+  lane Lane_Kancelaria "Kancelaria ogólna"
+    start Start_Wplynelo "Pismo wpłynęło"
+    manual Task_Dziennik "Wpis do dziennika podawczego"
+    manual Task_Skanowanie "Skanowanie pisma"
+    user Task_EZD "Rejestracja pisma w EZD"
+    xor Gw_Scalenie
+    manual Task_Przekazanie "Przekazanie oryginału do sekretariatu"
+    manual Task_Ustalenie "Ustalenie właściwej jednostki"
+  lane Lane_Sekretariat "Sekretariat jednostki"
+    user Task_RejestrSekretariatu "Wpis do rejestru sekretariatu"
+    manual Task_Przedlozenie "Przedłożenie pisma kierownikowi"
+  lane Lane_Kierownik "Kierownik jednostki"
+    manual Task_Dekretacja "Dekretacja pisma na papierze"
+    xor Gw_Wlasciwa "Czy pismo trafiło do właściwej jednostki?"
+    manual Task_Zalatwienie "Przekazanie pisma do załatwienia"
+    end End_Przekazane "Pismo przekazane do załatwienia"
+  store DataStoreRef_Dziennik "Dziennik podawczy (papierowy)"
+  store DataStoreRef_EZD "System EZD"
+  store DataStoreRef_RejestrSekretariatu "Rejestr sekretariatu (arkusz)"
+
+flow Start_Wplynelo -> Task_Dziennik id=F1
+flow Task_Dziennik -> Task_Skanowanie id=F2
+flow Task_Skanowanie -> Task_EZD id=F3
+flow Task_EZD -> Gw_Scalenie id=F4
+flow Gw_Scalenie -> Task_Przekazanie id=F5
+flow Task_Przekazanie -> Task_RejestrSekretariatu id=F6
+flow Task_RejestrSekretariatu -> Task_Przedlozenie id=F7
+flow Task_Przedlozenie -> Task_Dekretacja id=F8
+flow Task_Dekretacja -> Gw_Wlasciwa id=F9
+flow Gw_Wlasciwa -> Task_Zalatwienie "tak" id=F10
+flow Gw_Wlasciwa -> Task_Ustalenie "nie" id=F11
+flow Task_Ustalenie -> Gw_Scalenie id=F12
+flow Task_Zalatwienie -> End_Przekazane id=F13
+
+writes Task_Dziennik DataStoreRef_Dziennik
+writes Task_EZD DataStoreRef_EZD
+writes Task_RejestrSekretariatu DataStoreRef_RejestrSekretariatu

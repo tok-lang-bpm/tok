@@ -1,0 +1,149 @@
+[
+  {
+    "code": "P001",
+    "severity": "error",
+    "line": 4,
+    "id": null,
+    "message": "nieznane słowo kluczowe „proces”"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 5,
+    "id": null,
+    "message": "niepoprawny atrybut w pobliżu „label”"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 6,
+    "id": null,
+    "message": "„lane” nie może wystąpić w bloku top"
+  },
+  {
+    "code": "P002",
+    "severity": "error",
+    "line": 7,
+    "id": null,
+    "message": "„task” wymaga identyfikatora"
+  },
+  {
+    "code": "P003",
+    "severity": "error",
+    "line": 8,
+    "id": null,
+    "message": "„task” nie może mieć wciętego bloku"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 9,
+    "id": null,
+    "message": "niepoprawny wiersz flow: expected '->'"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 10,
+    "id": null,
+    "message": "niepoprawny wiersz flow: expected '->'"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 11,
+    "id": null,
+    "message": "niepoprawny wiersz message: expected 'message A -> B'"
+  },
+  {
+    "code": "P010",
+    "severity": "error",
+    "line": 12,
+    "id": null,
+    "message": "drugi nagłówek dokumentu"
+  },
+  {
+    "code": "P001",
+    "severity": "error",
+    "line": 13,
+    "id": null,
+    "message": "nieznane słowo kluczowe „tekst”"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 14,
+    "id": null,
+    "message": "„|” nie może wystąpić w bloku top"
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 16,
+    "id": null,
+    "message": "„start” nie może wystąpić w bloku form"
+  },
+  {
+    "code": "P009",
+    "severity": "error",
+    "line": 18,
+    "id": null,
+    "message": "niepoprawny wiersz tabeli decyzyjnej: expected inputs || outputs [|| annotation]"
+  },
+  {
+    "code": "P009",
+    "severity": "error",
+    "line": 19,
+    "id": null,
+    "message": "niepoprawny wiersz tabeli decyzyjnej: unbalanced quotes"
+  },
+  {
+    "code": "P002",
+    "severity": "error",
+    "line": 20,
+    "id": null,
+    "message": "„data” wymaga identyfikatora"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 21,
+    "id": null,
+    "message": "niepoprawny wiersz reads: expected 'reads ACTIVITY DATA'"
+  },
+  {
+    "code": "P007",
+    "severity": "error",
+    "line": 22,
+    "id": null,
+    "message": "niepoprawny atrybut w pobliżu „etykieta”"
+  },
+  {
+    "code": "P008",
+    "severity": "error",
+    "line": 23,
+    "id": null,
+    "message": "niepoprawny wiersz variable: expected variable NAME \"DIST\""
+  },
+  {
+    "code": "P004",
+    "severity": "error",
+    "line": 24,
+    "id": null,
+    "message": "„text” nie może wystąpić w bloku top"
+  },
+  {
+    "code": "T001",
+    "severity": "error",
+    "line": 25,
+    "id": null,
+    "message": "niepoprawny znak lub tekst: unexpected character '@'"
+  },
+  {
+    "code": "T001",
+    "severity": "error",
+    "line": 26,
+    "id": null,
+    "message": "niepoprawny znak lub tekst: unterminated string"
+  }
+]

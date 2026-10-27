@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Kwerenda archiwalna: trzech archiwistów" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="archiwum" name="Archiwum Państwowe" processRef="archiwum-process" />
+  </bpmn:collaboration>
+  <bpmn:process id="archiwum-process" name="Kwerenda archiwalna: trzech archiwistów" isExecutable="false">
+    <bpmn:laneSet id="archiwum-lanes">
+      <bpmn:lane id="kancelaria" name="Kancelaria">
+        <bpmn:flowNodeRef>wplyw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odmowa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odrzucony</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odpowiedz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zakonczona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="archiwista" name="Archiwista">
+        <bpmn:flowNodeRef>ocena</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>mozliwa</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>poszukiwania</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>opracowanie</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="wplyw" name="Wniosek o kwerendę wpłynął" />
+    <bpmn:userTask id="rejestracja" name="Rejestracja wniosku" />
+    <bpmn:sendTask id="odmowa" name="Wysłanie odmowy" />
+    <bpmn:endEvent id="odrzucony" name="Wniosek odrzucony" />
+    <bpmn:sendTask id="odpowiedz" name="Wysłanie odpowiedzi" />
+    <bpmn:endEvent id="zakonczona" name="Kwerenda zakończona" />
+    <bpmn:userTask id="ocena" name="Ocena wniosku" />
+    <bpmn:exclusiveGateway id="mozliwa" name="Czy kwerenda jest możliwa?" />
+    <bpmn:userTask id="poszukiwania" name="Poszukiwania w zasobie" />
+    <bpmn:userTask id="opracowanie" name="Opracowanie odpowiedzi" />
+    <bpmn:sequenceFlow id="f-wplyw-rejestracja" sourceRef="wplyw" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-ocena" sourceRef="rejestracja" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-mozliwa" sourceRef="ocena" targetRef="mozliwa" />
+    <bpmn:sequenceFlow id="f-mozliwa-poszukiwania" name="tak" sourceRef="mozliwa" targetRef="poszukiwania" />
+    <bpmn:sequenceFlow id="f-mozliwa-odmowa" name="nie" sourceRef="mozliwa" targetRef="odmowa" />
+    <bpmn:sequenceFlow id="f-odmowa-odrzucony" sourceRef="odmowa" targetRef="odrzucony" />
+    <bpmn:sequenceFlow id="f-poszukiwania-opracowanie" sourceRef="poszukiwania" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-odpowiedz" sourceRef="opracowanie" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-zakonczona" sourceRef="odpowiedz" targetRef="zakonczona" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="archiwum_di" bpmnElement="archiwum" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1100" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kancelaria_di" bpmnElement="kancelaria" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1070" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archiwista_di" bpmnElement="archiwista" isHorizontal="true">
+        <dc:Bounds x="30" y="140" width="1070" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wplyw_di" bpmnElement="wplyw">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odmowa_di" bpmnElement="odmowa">
+        <dc:Bounds x="576" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odrzucony_di" bpmnElement="odrzucony">
+        <dc:Bounds x="758" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odpowiedz_di" bpmnElement="odpowiedz">
+        <dc:Bounds x="876" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zakonczona_di" bpmnElement="zakonczona">
+        <dc:Bounds x="1026" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ocena_di" bpmnElement="ocena">
+        <dc:Bounds x="326" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="mozliwa_di" bpmnElement="mozliwa" isMarkerVisible="true">
+        <dc:Bounds x="476" y="185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="poszukiwania_di" bpmnElement="poszukiwania">
+        <dc:Bounds x="576" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="opracowanie_di" bpmnElement="opracowanie">
+        <dc:Bounds x="726" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-wplyw-rejestracja_di" bpmnElement="f-wplyw-rejestracja">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-ocena_di" bpmnElement="f-rejestracja-ocena">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="301" y="70" />
+        <di:waypoint x="301" y="210" />
+        <di:waypoint x="326" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ocena-mozliwa_di" bpmnElement="f-ocena-mozliwa">
+        <di:waypoint x="426" y="210" />
+        <di:waypoint x="476" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-mozliwa-poszukiwania_di" bpmnElement="f-mozliwa-poszukiwania">
+        <di:waypoint x="526" y="210" />
+        <di:waypoint x="576" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-mozliwa-odmowa_di" bpmnElement="f-mozliwa-odmowa">
+        <di:waypoint x="501" y="185" />
+        <di:waypoint x="501" y="70" />
+        <di:waypoint x="576" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odmowa-odrzucony_di" bpmnElement="f-odmowa-odrzucony">
+        <di:waypoint x="676" y="70" />
+        <di:waypoint x="758" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-poszukiwania-opracowanie_di" bpmnElement="f-poszukiwania-opracowanie">
+        <di:waypoint x="676" y="210" />
+        <di:waypoint x="726" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-opracowanie-odpowiedz_di" bpmnElement="f-opracowanie-odpowiedz">
+        <di:waypoint x="826" y="210" />
+        <di:waypoint x="851" y="210" />
+        <di:waypoint x="851" y="70" />
+        <di:waypoint x="876" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odpowiedz-zakonczona_di" bpmnElement="f-odpowiedz-zakonczona">
+        <di:waypoint x="976" y="70" />
+        <di:waypoint x="1026" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

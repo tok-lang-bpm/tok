@@ -1,0 +1,38 @@
+{
+  "id": "f-akc",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "radio",
+      "id": "Field_zgoda",
+      "key": "zgoda",
+      "label": "Decyzja",
+      "values": [
+        {
+          "label": "zgoda",
+          "value": true
+        },
+        {
+          "label": "odmowa",
+          "value": false
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Field_uwagi",
+      "key": "uwagi",
+      "label": "uwagi"
+    }
+  ],
+  "schemaVersion": 18
+}

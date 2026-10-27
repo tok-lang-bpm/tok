@@ -1,0 +1,43 @@
+{
+  "id": "f-akceptacja",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "text",
+      "id": "Text_1",
+      "text": "## Propozycja: {{tytul}}"
+    },
+    {
+      "type": "radio",
+      "id": "Field_zgoda",
+      "key": "zgoda",
+      "label": "Decyzja",
+      "values": [
+        {
+          "label": "zgoda na zakup",
+          "value": true
+        },
+        {
+          "label": "odmowa",
+          "value": false
+        }
+      ],
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "Field_komentarz",
+      "key": "komentarz",
+      "label": "Komentarz dla czytelnika"
+    }
+  ],
+  "schemaVersion": 18
+}

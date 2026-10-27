@@ -1,0 +1,32 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C012",
+  "id": "zlozona",
+  "komunikat": "Formularza startowego „f-propozycja” nie ma w żadnym pliku .form w folderze modelu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C032",
+  "id": "tryb",
+  "komunikat": "Decyzji „tryb-akceptacji” (zadanie „Ustalenie trybu akceptacji” (tryb)) nie ma w żadnym pliku .dmn w folderze modelu."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "C021",
+  "id": "powiad",
+  "komunikat": "Zadanie usługowe „Powiadomienie” (powiad) czeka na program (worker) obsługujący typ „powiadomienie”. Bez niego instancja zatrzyma się w tym miejscu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C012",
+  "id": "akceptacja",
+  "komunikat": "Formularza „f-akceptacja” (zadanie „Akceptacja propozycji” (akceptacja)) nie ma w żadnym pliku .form w folderze modelu."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "C011",
+  "id": "zamowienie",
+  "komunikat": "Zadanie użytkownika „Złożenie zamówienia u dostawcy” (zamowienie) nie ma formularza (zeebe:formDefinition). W Tasklist można je tylko zakończyć bez danych."
+ }
+]

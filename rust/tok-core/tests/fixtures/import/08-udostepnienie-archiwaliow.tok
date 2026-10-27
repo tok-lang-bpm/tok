@@ -1,0 +1,60 @@
+tok 0.1 "Udostępnienie materiałów archiwalnych" id=Definitions_Udostepnienie namespace=https://codeberg.org/MarekDeja/ipm/diagramy/08 collaboration=Collaboration_Udostepnienie
+
+pool Participant_Archiwum "Archiwum" process=Process_Udostepnienie
+  lane Lane_Czytelnia "Pracownik czytelni"
+    start Start_Wniosek "Wniosek wpłynął" message="Wniosek o udostępnienie"
+    user Task_Weryfikacja "Weryfikacja kompletności wniosku"
+    user Task_Anonimizacja "Anonimizacja kopii"
+    xor Gw_Udostepnienie
+    manual Task_Przygotowanie "Przygotowanie materiałów w czytelni"
+    xor Gw_Odmowa
+    user Task_Uzasadnienie "Przygotowanie uzasadnienia odmowy"
+    end End_Odmowa "Odmowa wysłana" message="Odmowa udostępnienia"
+  lane Lane_System "System archiwalny"
+    rule Task_Tryb "Ustalenie trybu udostępnienia"
+    xor Gw_Tryb "Jaki tryb udostępnienia?"
+    service Task_Rejestracja "Rejestracja udostępnienia"
+    end End_Udostepnione "Materiały udostępnione" message="Powiadomienie o udostępnieniu"
+  lane Lane_Kierownik "Kierownik oddziału"
+    user Task_Kontrola "Kontrola anonimizacji"
+    xor Gw_Kontrola "Czy anonimizacja kompletna?"
+  lane Lane_Dyrektor "Dyrektor archiwum"
+    user Task_Zgoda "Decyzja o zgodzie"
+    xor Gw_Zgoda "Czy zgoda udzielona?"
+  data DOR_Wniosek_zlozony "Wniosek" state="złożony"
+  data DOR_Kopia_anon "Kopia materiałów" state=zanonimizowana
+  store DSR_Ewidencja "Ewidencja udostępnień"
+
+pool Participant_Uzytkownik "Użytkownik archiwum"
+
+flow Start_Wniosek -> Task_Weryfikacja id=F1
+flow Task_Weryfikacja -> Task_Tryb id=F2
+flow Task_Tryb -> Gw_Tryb id=F3
+flow Gw_Tryb -> Gw_Udostepnienie "czytelnia" id=F4
+flow Gw_Tryb -> Task_Anonimizacja "anonimizacja" id=F5
+flow Gw_Tryb -> Task_Zgoda "zgoda dyrektora" id=F6
+flow Gw_Tryb -> Gw_Odmowa "odmowa" id=F7
+flow Task_Anonimizacja -> Task_Kontrola id=F8
+flow Task_Kontrola -> Gw_Kontrola id=F9
+flow Gw_Kontrola -> Gw_Udostepnienie "tak" id=F10
+flow Gw_Kontrola -> Task_Anonimizacja "nie" id=F11
+flow Task_Zgoda -> Gw_Zgoda id=F13
+flow Gw_Zgoda -> Gw_Udostepnienie "tak" id=F14
+flow Gw_Zgoda -> Gw_Odmowa "nie" id=F15
+flow Gw_Udostepnienie -> Task_Przygotowanie id=F16
+flow Task_Przygotowanie -> Task_Rejestracja id=F17
+flow Task_Rejestracja -> End_Udostepnione id=F18
+flow Gw_Odmowa -> Task_Uzasadnienie id=F19
+flow Task_Uzasadnienie -> End_Odmowa id=F20
+
+message Participant_Uzytkownik -> Start_Wniosek "Wniosek" message="Wniosek o udostępnienie" id=MF_Wniosek
+message End_Udostepnione -> Participant_Uzytkownik "Powiadomienie" message="Powiadomienie o udostępnieniu" id=MF_Powiadomienie
+message End_Odmowa -> Participant_Uzytkownik "Odmowa" message="Odmowa udostępnienia" id=MF_Odmowa
+
+reads Task_Weryfikacja DOR_Wniosek_zlozony
+writes Task_Anonimizacja DOR_Kopia_anon
+reads Task_Kontrola DOR_Kopia_anon
+writes Task_Rejestracja DSR_Ewidencja
+
+note Annotation_Podstawa "Reguły trybu: tabela decyzyjna „Tryb udostępnienia”. Dane osobowe: RODO, art. 89 (cele archiwalne i badawcze)" on=Task_Tryb
+note Annotation_Dwie "Zasada dwóch par oczu: kopię anonimizuje i sprawdza inna osoba" on=Task_Kontrola

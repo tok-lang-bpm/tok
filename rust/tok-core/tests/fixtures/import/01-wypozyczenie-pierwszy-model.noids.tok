@@ -1,0 +1,19 @@
+tok 0.1 "Wypożyczenie międzybiblioteczne" id=Definitions_Wypozyczenie namespace=https://codeberg.org/MarekDeja/ipm/diagramy/01 collaboration=Collaboration_Wypozyczenie
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=Process_Wypozyczenie
+  lane Lane_Czytelnik "Czytelnik"
+    start Start "Potrzeba książki"
+    user Task_Zlozenie "Złożenie zamówienia"
+  lane Lane_Bibliotekarz "Bibliotekarz"
+    user Task_Sprawdzenie "Sprawdzenie katalogów"
+    xor Gw_Dostepna "Czy książka dostępna lokalnie?"
+    user Task_Wskazanie "Wskazanie egzemplarza"
+    user Task_Zamowienie "Zamówienie w innej bibliotece"
+    end End_Wskazany "Egzemplarz wskazany"
+    end End_Zamowione "Zamówienie złożone"
+
+flow Start -> Task_Zlozenie -> Task_Sprawdzenie -> Gw_Dostepna
+flow Gw_Dostepna -> Task_Wskazanie "tak"
+flow Gw_Dostepna -> Task_Zamowienie "nie"
+flow Task_Wskazanie -> End_Wskazany
+flow Task_Zamowienie -> End_Zamowione

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="d-definitions" name="D" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <decision id="d" name="D">
+    <decisionTable id="d-table" hitPolicy="FIRST">
+      <input id="d-input-1" label="a">
+        <inputExpression id="d-input-1-expr" typeRef="number">
+          <text>a</text>
+        </inputExpression>
+      </input>
+      <output id="d-output-1" label="b" name="b" typeRef="string" />
+      <rule id="d-rule-1">
+        <description>mało</description>
+        <inputEntry id="d-rule-1-in-1">
+          <text>&lt; 1</text>
+        </inputEntry>
+        <outputEntry id="d-rule-1-out-1">
+          <text>"x"</text>
+        </outputEntry>
+      </rule>
+      <rule id="d-rule-2">
+        <inputEntry id="d-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="d-rule-2-out-1">
+          <text>"y"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

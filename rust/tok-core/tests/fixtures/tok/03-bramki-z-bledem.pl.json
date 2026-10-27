@@ -1,0 +1,30 @@
+[
+  {
+    "code": "W051",
+    "severity": "warning",
+    "line": 7,
+    "id": "gotowe",
+    "message": "gotowe (bramka wykluczająca (XOR)) łączy gałęzie rozwidlone przez przygotowania (bramka równoległa (AND)): wszystkie gałęzie dotrą do złączenia, więc dalsza część procesu wykona się kilka razy."
+  },
+  {
+    "code": "W042",
+    "severity": "warning",
+    "line": 10,
+    "id": "poprawki",
+    "message": "„Poprawki scenariusza” (poprawki) nie ma przepływu wychodzącego — ścieżka powinna kończyć się zdarzeniem końcowym."
+  },
+  {
+    "code": "E017",
+    "severity": "error",
+    "line": 14,
+    "id": "f-przygotowania-wybor",
+    "message": "Przepływ f-przygotowania-wybor z bramki równoległej przygotowania nie może mieć warunku."
+  },
+  {
+    "code": "W021",
+    "severity": "warning",
+    "line": 20,
+    "id": "f-zgoda-poprawki",
+    "message": "Gałąź f-zgoda-poprawki bramki „Czy dyrektor zatwierdził?” (zgoda) nie ma ani etykiety, ani warunku, ani statusu przepływu domyślnego."
+  }
+]

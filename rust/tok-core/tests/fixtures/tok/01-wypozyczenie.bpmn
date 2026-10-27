@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Wypożyczenie międzybiblioteczne" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="biblioteka-process" />
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" name="Wypożyczenie międzybiblioteczne" isExecutable="false">
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>potrzeba</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowienie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="bibliotekarz" name="Bibliotekarz">
+        <bpmn:flowNodeRef>katalogi</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>dostepna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wskazanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>inna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wskazany</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowione</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="potrzeba" name="Potrzeba książki" />
+    <bpmn:userTask id="zamowienie" name="Złożenie zamówienia" />
+    <bpmn:userTask id="katalogi" name="Sprawdzenie katalogów" />
+    <bpmn:exclusiveGateway id="dostepna" name="Czy książka dostępna lokalnie?" />
+    <bpmn:userTask id="wskazanie" name="Wskazanie egzemplarza" />
+    <bpmn:userTask id="inna" name="Zamówienie w innej bibliotece" />
+    <bpmn:endEvent id="wskazany" name="Egzemplarz wskazany" />
+    <bpmn:endEvent id="zamowione" name="Zamówienie złożone" />
+    <bpmn:sequenceFlow id="f-potrzeba-zamowienie" sourceRef="potrzeba" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-zamowienie-katalogi" sourceRef="zamowienie" targetRef="katalogi" />
+    <bpmn:sequenceFlow id="f-katalogi-dostepna" sourceRef="katalogi" targetRef="dostepna" />
+    <bpmn:sequenceFlow id="f-dostepna-wskazanie" name="tak" sourceRef="dostepna" targetRef="wskazanie" />
+    <bpmn:sequenceFlow id="f-dostepna-inna" name="nie" sourceRef="dostepna" targetRef="inna" />
+    <bpmn:sequenceFlow id="f-wskazanie-wskazany" sourceRef="wskazanie" targetRef="wskazany" />
+    <bpmn:sequenceFlow id="f-inna-zamowione" sourceRef="inna" targetRef="zamowione" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="biblioteka_di" bpmnElement="biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="800" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czytelnik_di" bpmnElement="czytelnik" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="770" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bibliotekarz_di" bpmnElement="bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="140" width="770" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="potrzeba_di" bpmnElement="potrzeba">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowienie_di" bpmnElement="zamowienie">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="katalogi_di" bpmnElement="katalogi">
+        <dc:Bounds x="326" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="dostepna_di" bpmnElement="dostepna" isMarkerVisible="true">
+        <dc:Bounds x="476" y="185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wskazanie_di" bpmnElement="wskazanie">
+        <dc:Bounds x="576" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inna_di" bpmnElement="inna">
+        <dc:Bounds x="576" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wskazany_di" bpmnElement="wskazany">
+        <dc:Bounds x="726" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowione_di" bpmnElement="zamowione">
+        <dc:Bounds x="726" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-potrzeba-zamowienie_di" bpmnElement="f-potrzeba-zamowienie">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zamowienie-katalogi_di" bpmnElement="f-zamowienie-katalogi">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="301" y="70" />
+        <di:waypoint x="301" y="210" />
+        <di:waypoint x="326" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-katalogi-dostepna_di" bpmnElement="f-katalogi-dostepna">
+        <di:waypoint x="426" y="210" />
+        <di:waypoint x="476" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-dostepna-wskazanie_di" bpmnElement="f-dostepna-wskazanie">
+        <di:waypoint x="526" y="210" />
+        <di:waypoint x="576" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-dostepna-inna_di" bpmnElement="f-dostepna-inna">
+        <di:waypoint x="501" y="235" />
+        <di:waypoint x="501" y="340" />
+        <di:waypoint x="576" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wskazanie-wskazany_di" bpmnElement="f-wskazanie-wskazany">
+        <di:waypoint x="676" y="210" />
+        <di:waypoint x="726" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-inna-zamowione_di" bpmnElement="f-inna-zamowione">
+        <di:waypoint x="676" y="340" />
+        <di:waypoint x="726" y="340" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

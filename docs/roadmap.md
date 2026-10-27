@@ -14,7 +14,12 @@ The goal of the 0.x series is a language and a tool chain that cover BPMN 2.0.2 
 
 Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (extendr, with an established CRAN policy for Rust packages); one code base compiled for Windows, macOS, Linux and WebAssembly (the browser playground); established XML, random-number and property-testing libraries; compile-time memory safety for a large stateful simulator. Julia stays standalone on purpose: two independent implementations of one specification are the strongest test that the specification is unambiguous.
 
-## Current state: 0.1
+## Released
+
+- **0.1.0, 0.1.1** — language 0.1 with the Python reference implementation and the Julia core.
+- **0.2.0** — Rust engine at parity with Python: `tok-core`, `tok-bpmn`, native `tok`, Python bindings for parity testing.
+
+## State at 0.1
 
 Text layer, checker with diagnostics in English and Polish, canonical printer, BPMN export with layout and SVG, BPMN import, FEEL subset, decision tables, Camunda forms, discrete-event simulation (Python); core in Julia; conformance corpus of 18 cases.
 

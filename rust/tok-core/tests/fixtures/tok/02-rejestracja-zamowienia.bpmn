@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Przyjęcie zamówienia na kopię cyfrową" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.1">
+  <bpmn:message id="Message_Zamowienie_kopii" name="Zamówienie kopii" />
+  <bpmn:message id="Message_Kopia_cyfrowa" name="Kopia cyfrowa" />
+  <bpmn:process id="process" name="Przyjęcie zamówienia na kopię cyfrową" isExecutable="false">
+    <bpmn:startEvent id="wplynelo" name="Zamówienie wpłynęło">
+      <bpmn:messageEventDefinition id="wplynelo-def" messageRef="Message_Zamowienie_kopii" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="rejestracja" name="Rejestracja zamówienia" />
+    <bpmn:userTask id="weryfikacja" name="Weryfikacja praw autorskich" />
+    <bpmn:manualTask id="pobranie" name="Pobranie oryginału z magazynu" />
+    <bpmn:userTask id="skanowanie" name="Wykonanie skanu" />
+    <bpmn:scriptTask id="oplata" name="Wyliczenie opłaty" />
+    <bpmn:sendTask id="wyslanie" name="Wysłanie kopii" messageRef="Message_Kopia_cyfrowa" />
+    <bpmn:endEvent id="wyslano" name="Kopia wysłana" />
+    <bpmn:sequenceFlow id="f-wplynelo-rejestracja" sourceRef="wplynelo" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-weryfikacja" sourceRef="rejestracja" targetRef="weryfikacja" />
+    <bpmn:sequenceFlow id="f-weryfikacja-pobranie" sourceRef="weryfikacja" targetRef="pobranie" />
+    <bpmn:sequenceFlow id="f-pobranie-skanowanie" sourceRef="pobranie" targetRef="skanowanie" />
+    <bpmn:sequenceFlow id="f-skanowanie-oplata" sourceRef="skanowanie" targetRef="oplata" />
+    <bpmn:sequenceFlow id="f-oplata-wyslanie" sourceRef="oplata" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-wyslano" sourceRef="wyslanie" targetRef="wyslano" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="wplynelo_di" bpmnElement="wplynelo">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="weryfikacja_di" bpmnElement="weryfikacja">
+        <dc:Bounds x="266" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="pobranie_di" bpmnElement="pobranie">
+        <dc:Bounds x="416" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skanowanie_di" bpmnElement="skanowanie">
+        <dc:Bounds x="566" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="oplata_di" bpmnElement="oplata">
+        <dc:Bounds x="716" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslanie_di" bpmnElement="wyslanie">
+        <dc:Bounds x="866" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslano_di" bpmnElement="wyslano">
+        <dc:Bounds x="1016" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-wplynelo-rejestracja_di" bpmnElement="f-wplynelo-rejestracja">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-weryfikacja_di" bpmnElement="f-rejestracja-weryfikacja">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-weryfikacja-pobranie_di" bpmnElement="f-weryfikacja-pobranie">
+        <di:waypoint x="366" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-pobranie-skanowanie_di" bpmnElement="f-pobranie-skanowanie">
+        <di:waypoint x="516" y="70" />
+        <di:waypoint x="566" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-skanowanie-oplata_di" bpmnElement="f-skanowanie-oplata">
+        <di:waypoint x="666" y="70" />
+        <di:waypoint x="716" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-oplata-wyslanie_di" bpmnElement="f-oplata-wyslanie">
+        <di:waypoint x="816" y="70" />
+        <di:waypoint x="866" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyslanie-wyslano_di" bpmnElement="f-wyslanie-wyslano">
+        <di:waypoint x="966" y="70" />
+        <di:waypoint x="1016" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

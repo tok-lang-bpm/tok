@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1" id="defs-xor" name="Rozgałęzienie XOR" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="wypozyczenie" isExecutable="false" name="Rozgałęzienie XOR">
+    <bpmn:startEvent id="s" />
+    <bpmn:userTask id="k" name="Sprawdzenie &quot;katalogu&quot; i C:\dane" />
+    <bpmn:exclusiveGateway default="f-g-z" id="g" name="Czy książka dostępna lokalnie?" />
+    <bpmn:task id="w" name="Wskazanie egzemplarza" />
+    <bpmn:task id="z" name="Zamówienie w innej bibliotece" />
+    <bpmn:endEvent id="e1" name="Egzemplarz wskazany" />
+    <bpmn:endEvent id="e2" />
+    <bpmn:sequenceFlow id="f-s-k" sourceRef="s" targetRef="k" />
+    <bpmn:sequenceFlow id="f-k-g" sourceRef="k" targetRef="g" />
+    <bpmn:sequenceFlow id="f-tak" name="tak" sourceRef="g" targetRef="w">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">dostepna = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-z" name="nie" sourceRef="g" targetRef="z" />
+    <bpmn:sequenceFlow id="f-w-e1" sourceRef="w" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-z-e2" sourceRef="z" targetRef="e2" />
+    <bpmn:sequenceFlow id="f-z-e2-2" sourceRef="z" targetRef="e2" />
+  </bpmn:process>
+</bpmn:definitions>

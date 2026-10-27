@@ -1,0 +1,31 @@
+tok 0.1 "Propozycja zakupu książki" executable id=Definitions_PropozycjaZakupu namespace=https://codeberg.org/MarekDeja/ipm/pakiety/camunda-start collaboration=Collaboration_PropozycjaZakupu
+
+pool Participant_Biblioteka "Biblioteka uczelniana" process=propozycja-zakupu
+  lane Lane_Czytelnik "Czytelnik"
+    start Start_Propozycja "Propozycja złożona" form=formularz-propozycja
+  lane Lane_System "System biblioteczny"
+    rule Task_Tryb "Ustalenie trybu akceptacji" decision=tryb-akceptacji result=tryb
+    xor Gw_Tryb "Czy potrzebna akceptacja kierownika?"
+    xor Gw_Zgoda_Join
+    script Task_Koszt "Wyliczenie kosztu zakupu" expr="cena + 12.5" result=koszt
+  lane Lane_Kierownik "Kierownik Oddziału Gromadzenia"
+    user Task_Akceptacja "Akceptacja propozycji" form=formularz-akceptacja
+    boundary Boundary_Termin "Minęło 7 dni" on=Task_Akceptacja timer=P7D
+    xor Gw_Zgoda "Czy kierownik się zgodził?"
+    end End_Odrzucona "Propozycja odrzucona"
+    end End_Wygasla "Propozycja wygasła"
+  lane Lane_Gromadzenie "Bibliotekarz gromadzenia"
+    user Task_Zamowienie "Złożenie zamówienia u dostawcy" form=formularz-zamowienie
+    end End_Zamowiona "Książka zamówiona"
+
+flow Start_Propozycja -> Task_Tryb id=Flow_Start
+flow Task_Tryb -> Gw_Tryb id=Flow_Tryb
+flow Gw_Tryb -> Task_Akceptacja "tak" when="tryb = \"kierownik\"" id=Flow_Tryb_Tak
+flow Gw_Tryb -> Gw_Zgoda_Join "nie" default id=Flow_Tryb_Nie
+flow Task_Akceptacja -> Gw_Zgoda id=Flow_Akceptacja
+flow Gw_Zgoda -> Gw_Zgoda_Join "tak" when="zgoda = true" id=Flow_Zgoda_Tak
+flow Gw_Zgoda -> End_Odrzucona "nie" default id=Flow_Zgoda_Nie
+flow Boundary_Termin -> End_Wygasla id=Flow_Termin
+flow Gw_Zgoda_Join -> Task_Koszt id=Flow_Join
+flow Task_Koszt -> Task_Zamowienie id=Flow_Koszt
+flow Task_Zamowienie -> End_Zamowiona id=Flow_Zamowienie

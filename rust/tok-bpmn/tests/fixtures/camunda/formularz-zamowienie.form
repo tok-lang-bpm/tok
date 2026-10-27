@@ -1,0 +1,12 @@
+{
+  "id": "formularz-zamowienie",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "components": [
+    { "type": "text", "id": "Text_Zamowienie", "text": "## Zamówienie: {{tytul}}\nKoszt z wysyłką: {{koszt}} zł" },
+    { "type": "textfield", "id": "Field_Dostawca", "key": "dostawca", "label": "Dostawca", "validate": { "required": true } },
+    { "type": "textfield", "id": "Field_Numer", "key": "numer_zamowienia", "label": "Numer zamówienia", "validate": { "required": true } }
+  ],
+  "schemaVersion": 18
+}

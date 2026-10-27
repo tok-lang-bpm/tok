@@ -22,7 +22,7 @@ use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use crate::layout::{OMap, Pt, key};
-use crate::model::{Model, is_act, is_data, is_evt, is_flownode, is_gw, is_subp};
+use crate::model::{Model, is_act, is_data_shape, is_evt, is_flownode, is_gw, is_subp};
 use crate::svg::{flow_label_anchor, msg_label_anchor, wrap};
 use crate::xml::Id;
 
@@ -420,7 +420,7 @@ fn ancestors(md: &Model, e: Id) -> Vec<String> {
 }
 
 fn is_node_tag(t: &str) -> bool {
-    is_flownode(t) || is_data(t) || t == "textAnnotation"
+    is_flownode(t) || is_data_shape(t) || t == "textAnnotation"
 }
 
 /// Text of the external label of a node (events, gateways, data), as drawn.
@@ -705,7 +705,7 @@ impl Scene {
                 continue;
             };
             let t = self.nodes[k].tag.clone();
-            if !(is_evt(&t) || is_gw(&t) || is_data(&t)) {
+            if !(is_evt(&t) || is_gw(&t) || is_data_shape(&t)) {
                 continue;
             }
             let text = node_label_text(md, e, &t);

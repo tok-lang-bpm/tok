@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Standard loop" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Standard loop">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="proba" name="Próba połączenia">
+      <bpmn:standardLoopCharacteristics loopMaximum="5" testBefore="true">
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">proby &lt; 3</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="poprawki" name="Naniesienie poprawek">
+      <bpmn:standardLoopCharacteristics>
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">not(zatwierdzono)</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:subProcess id="kontrola" name="Kontrola jakości">
+      <bpmn:standardLoopCharacteristics loopMaximum="3" />
+      <bpmn:startEvent id="ks" />
+      <bpmn:task id="sprawdz" name="Sprawdzenie" />
+      <bpmn:endEvent id="ke" />
+      <bpmn:sequenceFlow id="f-ks-sprawdz" sourceRef="ks" targetRef="sprawdz" />
+      <bpmn:sequenceFlow id="f-sprawdz-ke" sourceRef="sprawdz" targetRef="ke" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-proba" sourceRef="s" targetRef="proba" />
+    <bpmn:sequenceFlow id="f-proba-poprawki" sourceRef="proba" targetRef="poprawki" />
+    <bpmn:sequenceFlow id="f-poprawki-kontrola" sourceRef="poprawki" targetRef="kontrola" />
+    <bpmn:sequenceFlow id="f-kontrola-e" sourceRef="kontrola" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

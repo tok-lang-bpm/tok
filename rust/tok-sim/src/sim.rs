@@ -338,6 +338,9 @@ struct Frame {
     last_end: Option<String>,
     /// ad-hoc sub-process: (expression, wait flag)
     until: Option<(String, bool)>,
+    /// complex gateways with an activation condition waiting in this frame: (tokens
+    /// expected, already fired)
+    complex: IndexMap<String, (i64, bool)>,
 }
 
 /// A case (`_Case`).
@@ -350,8 +353,9 @@ pub struct Case {
     pub vars: Vars,
     steps: u64,
     top: usize,
-    /// (activity id, handler id) of completed activities, in completion order
-    compensable: Vec<(String, String)>,
+    /// (activity id, handler id, frame of the activity) of completed activities, in
+    /// completion order
+    compensable: Vec<(String, String, usize)>,
 }
 
 /// An activity instance, task or sub-process (`_AI`).
@@ -375,6 +379,11 @@ struct Ai {
     instances: Option<Vec<usize>>,
     /// not written to the event log (compensation throw)
     silent: bool,
+    /// standard loop with a condition or a maximum: number of this iteration, from 1
+    /// (0 for every other activity)
+    iteration: u64,
+    /// compensation of a cancelled transaction: the instance of the transaction
+    cancel: Option<usize>,
     index: usize,
     items: Vec<PyValue>,
     results: Vec<PyValue>,
@@ -515,6 +524,11 @@ pub struct Simulator<'a> {
     ais: Vec<Ai>,
     waiters: Vec<bool>,
     main_start: String,
+    /// the document is in language 0.5 (multiple events and standard loops with a
+    /// condition exist only there)
+    lang05: bool,
+    /// iteration of a standard loop for the next activity instance
+    loop_iter: u64,
 }
 
 fn node_id(n: &Node) -> &str {
@@ -614,6 +628,8 @@ impl<'a> Simulator<'a> {
             ais: Vec::new(),
             waiters: Vec::new(),
             main_start: String::new(),
+            lang05: doc.lang_05(),
+            loop_iter: 0,
         })
     }
 
@@ -649,8 +665,25 @@ impl<'a> Simulator<'a> {
             .collect();
         match plain.first() {
             Some(n) => Some(node_id(n).to_string()),
-            None => starts.first().map(|n| node_id(n).to_string()),
+            None => starts
+                .first()
+                .map(|n| node_id(n).to_string())
+                .or_else(|| self.instantiating(scope)),
         }
+    }
+
+    /// The instantiating receive task or event-based gateway of a scope without a start
+    /// event (language 0.5): it starts each case as a start event would.
+    fn instantiating(&self, scope: &str) -> Option<String> {
+        self.doc
+            .nodes
+            .values()
+            .find(|n| {
+                n.scope.as_deref() == Some(scope)
+                    && (n.base.kind == "receive" || n.base.kind == "eventgw")
+                    && n.base.has("instantiate")
+            })
+            .map(|n| node_id(n).to_string())
     }
 
     fn schedule(&mut self, dt: &Sample, event: Event) -> R<()> {
@@ -692,6 +725,8 @@ impl<'a> Simulator<'a> {
             body: None,
             instances: None,
             silent: false,
+            iteration: std::mem::take(&mut self.loop_iter),
+            cancel: None,
             index: 0,
             items: Vec::new(),
             results: Vec::new(),
@@ -722,6 +757,7 @@ impl<'a> Simulator<'a> {
             children: Vec::new(),
             last_end: None,
             until: None,
+            complex: IndexMap::new(),
         });
         self.frames.len() - 1
     }
@@ -869,6 +905,7 @@ impl<'a> Simulator<'a> {
     }
 
     fn enter(&mut self, frame: usize, node_id: &str) -> R<()> {
+        let iteration = std::mem::take(&mut self.loop_iter);
         if !self.frames[frame].alive {
             return Ok(());
         }
@@ -892,6 +929,25 @@ impl<'a> Simulator<'a> {
         {
             return Ok(());
         }
+        if k == "end"
+            && n.base.has("cancel")
+            && let Some(tx) = self.transaction_frame(frame)
+        {
+            return self.cancel_transaction(tx);
+        }
+        if self.standard_loop(n) {
+            // the first entry tests the condition only with test-before; later
+            // iterations come from `complete`, which has tested it
+            let iteration = if iteration > 0 {
+                iteration
+            } else if n.base.has("test-before") && !self.loop_again(frame, n, 0) {
+                return self.leave(frame, node_id);
+            } else {
+                1
+            };
+            // taken by the activity instance that the dispatch below creates first
+            self.loop_iter = iteration;
+        }
         match k {
             "end" => {
                 self.frames[frame].last_end = Some(node_id.to_string());
@@ -906,7 +962,11 @@ impl<'a> Simulator<'a> {
             }
             "start" | "throw" | "boundary" => self.leave(frame, node_id),
             "catch" => {
-                let wait = self.event_wait(n)?;
+                let wait = if self.multiple(n) {
+                    self.multiple_wait(n, true)?
+                } else {
+                    self.event_wait(n)?
+                };
                 let pass = match &wait {
                     None => true,
                     Some(w) => w.le_zero()?,
@@ -928,7 +988,7 @@ impl<'a> Simulator<'a> {
                 }
             }
             _ if GATEWAY_KINDS.contains(&k) => self.gateway(frame, n),
-            "sub" => self.start_sub(frame, n),
+            "sub" | "transaction" => self.start_sub(frame, n),
             "adhoc" => self.start_adhoc(frame, n),
             "eventsub" => self.consume(frame),
             _ if (n.base.has("parallel") || n.base.has("sequential"))
@@ -1042,7 +1102,15 @@ impl<'a> Simulator<'a> {
         let kind = n.base.kind.as_str();
         let nin = self.inc.get(id).copied().unwrap_or(0) as i64;
         let ctx = self.cases[self.frames[frame].case].vars.clone();
-        if nin > 1 && (kind == "and" || kind == "or") {
+        let activation = n.base.attr("activation").filter(|_| kind == "complex");
+        if nin > 1
+            && let Some(expr) = activation
+        {
+            if !self.complex_join(frame, id, expr, nin)? {
+                return Ok(());
+            }
+        } else if nin > 1 && (kind == "and" || kind == "or" || kind == "complex") {
+            // a complex gateway without an activation condition joins like `or`
             let f = &mut self.frames[frame];
             let expected = if kind == "and" {
                 nin
@@ -1055,7 +1123,7 @@ impl<'a> Simulator<'a> {
                 return self.consume(frame);
             }
             f.joins.insert(id.to_string(), 0);
-            if kind == "or" {
+            if kind != "and" {
                 f.or_stack.pop();
             }
         }
@@ -1074,7 +1142,7 @@ impl<'a> Simulator<'a> {
                 let t = self.xor_choice(&flows, &ctx);
                 self.route(frame, &[t])
             }
-            "or" => {
+            "or" | "complex" => {
                 let targets = self.or_choice(&flows, &ctx);
                 self.frames[frame].or_stack.push(targets.len() as i64);
                 self.route(frame, &targets)
@@ -1165,6 +1233,8 @@ impl<'a> Simulator<'a> {
                 } else {
                     None
                 }
+            } else if self.multiple(target) {
+                self.multiple_wait(target, false)?
             } else if a.contains_key("timer") || a.contains_key("delay") {
                 self.event_wait(target)?
             } else {
@@ -1180,6 +1250,12 @@ impl<'a> Simulator<'a> {
                     best_t = Some(w);
                 }
             }
+        }
+        if best.is_none() && n.base.has("instantiate") {
+            // an instantiating gateway is reached because one of its events arrived:
+            // without known waiting times that is the event of the first flow
+            best = flows.first().map(|i| self.node(&self.doc.flows[*i].target));
+            best_t = Some(Sample::Num(0.0));
         }
         let (Some(best), Some(best_t)) = (best, best_t) else {
             self.warnings.push(format!(
@@ -1346,7 +1422,12 @@ impl<'a> Simulator<'a> {
         {
             self.cases[case]
                 .compensable
-                .push((node_id(n).to_string(), h.clone()));
+                .push((node_id(n).to_string(), h.clone(), frame));
+        }
+        let iteration = self.ais[ai].iteration;
+        if iteration > 0 && self.loop_again(frame, n, iteration) {
+            self.loop_iter = iteration + 1;
+            return self.enter(frame, node_id(n));
         }
         self.leave(frame, node_id(n))
     }
@@ -1413,8 +1494,15 @@ impl<'a> Simulator<'a> {
             return Ok(());
         };
         for b in bs {
-            let a = &self.node(&b).base.attrs;
-            let w = if let Some(timer) = a.get("timer") {
+            let bn = self.node(&b);
+            if bn.base.has("cancel") {
+                // followed only when the transaction is cancelled
+                continue;
+            }
+            let a = &bn.base.attrs;
+            let w = if self.multiple(bn) {
+                self.multiple_wait(bn, false)?
+            } else if let Some(timer) = a.get("timer") {
                 let now = self.now_dt()?;
                 timer_seconds(timer, &now)?.map(Sample::Num)
             } else if let Some(d) = a.get("delay") {
@@ -1480,6 +1568,11 @@ impl<'a> Simulator<'a> {
 
     fn finish_ai(&mut self, ai: usize) -> R<()> {
         if self.ais[ai].alive && self.frames[self.ais[ai].frame].alive {
+            if let Some(tx) = self.ais[ai].cancel {
+                self.ais[ai].alive = false;
+                self.ais[ai].end = Some(self.t);
+                return self.cancelled(tx);
+            }
             self.complete(ai)?;
         }
         Ok(())
@@ -1648,7 +1741,7 @@ impl<'a> Simulator<'a> {
         if let Some(h) = a.get("compensate") {
             self.cases[case]
                 .compensable
-                .push((node_id(n).to_string(), h.clone()));
+                .push((node_id(n).to_string(), h.clone(), frame));
         }
         self.leave(frame, node_id(n))
     }
@@ -1728,8 +1821,8 @@ impl<'a> Simulator<'a> {
             .compensable
             .iter()
             .rev()
-            .filter(|(act, _)| target.is_none_or(|t| act == t))
-            .map(|(_, h)| h.clone())
+            .filter(|(act, _, _)| target.is_none_or(|t| act == t))
+            .map(|(_, h, _)| h.clone())
             .filter(|h| self.doc.nodes.contains_key(h))
             .collect();
         if todo.is_empty() {
@@ -1737,7 +1830,7 @@ impl<'a> Simulator<'a> {
         }
         self.cases[case]
             .compensable
-            .retain(|(act, _)| !target.is_none_or(|t| act == t));
+            .retain(|(act, _, _)| !target.is_none_or(|t| act == t));
         if n.base.kind == "end" {
             self.frames[frame].last_end = Some(node_id(n).to_string());
         }
@@ -1756,4 +1849,215 @@ impl<'a> Simulator<'a> {
         }
         Ok(true)
     }
+
+    // ------------------------------------------------------------ language 0.5
+
+    /// A standard loop with a condition (`while=`) or a maximum (`loop-max=`). A `loop`
+    /// marker without either runs once, as in language 0.3.
+    fn standard_loop(&self, n: &Node) -> bool {
+        let k = n.base.kind.as_str();
+        self.lang05
+            && n.base.has("loop")
+            && is_activity(k)
+            && k != "eventsub"
+            && (n.base.attrs.contains_key("while") || n.base.attrs.contains_key("loop-max"))
+    }
+
+    /// Whether a standard loop runs again after `done` iterations: fewer than `loop-max`
+    /// and `while` holds (absent: true). `loopCounter` is the number of iterations done.
+    fn loop_again(&mut self, frame: usize, n: &Node, done: u64) -> bool {
+        if let Some(max) = n.base.attr("loop-max").and_then(parse_float)
+            && done as f64 >= max
+        {
+            return false;
+        }
+        let Some(expr) = n.base.attr("while") else {
+            return true;
+        };
+        let mut ctx = self.cases[self.frames[frame].case].vars.clone();
+        ctx.insert("loopCounter".into(), PyValue::Int(done.to_string()));
+        let what = format!("while of '{}'", node_id(n));
+        self.truth(expr, &ctx, &what)
+    }
+
+    /// A catching event with two or more triggers.
+    fn multiple(&self, n: &Node) -> bool {
+        self.lang05
+            && TRIGGERS
+                .iter()
+                .map(|k| n.base.values(k).len())
+                .sum::<usize>()
+                >= 2
+    }
+
+    /// Waiting time of a multiple event: the earliest of its triggers, or with `parallel`
+    /// the latest. A timer waits for its duration; every other trigger waits for the
+    /// event's `delay=` (one draw for all of them). Without `delay=` such a trigger
+    /// happens at once on a `catch` event (as a single one does) and never on a boundary
+    /// event or after an event-based gateway.
+    fn multiple_wait(&mut self, n: &Node, catch: bool) -> R<Option<Sample>> {
+        let mut waits: Vec<Option<f64>> = Vec::new();
+        let timers = n.base.values("timer");
+        if !timers.is_empty() {
+            let now = self.now_dt()?;
+            for timer in timers {
+                let w = timer_seconds(timer, &now)?;
+                if w.is_none() {
+                    self.warnings.push(format!(
+                        "timer of '{}' is not understood: {timer}",
+                        node_id(n)
+                    ));
+                }
+                waits.push(w);
+            }
+        }
+        let others: usize = TRIGGERS
+            .iter()
+            .filter(|k| **k != "timer")
+            .map(|k| n.base.values(k).len())
+            .sum();
+        if others > 0 {
+            let w = match n.base.attr("delay") {
+                Some(d) => Some(self.draw(d)?.delay()?),
+                None if catch => Some(0.0),
+                None => None,
+            };
+            waits.extend(std::iter::repeat_n(w, others));
+        }
+        let w = if n.base.has("parallel") {
+            waits
+                .into_iter()
+                .collect::<Option<Vec<f64>>>()
+                .and_then(|ws| ws.into_iter().reduce(f64::max))
+        } else {
+            waits.into_iter().flatten().reduce(f64::min)
+        };
+        Ok(w.map(Sample::Num))
+    }
+
+    /// Join of a complex gateway with an activation condition. Each arriving token
+    /// counts in `_activationCount`; the first token for which `activation` holds goes
+    /// on, the later ones are consumed until all expected tokens have arrived (one per
+    /// incoming flow, or as many as the matching `or` split activated), and then the
+    /// gateway waits for the next activation. Returns whether this token goes on.
+    fn complex_join(&mut self, frame: usize, id: &str, expr: &str, nin: i64) -> R<bool> {
+        let case = self.frames[frame].case;
+        let f = &mut self.frames[frame];
+        let (expected, fired) = match f.complex.get(id) {
+            Some(state) => *state,
+            None => (f.or_stack.pop().unwrap_or(nin), false),
+        };
+        let got = f.joins.get(id).copied().unwrap_or(0) + 1;
+        let fire = !fired && {
+            let mut ctx = self.cases[case].vars.clone();
+            ctx.insert("_activationCount".into(), PyValue::Int(got.to_string()));
+            let what = format!("activation of '{id}'");
+            self.truth(expr, &ctx, &what)
+        };
+        let f = &mut self.frames[frame];
+        if got >= expected && (fired || fire) {
+            f.joins.insert(id.to_string(), 0);
+            f.complex.shift_remove(id);
+        } else {
+            // a count left above zero when every token has arrived without activation
+            // reports the case as a deadlock, as an unfinished join does
+            f.joins.insert(id.to_string(), got);
+            f.complex.insert(id.to_string(), (expected, fired || fire));
+        }
+        if !fire {
+            self.consume(frame)?;
+        }
+        Ok(fire)
+    }
+
+    /// The frame of the transaction that a cancel end event in `frame` cancels.
+    fn transaction_frame(&self, frame: usize) -> Option<usize> {
+        let mut cur = Some(frame);
+        while let Some(i) = cur {
+            if let Some(ai) = self.frames[i].ai
+                && self.ais[ai].cancel.is_none()
+                && self.node(&self.ais[ai].node).base.kind == "transaction"
+            {
+                return Some(i);
+            }
+            cur = self.frames[i].parent;
+        }
+        None
+    }
+
+    /// Cancel end event: stop every token of the transaction, run the compensation
+    /// handlers of the activities completed inside it (the latest first, all at once as
+    /// a compensation throw does) and then leave through the cancel boundary event.
+    fn cancel_transaction(&mut self, tx: usize) -> R<()> {
+        let (Some(tx_ai), Some(parent)) = (self.frames[tx].ai, self.frames[tx].parent) else {
+            return Ok(());
+        };
+        let case = self.frames[tx].case;
+        self.kill(tx)?;
+        self.ais[tx_ai].alive = false;
+        self.release(tx_ai)?;
+        for w in self.ais[tx_ai].timers.clone() {
+            self.waiters[w] = false;
+        }
+        let frames = &self.frames;
+        let todo: Vec<String> = self.cases[case]
+            .compensable
+            .iter()
+            .rev()
+            .filter(|(_, _, f)| within(frames, *f, tx))
+            .map(|(_, h, _)| h.clone())
+            .filter(|h| self.doc.nodes.contains_key(h))
+            .collect();
+        self.cases[case]
+            .compensable
+            .retain(|(_, _, f)| !within(frames, *f, tx));
+        if todo.is_empty() {
+            return self.cancelled(tx_ai);
+        }
+        let tx_id = self.ais[tx_ai].node.clone();
+        let ai = self.new_ai(parent, &tx_id);
+        self.ais[ai].start = Some(self.t);
+        self.ais[ai].cancel = Some(tx_ai);
+        self.frames[parent].ais.push(ai);
+        let child = self.new_frame(case, &tx_id, Some(parent), Some(ai));
+        self.ais[ai].child = Some(child);
+        self.frames[parent].children.push(child);
+        self.frames[child].active = todo.len() as i64;
+        for h in todo {
+            let hn = self.node(&h);
+            self.start_activity(child, hn)?;
+        }
+        Ok(())
+    }
+
+    /// The end of a cancelled transaction, after its compensation: the instance is
+    /// logged as interrupted and the token follows the cancel boundary event. A
+    /// cancelled transaction does not complete, so without a cancel boundary event its
+    /// outgoing flows are not taken and the token ends there (in BPMN only the cancel
+    /// event attached to the transaction continues the process).
+    fn cancelled(&mut self, tx_ai: usize) -> R<()> {
+        self.ais[tx_ai].end = Some(self.t);
+        self.log(tx_ai, "interrupted");
+        let frame = self.ais[tx_ai].frame;
+        let boundary = self
+            .boundaries
+            .get(&self.ais[tx_ai].node)
+            .and_then(|bs| bs.iter().find(|b| self.node(b).base.has("cancel")).cloned());
+        match boundary {
+            Some(b) => self.leave(frame, &b),
+            None => self.consume(frame),
+        }
+    }
+}
+
+/// Whether `frame` is `ancestor` or runs inside it.
+fn within(frames: &[Frame], frame: usize, ancestor: usize) -> bool {
+    let mut cur = Some(frame);
+    while let Some(i) = cur {
+        if i == ancestor {
+            return true;
+        }
+        cur = frames[i].parent;
+    }
+    false
 }

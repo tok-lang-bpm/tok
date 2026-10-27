@@ -35,6 +35,10 @@ No errors means the model follows the notation rules. It does not mean the model
 
 When the document is `executable` (header flag), every `user` task should have `form=`, every `rule` task `decision=` and `result=`, every `script` task `expr=` and `result=`, every flow leaving an `xor`/`or` gateway with several outgoing flows either `when="…"` or `default`. FEEL expressions are written without a leading `=`. Avoid `service` tasks: they need a separate worker program; use `script` or `user` tasks instead. Forms and decisions are written in the same file (`form`, `decision` blocks) and exported with `tok export`.
 
+## BPMN beyond Camunda (language 0.5)
+
+With the header `tok 0.5` the model may use the rest of BPMN 2.0.2 process modelling: `transaction` with `end … cancel` and `boundary … cancel`, `complex` gateways (`activation=`), standard loops (`loop while="…" test-before loop-max=N`), events with several triggers (`parallel` for all of them), `receive`/`eventgw … instantiate`, process data (`item`, `input`, `output`, `property`, `type=`), `global` tasks, `interface`/`operation` and correlation `key` blocks (in documents with pools). They belong to the level `full` (the levels `basic` and `analytic` reject them) and are not executed by Camunda 8: in executable documents they are reported as `C100`–`C110`.
+
 ## Simulation
 
 Add `simulate`, `resource` and `variable` statements and `by=`, `duration=`, `p=` attributes; run `tok sim FILE --seed 1`. Report indicators with the seed you used.

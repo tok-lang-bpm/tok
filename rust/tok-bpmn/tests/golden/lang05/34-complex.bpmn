@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Complex gateway" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Complex gateway">
+    <bpmn:startEvent id="s" name="Rękopis wpłynął" />
+    <bpmn:parallelGateway id="rozdzial" name="Rozesłanie do recenzentów" />
+    <bpmn:userTask id="r1" name="Recenzja 1" />
+    <bpmn:userTask id="r2" name="Recenzja 2" />
+    <bpmn:userTask id="r3" name="Recenzja 3" />
+    <bpmn:complexGateway id="wybor" name="Czy zebrano dość recenzji?">
+      <bpmn:activationCondition xsi:type="bpmn:tFormalExpression">_activationCount &gt;= 2</bpmn:activationCondition>
+    </bpmn:complexGateway>
+    <bpmn:userTask id="decyzja" name="Decyzja redakcji" />
+    <bpmn:complexGateway default="f-podzial-sklad" id="podzial" name="Które działania są potrzebne?" />
+    <bpmn:task id="korekta" name="Korekta" />
+    <bpmn:task id="sklad" name="Skład" />
+    <bpmn:inclusiveGateway id="scalenie" />
+    <bpmn:endEvent id="e" name="Decyzja podjęta" />
+    <bpmn:sequenceFlow id="f-s-rozdzial" sourceRef="s" targetRef="rozdzial" />
+    <bpmn:sequenceFlow id="f-rozdzial-r1" sourceRef="rozdzial" targetRef="r1" />
+    <bpmn:sequenceFlow id="f-rozdzial-r2" sourceRef="rozdzial" targetRef="r2" />
+    <bpmn:sequenceFlow id="f-rozdzial-r3" sourceRef="rozdzial" targetRef="r3" />
+    <bpmn:sequenceFlow id="f-r1-wybor" sourceRef="r1" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-r2-wybor" sourceRef="r2" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-r3-wybor" sourceRef="r3" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-wybor-decyzja" sourceRef="wybor" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-podzial" sourceRef="decyzja" targetRef="podzial" />
+    <bpmn:sequenceFlow id="f-podzial-korekta" name="korekta" sourceRef="podzial" targetRef="korekta">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">poprawki</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-podzial-sklad" name="skład" sourceRef="podzial" targetRef="sklad" />
+    <bpmn:sequenceFlow id="f-korekta-scalenie" sourceRef="korekta" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-sklad-scalenie" sourceRef="sklad" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-scalenie-e" sourceRef="scalenie" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6" y="93" width="84" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rozdzial_di" bpmnElement="rozdzial">
+        <dc:Bounds x="116" y="45" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="62" y="20" width="74" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="r1_di" bpmnElement="r1">
+        <dc:Bounds x="216" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="r2_di" bpmnElement="r2">
+        <dc:Bounds x="216" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="r3_di" bpmnElement="r3">
+        <dc:Bounds x="216" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wybor_di" bpmnElement="wybor">
+        <dc:Bounds x="366" y="45" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="396" y="98" width="62" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="decyzja_di" bpmnElement="decyzja">
+        <dc:Bounds x="466" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="podzial_di" bpmnElement="podzial">
+        <dc:Bounds x="616" y="45" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="646" y="98" width="68" height="35" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="korekta_di" bpmnElement="korekta">
+        <dc:Bounds x="716" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sklad_di" bpmnElement="sklad">
+        <dc:Bounds x="716" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="scalenie_di" bpmnElement="scalenie">
+        <dc:Bounds x="866" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="966" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="942" y="93" width="84" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-rozdzial_di" bpmnElement="f-s-rozdzial">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rozdzial-r1_di" bpmnElement="f-rozdzial-r1">
+        <di:waypoint x="166" y="70" />
+        <di:waypoint x="216" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rozdzial-r2_di" bpmnElement="f-rozdzial-r2">
+        <di:waypoint x="141" y="95" />
+        <di:waypoint x="141" y="200" />
+        <di:waypoint x="216" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rozdzial-r3_di" bpmnElement="f-rozdzial-r3">
+        <di:waypoint x="141" y="95" />
+        <di:waypoint x="141" y="330" />
+        <di:waypoint x="216" y="330" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-r1-wybor_di" bpmnElement="f-r1-wybor">
+        <di:waypoint x="316" y="70" />
+        <di:waypoint x="366" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-r2-wybor_di" bpmnElement="f-r2-wybor">
+        <di:waypoint x="316" y="200" />
+        <di:waypoint x="391" y="200" />
+        <di:waypoint x="391" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-r3-wybor_di" bpmnElement="f-r3-wybor">
+        <di:waypoint x="316" y="330" />
+        <di:waypoint x="391" y="330" />
+        <di:waypoint x="391" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wybor-decyzja_di" bpmnElement="f-wybor-decyzja">
+        <di:waypoint x="416" y="70" />
+        <di:waypoint x="466" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-decyzja-podzial_di" bpmnElement="f-decyzja-podzial">
+        <di:waypoint x="566" y="70" />
+        <di:waypoint x="616" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-podzial-korekta_di" bpmnElement="f-podzial-korekta">
+        <di:waypoint x="666" y="70" />
+        <di:waypoint x="716" y="70" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="673" y="55" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-podzial-sklad_di" bpmnElement="f-podzial-sklad">
+        <di:waypoint x="641" y="95" />
+        <di:waypoint x="641" y="200" />
+        <di:waypoint x="716" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="649" y="185" width="28" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-korekta-scalenie_di" bpmnElement="f-korekta-scalenie">
+        <di:waypoint x="816" y="70" />
+        <di:waypoint x="866" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-sklad-scalenie_di" bpmnElement="f-sklad-scalenie">
+        <di:waypoint x="816" y="200" />
+        <di:waypoint x="891" y="200" />
+        <di:waypoint x="891" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-scalenie-e_di" bpmnElement="f-scalenie-e">
+        <di:waypoint x="916" y="70" />
+        <di:waypoint x="966" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

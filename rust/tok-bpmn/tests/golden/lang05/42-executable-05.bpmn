@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.5" id="definitions" name="Elements Camunda does not execute" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_E_mail" name="E-mail" />
+  <bpmn:message id="Message_Formularz" name="Formularz" />
+  <bpmn:message id="Message_A" name="A">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=id" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_Zgloszenie" name="Zgłoszenie" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=id" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:signal id="Signal_B" name="B" />
+  <bpmn:correlationProperty id="CorrelationProperty_id" name="id">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_A">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">a.id</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:interface id="katalog" name="Katalog">
+    <bpmn:operation id="szukaj" name="Szukaj">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:globalUserTask id="sprawdzenie" name="Sprawdzenie" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka" processRef="biblioteka-process" />
+    <bpmn:participant id="czytelnik" name="Czytelnik" processRef="czytelnik-process" />
+    <bpmn:correlationKey id="k" name="Klucz">
+      <bpmn:correlationPropertyRef>CorrelationProperty_id</bpmn:correlationPropertyRef>
+    </bpmn:correlationKey>
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" isExecutable="true" name="Biblioteka">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_E_mail" />
+      <bpmn:messageEventDefinition id="s-def-2" messageRef="Message_Formularz" />
+    </bpmn:startEvent>
+    <bpmn:transaction id="t" name="Transakcja">
+      <bpmn:startEvent id="ts" />
+      <bpmn:serviceTask id="rez" name="Rezerwacja" operationRef="szukaj">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="rezerwacja" />
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="te" />
+      <bpmn:endEvent id="anuluj" name="Anulowanie">
+        <bpmn:cancelEventDefinition id="anuluj-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ts-rez" sourceRef="ts" targetRef="rez" />
+      <bpmn:sequenceFlow id="f-rez-te" sourceRef="rez" targetRef="te" />
+    </bpmn:transaction>
+    <bpmn:boundaryEvent attachedToRef="t" id="tb" name="Anulowano">
+      <bpmn:cancelEventDefinition id="tb-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:complexGateway id="c" name="Czy dość?">
+      <bpmn:activationCondition xsi:type="bpmn:tFormalExpression">=_activationCount &gt;= 1</bpmn:activationCondition>
+    </bpmn:complexGateway>
+    <bpmn:callActivity calledElement="sprawdzenie" id="cz" name="Sprawdzenie" />
+    <bpmn:serviceTask id="proba" name="Próba">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="proba" />
+      </bpmn:extensionElements>
+      <bpmn:standardLoopCharacteristics>
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">=proby &lt; 3</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="kilka" name="Kilka" parallelMultiple="true">
+      <bpmn:messageEventDefinition id="kilka-def" messageRef="Message_A" />
+      <bpmn:signalEventDefinition id="kilka-def-2" signalRef="Signal_B" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e2" name="Anulowano" />
+    <bpmn:sequenceFlow id="f-s-t" sourceRef="s" targetRef="t" />
+    <bpmn:sequenceFlow id="f-t-c" sourceRef="t" targetRef="c" />
+    <bpmn:sequenceFlow id="f-c-cz" sourceRef="c" targetRef="cz" />
+    <bpmn:sequenceFlow id="f-cz-proba" sourceRef="cz" targetRef="proba" />
+    <bpmn:sequenceFlow id="f-proba-kilka" sourceRef="proba" targetRef="kilka" />
+    <bpmn:sequenceFlow id="f-kilka-e" sourceRef="kilka" targetRef="e" />
+    <bpmn:sequenceFlow id="f-tb-e2" sourceRef="tb" targetRef="e2" />
+  </bpmn:process>
+  <bpmn:process id="czytelnik-process" isExecutable="true" name="Czytelnik">
+    <bpmn:receiveTask id="przyjecie" instantiate="true" messageRef="Message_Zgloszenie" name="Przyjęcie" />
+    <bpmn:eventBasedGateway id="g" instantiate="true" name="Co dalej?" />
+    <bpmn:intermediateCatchEvent id="odp" name="Odpowiedź">
+      <bpmn:messageEventDefinition id="odp-def" messageRef="Message_Odpowiedz" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="czas" name="Czas">
+      <bpmn:timerEventDefinition id="czas-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="ce" name="Koniec" />
+    <bpmn:endEvent id="ce2" name="Koniec 2" />
+    <bpmn:endEvent id="ce3" name="Koniec 3" />
+    <bpmn:sequenceFlow id="f-przyjecie-ce" sourceRef="przyjecie" targetRef="ce" />
+    <bpmn:sequenceFlow id="f-g-odp" sourceRef="g" targetRef="odp" />
+    <bpmn:sequenceFlow id="f-odp-ce2" sourceRef="odp" targetRef="ce2" />
+    <bpmn:sequenceFlow id="f-g-czas" sourceRef="g" targetRef="czas" />
+    <bpmn:sequenceFlow id="f-czas-ce3" sourceRef="czas" targetRef="ce3" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="biblioteka_di" bpmnElement="biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1090" height="390" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czytelnik_di" bpmnElement="czytelnik" isHorizontal="true">
+        <dc:Bounds x="0" y="430" width="1090" height="330" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="60" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="64" y="173" width="28" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_di" bpmnElement="t" isExpanded="true">
+        <dc:Bounds x="146" y="30" width="340" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ts_di" bpmnElement="ts">
+        <dc:Bounds x="176" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rez_di" bpmnElement="rez">
+        <dc:Bounds x="262" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="te_di" bpmnElement="te">
+        <dc:Bounds x="412" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="anuluj_di" bpmnElement="anuluj">
+        <dc:Bounds x="176" y="200" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="166" y="241" width="56" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_di" bpmnElement="c">
+        <dc:Bounds x="536" y="125" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="535" y="180" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cz_di" bpmnElement="cz">
+        <dc:Bounds x="636" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="proba_di" bpmnElement="proba">
+        <dc:Bounds x="786" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kilka_di" bpmnElement="kilka">
+        <dc:Bounds x="936" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="940" y="173" width="28" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="1022" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1023" y="173" width="34" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="543" y="320" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="535" y="361" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przyjecie_di" bpmnElement="przyjecie">
+        <dc:Bounds x="60" y="460" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g">
+        <dc:Bounds x="85" y="590" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="53" y="643" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="odp_di" bpmnElement="odp">
+        <dc:Bounds x="210" y="597" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="202" y="638" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czas_di" bpmnElement="czas">
+        <dc:Bounds x="210" y="690" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="216" y="731" width="24" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ce_di" bpmnElement="ce">
+        <dc:Bounds x="210" y="482" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="211" y="523" width="34" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ce2_di" bpmnElement="ce2">
+        <dc:Bounds x="296" y="597" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="291" y="638" width="46" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ce3_di" bpmnElement="ce3">
+        <dc:Bounds x="296" y="690" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="291" y="731" width="46" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="tb_di" bpmnElement="tb">
+        <dc:Bounds x="438" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="399" y="291" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-ts-rez_di" bpmnElement="f-ts-rez">
+        <di:waypoint x="212" y="110" />
+        <di:waypoint x="262" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rez-te_di" bpmnElement="f-rez-te">
+        <di:waypoint x="362" y="110" />
+        <di:waypoint x="412" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-t_di" bpmnElement="f-s-t">
+        <di:waypoint x="96" y="150" />
+        <di:waypoint x="146" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-t-c_di" bpmnElement="f-t-c">
+        <di:waypoint x="486" y="150" />
+        <di:waypoint x="536" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-c-cz_di" bpmnElement="f-c-cz">
+        <di:waypoint x="586" y="150" />
+        <di:waypoint x="636" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-cz-proba_di" bpmnElement="f-cz-proba">
+        <di:waypoint x="736" y="150" />
+        <di:waypoint x="786" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-proba-kilka_di" bpmnElement="f-proba-kilka">
+        <di:waypoint x="886" y="150" />
+        <di:waypoint x="936" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-kilka-e_di" bpmnElement="f-kilka-e">
+        <di:waypoint x="972" y="150" />
+        <di:waypoint x="1022" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-tb-e2_di" bpmnElement="f-tb-e2">
+        <di:waypoint x="456" y="288" />
+        <di:waypoint x="456" y="338" />
+        <di:waypoint x="543" y="338" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przyjecie-ce_di" bpmnElement="f-przyjecie-ce">
+        <di:waypoint x="160" y="500" />
+        <di:waypoint x="210" y="500" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-odp_di" bpmnElement="f-g-odp">
+        <di:waypoint x="135" y="615" />
+        <di:waypoint x="210" y="615" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-odp-ce2_di" bpmnElement="f-odp-ce2">
+        <di:waypoint x="246" y="615" />
+        <di:waypoint x="296" y="615" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-g-czas_di" bpmnElement="f-g-czas">
+        <di:waypoint x="110" y="640" />
+        <di:waypoint x="110" y="708" />
+        <di:waypoint x="210" y="708" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-czas-ce3_di" bpmnElement="f-czas-ce3">
+        <di:waypoint x="246" y="708" />
+        <di:waypoint x="296" y="708" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,37 @@
+tok 0.5 "Errors of language 0.5"
+
+item i "Typ" structure="typy.xsd#Typ" kind=digital
+global g "Zadanie" kind=service
+
+start s "Start" terminate message="M"
+transaction t "Transakcja" method=undo
+  start ts
+  end te
+sub p "Podproces"
+  start ps
+  end anuluj "Anulowanie" cancel
+boundary b "Anulowano" noninterrupting cancel on=p
+user powtorz "Powtórzenie" while="x < 3" loop-max=dwa
+catch c "Czekanie" parallel message="A"
+task odbior "Odbiór" instantiate
+receive r "Odbiór" instantiate message="R"
+eventgw g2 "Co dalej?" parallel
+call w "Wywołanie" process=inny task=g
+call w2 "Wywołanie 2" task=brak
+service op "Operacja" operation=nieznana
+user ocena "Ocena"
+end e "Koniec"
+end e2 "Koniec 2"
+data d "Dokument" state="złożony" type=brak-typu
+data d2 "Dokument" state="złożony"
+
+flow ts -> te
+flow ps -> anuluj
+flow s -> t -> p -> powtorz -> c -> odbior -> r -> g2 -> w -> w2 -> op -> ocena -> e
+flow b -> e2
+
+key k "Klucz"
+  prop id message="M"
+
+reads ocena d
+writes ocena d2

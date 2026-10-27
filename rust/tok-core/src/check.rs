@@ -39,8 +39,14 @@ const TASK_EVENTS: &[&str] = &[
 ];
 
 /// Keys rejected at the level analytic: the executable profile and the executable layer.
-fn analytic_excluded(k: &str) -> bool {
-    ANALYTIC_EXCLUDED_BASE.contains(&k) || EXEC_KEYS.contains(&k)
+fn analytic_excluded(kind: &str, k: &str) -> bool {
+    ANALYTIC_EXCLUDED_BASE.contains(&k) || is_exec_key(kind, k)
+}
+
+/// A key of the executable layer on an element of kind `kind` (`method=` of a transaction
+/// is BPMN, not the method of a REST connector).
+fn is_exec_key(kind: &str, k: &str) -> bool {
+    EXEC_KEYS.contains(&k) && !(kind == "transaction" && k == "method")
 }
 
 /// `'a = x; b = y'` (sep `=`) or `'k: v; …'` (sep `:`) into pairs; an item without the
@@ -72,6 +78,14 @@ fn is_target(s: &str) -> bool {
             matches!(ch.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
                 && ch.all(|c| c.is_ascii_alphanumeric() || c == '_')
         })
+}
+
+/// An XML name without a namespace prefix (an NCName): a letter or `_`, then letters,
+/// digits, `_`, `-` and `.`.
+fn is_xml_name(v: &str) -> bool {
+    let mut ch = v.chars();
+    matches!(ch.next(), Some(c) if c.is_alphabetic() || c == '_')
+        && ch.all(|c| c.is_alphanumeric() || matches!(c, '_' | '-' | '.'))
 }
 
 /// `n` ASCII digits at `b[at..]`.
@@ -167,6 +181,7 @@ pub fn check(doc: &mut Document, level: &str, bpmn: Option<&dyn BpmnRules>) -> V
         c.executable();
     }
     c.layer_03();
+    c.layer_05();
     c.decisions_and_forms();
     c.feel();
     c.simulation();
@@ -251,7 +266,7 @@ impl Checker<'_> {
                     ));
                 }
             }
-            if is_event(&b.kind) {
+            if is_event(&b.kind) && !d.lang_05() {
                 let mut trig: Vec<&str> = TRIGGERS
                     .iter()
                     .copied()
@@ -286,9 +301,48 @@ impl Checker<'_> {
                 &[],
             ),
             (
-                d.data.values().map(|x| &x.base).collect(),
+                d.data
+                    .values()
+                    .map(|x| &x.base)
+                    .filter(|b| !IO_KINDS.contains(&b.kind.as_str()))
+                    .collect(),
                 DATA_KEYS,
                 DATA_FLAGS,
+            ),
+            (
+                d.data
+                    .values()
+                    .map(|x| &x.base)
+                    .filter(|b| b.kind == "input" || b.kind == "output")
+                    .collect(),
+                IO_KEYS,
+                IO_FLAGS,
+            ),
+            (
+                d.data
+                    .values()
+                    .map(|x| &x.base)
+                    .filter(|b| b.kind == "property")
+                    .collect(),
+                IO_KEYS,
+                &[],
+            ),
+            (d.items.values().collect(), ITEM_KEYS, ITEM_FLAGS),
+            (d.globals.values().collect(), GLOBAL_KEYS, &[]),
+            (d.interfaces.values().map(|x| &x.base).collect(), &[], &[]),
+            (
+                d.interfaces
+                    .values()
+                    .flat_map(|x| x.operations.iter())
+                    .collect(),
+                OPERATION_KEYS,
+                &[],
+            ),
+            (d.keys.values().map(|x| &x.base).collect(), &[], &[]),
+            (
+                d.keys.values().flat_map(|x| x.props.iter()).collect(),
+                PROP_KEYS,
+                &[],
             ),
             (d.notes.iter().collect(), NOTE_KEYS, &[]),
             (d.groups.iter().collect(), GROUP_KEYS, &[]),
@@ -520,7 +574,9 @@ impl Checker<'_> {
             .collect();
         for (act, data, line) in assocs {
             self.reference(&act, line, "activity", &is_act);
-            self.reference(&data, line, "data", &|k| k == "data" || k == "store");
+            self.reference(&data, line, "data", &|k| {
+                k == "data" || k == "store" || IO_KINDS.contains(&k)
+            });
         }
         let notes: Vec<(Option<String>, usize)> = self
             .doc
@@ -943,7 +999,10 @@ impl Checker<'_> {
                 }
             }
             for key in CONNECTOR_KEYS {
-                if a.contains_key(*key) && !a.contains_key("connector") {
+                if a.contains_key(*key)
+                    && !a.contains_key("connector")
+                    && !(kind == "transaction" && *key == "method")
+                {
                     self.add(
                         "R013",
                         line,
@@ -964,7 +1023,7 @@ impl Checker<'_> {
             }
             if !self.node_executable(&n) {
                 for key in EXEC_KEYS {
-                    if a.contains_key(*key) {
+                    if a.contains_key(*key) && is_exec_key(kind, key) {
                         self.add("R055", line, id, &[("key", s(key))]);
                     }
                 }
@@ -1055,6 +1114,584 @@ impl Checker<'_> {
         }
     }
 
+    /// `R066` (undeclared) or `R003` (wrong kind) for a reference to a declaration of
+    /// language 0.5; true when the reference is good.
+    fn declared(
+        &mut self,
+        target: &str,
+        line: usize,
+        owner: Option<&str>,
+        kinds: &[&str],
+        keyword: &str,
+        what: (&str, &str),
+    ) -> bool {
+        match self.doc.ids.get(target).map(|e| e.kind.clone()) {
+            None => {
+                self.add(
+                    "R066",
+                    line,
+                    owner,
+                    &[
+                        ("what", s(what.0)),
+                        ("what_pl", s(what.1)),
+                        ("id", s(target)),
+                        ("keyword", s(keyword)),
+                    ],
+                );
+                false
+            }
+            Some(k) if !kinds.contains(&k.as_str()) => {
+                self.add(
+                    "R003",
+                    line,
+                    Some(target),
+                    &[
+                        ("id", s(target)),
+                        ("actual", k),
+                        ("expected", s(what.0)),
+                        ("expected_pl", s(what.1)),
+                    ],
+                );
+                false
+            }
+            Some(_) => true,
+        }
+    }
+
+    fn detail(&mut self, code: &str, line: usize, id: Option<&str>, en: String, pl: String) {
+        self.add(code, line, id, &[("detail", en), ("detail_pl", pl)]);
+    }
+
+    /// Elements of language 0.5 (BPMN 2.0.2 beyond Camunda 8): R060–R066 and, in executable
+    /// documents for Camunda, C100–C110.
+    fn layer_05(&mut self) {
+        let incoming: std::collections::HashSet<String> =
+            self.doc.flows.iter().map(|f| f.target.clone()).collect();
+        let process_ids = self.process_ids();
+        let lang_05 = self.doc.lang_05();
+        let camunda = self.doc.attrs.get("target").is_none_or(|t| t == "camunda");
+        let node_ids: Vec<String> = self.doc.nodes.keys().cloned().collect();
+        for nid in node_ids {
+            let n = self.doc.nodes[&nid].clone();
+            let b = &n.base;
+            let kind = b.kind.as_str();
+            let line = b.line;
+            let id = Some(nid.as_str());
+            let kind_of = |x: Option<&str>| -> Option<String> {
+                x.and_then(|i| self.doc.nodes.get(i))
+                    .map(|m| m.base.kind.clone())
+            };
+            let scope_kind = kind_of(n.scope.as_deref());
+            let on_kind = kind_of(b.attr("on"));
+            if b.has("cancel") {
+                match kind {
+                    "end" => {
+                        if scope_kind.as_deref() != Some("transaction") {
+                            self.detail(
+                                "R060",
+                                line,
+                                id,
+                                format!("cancel end event '{nid}' must be inside a transaction"),
+                                format!(
+                                    "zdarzenie końcowe anulowania „{nid}” musi leżeć wewnątrz transakcji"
+                                ),
+                            );
+                        }
+                    }
+                    "boundary" => {
+                        if b.attr("on").is_some() && on_kind.as_deref() != Some("transaction") {
+                            self.detail(
+                                "R060",
+                                line,
+                                id,
+                                format!(
+                                    "cancel boundary event '{nid}' must be attached to a transaction"
+                                ),
+                                format!(
+                                    "zdarzenie graniczne anulowania „{nid}” musi być przypięte do transakcji"
+                                ),
+                            );
+                        }
+                        if b.has("noninterrupting") {
+                            self.detail(
+                                "R060",
+                                line,
+                                id,
+                                format!("cancel boundary event '{nid}' is always interrupting"),
+                                format!(
+                                    "zdarzenie graniczne anulowania „{nid}” zawsze przerywa czynność"
+                                ),
+                            );
+                        }
+                    }
+                    _ => self.detail(
+                        "R060",
+                        line,
+                        id,
+                        format!(
+                            "'{nid}': cancel is allowed only on end events inside a transaction and on boundary events of a transaction"
+                        ),
+                        format!(
+                            "„{nid}”: cancel może wystąpić tylko w zdarzeniu końcowym wewnątrz transakcji i w zdarzeniu granicznym transakcji"
+                        ),
+                    ),
+                }
+            }
+            if kind == "transaction"
+                && let Some(m) = b.attr("method")
+                && !TRANSACTION_METHODS.iter().any(|(k, _)| *k == m)
+            {
+                self.detail(
+                    "R060",
+                    line,
+                    id,
+                    format!("method=\"{m}\" of transaction '{nid}' must be compensate, store or image"),
+                    format!(
+                        "method=\"{m}\" transakcji „{nid}” musi mieć wartość compensate, store albo image"
+                    ),
+                );
+            }
+            let loop_parts: Vec<&str> = ["while", "loop-max"]
+                .into_iter()
+                .filter(|k| b.attrs.contains_key(*k))
+                .chain(b.has("test-before").then_some("test-before"))
+                .collect();
+            if !loop_parts.is_empty() && !b.has("loop") {
+                let parts = loop_parts.join(", ");
+                self.detail(
+                    "R061",
+                    line,
+                    id,
+                    format!("{parts} on '{nid}' requires the flag loop"),
+                    format!("{parts} w „{nid}” wymaga flagi loop"),
+                );
+            }
+            if let Some(v) = b.attr("loop-max")
+                && (v.is_empty() || !v.bytes().all(|c| c.is_ascii_digit()))
+            {
+                self.detail(
+                    "R061",
+                    line,
+                    id,
+                    format!("loop-max of '{nid}' must be a whole number, not '{v}'"),
+                    format!("loop-max w „{nid}” musi być liczbą całkowitą, a nie „{v}”"),
+                );
+            }
+            if is_event(kind) {
+                let mut trig: Vec<(&str, bool)> = Vec::new();
+                for k in TRIGGERS {
+                    for _ in b.values(k) {
+                        trig.push((k, false));
+                    }
+                }
+                for f in TRIGGER_FLAGS.iter().chain(CATCH_ALL_FLAGS) {
+                    if b.has(f) {
+                        trig.push((f, true));
+                    }
+                }
+                let alone: Vec<&str> = trig
+                    .iter()
+                    .filter(|(t, flag)| {
+                        SINGLE_TRIGGERS.contains(t) || (*flag && CATCH_ALL_FLAGS.contains(t))
+                    })
+                    .map(|(t, _)| *t)
+                    .collect();
+                if lang_05 && trig.len() > 1 && !alone.is_empty() {
+                    let names = alone.join(", ");
+                    self.detail(
+                        "R062",
+                        line,
+                        id,
+                        format!("'{nid}': {names} cannot be combined with other triggers"),
+                        format!("„{nid}”: {names} nie może łączyć się z innymi wyzwalaczami"),
+                    );
+                }
+                if b.has("parallel") {
+                    if !matches!(kind, "start" | "catch" | "boundary") {
+                        self.detail(
+                            "R062",
+                            line,
+                            id,
+                            format!("parallel on '{nid}' requires a catching event (start, catch, boundary)"),
+                            format!(
+                                "parallel w „{nid}” wymaga zdarzenia przechwytującego (start, catch, boundary)"
+                            ),
+                        );
+                    } else if trig.len() < 2 {
+                        self.detail(
+                            "R062",
+                            line,
+                            id,
+                            format!("parallel on '{nid}' requires two or more triggers"),
+                            format!("parallel w „{nid}” wymaga co najmniej dwóch wyzwalaczy"),
+                        );
+                    }
+                }
+            } else if let Some((k, _)) = b.extra.first() {
+                self.detail(
+                    "R062",
+                    line,
+                    id,
+                    format!("'{k}' is given more than once on '{nid}'; only events have several triggers"),
+                    format!(
+                        "„{k}” podano kilka razy w „{nid}”; kilka wyzwalaczy może mieć tylko zdarzenie"
+                    ),
+                );
+            }
+            if b.has("instantiate") {
+                if kind == "receive" || kind == "eventgw" {
+                    if incoming.contains(&nid) {
+                        self.detail(
+                            "R063",
+                            line,
+                            id,
+                            format!("instantiating '{nid}' cannot have incoming sequence flows"),
+                            format!(
+                                "„{nid}” rozpoczynające proces nie może mieć przychodzących przepływów sekwencji"
+                            ),
+                        );
+                    }
+                    if !n.scope.as_ref().is_some_and(|sc| process_ids.contains(sc)) {
+                        self.detail(
+                            "R063",
+                            line,
+                            id,
+                            format!("instantiating '{nid}' must be in a process, not in a sub-process"),
+                            format!(
+                                "„{nid}” rozpoczynające proces musi leżeć w procesie, a nie w podprocesie"
+                            ),
+                        );
+                    }
+                } else {
+                    self.detail(
+                        "R063",
+                        line,
+                        id,
+                        format!(
+                            "instantiate on '{nid}' is allowed only on receive tasks and event-based gateways"
+                        ),
+                        format!(
+                            "instantiate w „{nid}” może wystąpić tylko w zadaniu odbioru i w bramce opartej na zdarzeniach"
+                        ),
+                    );
+                }
+            }
+            if kind == "eventgw" && b.has("parallel") && !b.has("instantiate") {
+                self.detail(
+                    "R063",
+                    line,
+                    id,
+                    format!("parallel event-based gateway '{nid}' requires the flag instantiate"),
+                    format!(
+                        "równoległa bramka oparta na zdarzeniach „{nid}” wymaga flagi instantiate"
+                    ),
+                );
+            }
+            if let Some(t) = b.attr("task") {
+                if kind != "call" {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[("key", s("task")), ("requirement", s("a call activity"))],
+                    );
+                } else if b.attrs.contains_key("process") {
+                    self.detail(
+                        "R065",
+                        line,
+                        id,
+                        format!("call activity '{nid}' has both process= and task=; it calls one of them"),
+                        format!(
+                            "czynność wywołania „{nid}” ma jednocześnie process= i task=; wywołuje jedno z nich"
+                        ),
+                    );
+                }
+                self.declared(
+                    t,
+                    line,
+                    id,
+                    &["global"],
+                    "global",
+                    ("global task", "zadanie globalne"),
+                );
+            }
+            if let Some(o) = b.attr("operation") {
+                if !matches!(kind, "service" | "send" | "receive") {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[
+                            ("key", s("operation")),
+                            ("requirement", s("a service, send or receive task")),
+                        ],
+                    );
+                }
+                self.declared(
+                    o,
+                    line,
+                    id,
+                    &["operation"],
+                    "operation",
+                    ("operation", "operacja"),
+                );
+            }
+            if camunda && self.node_executable(&n) {
+                self.camunda_05(&n);
+            }
+        }
+        self.data_05();
+        self.declarations_05(camunda);
+    }
+
+    /// C100–C109: elements of a node that Camunda 8.10 does not execute.
+    fn camunda_05(&mut self, n: &Node) {
+        let b = &n.base;
+        let kind = b.kind.as_str();
+        let line = b.line;
+        let nid = b.id().to_string();
+        let id = Some(nid.as_str());
+        let arg = || vec![("id", nid.clone())];
+        if kind == "transaction" {
+            self.add("C100", line, id, &arg());
+        }
+        if b.has("cancel") {
+            self.add("C101", line, id, &arg());
+        }
+        if kind == "complex" {
+            self.add("C102", line, id, &arg());
+        }
+        if b.has("loop")
+            && (b.attrs.contains_key("while")
+                || b.attrs.contains_key("loop-max")
+                || b.has("test-before"))
+        {
+            self.add("C103", line, id, &arg());
+        }
+        if is_event(kind) {
+            let count = TRIGGERS.iter().map(|k| b.values(k).len()).sum::<usize>()
+                + TRIGGER_FLAGS
+                    .iter()
+                    .chain(CATCH_ALL_FLAGS)
+                    .filter(|f| b.has(f))
+                    .count();
+            if count > 1 {
+                self.add(
+                    if b.has("parallel") { "C105" } else { "C104" },
+                    line,
+                    id,
+                    &arg(),
+                );
+            }
+        }
+        if b.has("instantiate") && kind == "receive" {
+            self.add("C106", line, id, &arg());
+        }
+        if b.has("instantiate") && kind == "eventgw" {
+            self.add("C107", line, id, &arg());
+        }
+        if let Some(t) = b.attr("task") {
+            self.add("C108", line, id, &[("id", nid.clone()), ("task", s(t))]);
+        }
+        if let Some(o) = b.attr("operation") {
+            self.add(
+                "C109",
+                line,
+                id,
+                &[("id", nid.clone()), ("operation", s(o))],
+            );
+        }
+    }
+
+    /// Process data: `type=`, `on=` and the state transitions of data objects (R064).
+    fn data_05(&mut self) {
+        // (identifier, kind, type=, on=, line)
+        type DataRef = (String, String, Option<String>, Option<String>, usize);
+        let items: Vec<DataRef> = self
+            .doc
+            .data
+            .values()
+            .map(|x| {
+                (
+                    x.base.id().to_string(),
+                    x.base.kind.clone(),
+                    x.base.attrs.get("type").cloned(),
+                    x.base.attrs.get("on").cloned(),
+                    x.base.line,
+                )
+            })
+            .collect();
+        for (did, kind, typ, on, line) in items {
+            if let Some(t) = typ {
+                self.declared(
+                    &t,
+                    line,
+                    Some(&did),
+                    &["item"],
+                    "item",
+                    ("item definition", "definicja elementu danych"),
+                );
+            }
+            if let Some(on) = on {
+                if !IO_KINDS.contains(&kind.as_str()) {
+                    continue;
+                }
+                if kind == "property" {
+                    self.reference(&on, line, "activity", &|k| is_activity(k) || is_event(k));
+                } else {
+                    self.reference(&on, line, "activity", &|k| is_activity(k));
+                }
+            }
+        }
+        // a state transition reads a data object in one state and writes it in another
+        let d = &*self.doc;
+        let object = |id: &str| -> Option<(String, String)> {
+            let x = d.data.get(id)?;
+            if x.base.kind != "data" {
+                return None;
+            }
+            let state = x.base.attrs.get("state")?.clone();
+            Some((
+                x.base.label.clone().unwrap_or_else(|| id.to_string()),
+                state,
+            ))
+        };
+        let mut found = Vec::new();
+        for r in d.assocs.iter().filter(|a| a.base.kind == "reads") {
+            let Some((name, state)) = object(&r.data) else {
+                continue;
+            };
+            let same = d.assocs.iter().any(|w| {
+                w.base.kind == "writes"
+                    && w.activity == r.activity
+                    && object(&w.data).is_some_and(|(n2, s2)| n2 == name && s2 == state)
+            });
+            if same {
+                found.push(Diag::new(
+                    "R064",
+                    r.base.line,
+                    Some(&r.activity),
+                    &[
+                        ("activity", r.activity.clone()),
+                        ("data", name),
+                        ("state", state),
+                    ],
+                ));
+            }
+        }
+        self.diags.extend(found);
+    }
+
+    /// Items, global tasks, interfaces and correlation keys.
+    fn declarations_05(&mut self, camunda: bool) {
+        let mut found = Vec::new();
+        let d = &*self.doc;
+        for it in d.items.values() {
+            if let Some(k) = it.attr("kind")
+                && !ITEM_KINDS.contains(&k)
+            {
+                found.push(Diag::new(
+                    "R013",
+                    it.line,
+                    it.id.as_deref(),
+                    &[
+                        ("key", s("kind")),
+                        ("requirement", s("information or physical")),
+                    ],
+                ));
+            }
+            // structureRef is a QName: a name without a prefix or an XML Schema type
+            if let Some(v) = it.attr("structure")
+                && !is_xml_name(v.strip_prefix("xsd:").unwrap_or(v))
+            {
+                found.push(Diag::new(
+                    "R013",
+                    it.line,
+                    it.id.as_deref(),
+                    &[
+                        ("key", s("structure")),
+                        (
+                            "requirement",
+                            s("a type name (Wniosek) or an XML Schema type (xsd:string)"),
+                        ),
+                    ],
+                ));
+            }
+        }
+        for g in d.globals.values() {
+            if let Some(k) = g.attr("kind")
+                && !GLOBAL_KINDS.iter().any(|(x, _)| *x == k)
+            {
+                found.push(Diag::new(
+                    "R065",
+                    g.line,
+                    g.id.as_deref(),
+                    &[
+                        (
+                            "detail",
+                            format!("kind=\"{k}\" of global task '{}' must be task, user, manual, script or rule", g.id()),
+                        ),
+                        (
+                            "detail_pl",
+                            format!("kind=\"{k}\" zadania globalnego „{}” musi mieć wartość task, user, manual, script albo rule", g.id()),
+                        ),
+                    ],
+                ));
+            }
+        }
+        for x in d.interfaces.values() {
+            for op in &x.operations {
+                if !op.attrs.contains_key("in") {
+                    found.push(Diag::new(
+                        "R013",
+                        op.line,
+                        op.id.as_deref(),
+                        &[
+                            ("key", s("operation")),
+                            ("requirement", s("in=\"Message\"")),
+                        ],
+                    ));
+                }
+            }
+        }
+        let executable = d.executable_any();
+        for k in d.keys.values() {
+            if d.pools.is_empty() {
+                found.push(Diag::new(
+                    "R013",
+                    k.base.line,
+                    k.base.id.as_deref(),
+                    &[
+                        ("key", s("key")),
+                        (
+                            "requirement",
+                            s("pools (BPMN keeps correlation keys in a collaboration)"),
+                        ),
+                    ],
+                ));
+            }
+            for p in &k.props {
+                if !p.attrs.contains_key("message") || !p.attrs.contains_key("path") {
+                    found.push(Diag::new(
+                        "R013",
+                        p.line,
+                        None,
+                        &[("key", s("prop")), ("requirement", s("message= and path="))],
+                    ));
+                }
+            }
+            if executable && camunda {
+                found.push(Diag::new(
+                    "C110",
+                    k.base.line,
+                    k.base.id.as_deref(),
+                    &[("id", s(k.base.id()))],
+                ));
+            }
+        }
+        self.diags.extend(found);
+    }
+
     fn decisions_and_forms(&mut self) {
         let mut found = Vec::new();
         let d = &*self.doc;
@@ -1124,6 +1761,8 @@ impl Checker<'_> {
                 "output-item",
                 "until",
                 "active",
+                "while",
+                "activation",
             ] {
                 if let Some(t) = a.get(k) {
                     exprs.push((t.clone(), n.base.line, n.base.id.clone()));
@@ -1214,22 +1853,34 @@ impl Checker<'_> {
         let d = &*self.doc;
         for n in d.nodes.values() {
             let b = &n.base;
-            let exec_layer = EXEC_KEYS.iter().any(|k| b.attrs.contains_key(*k))
+            let exec_layer = EXEC_KEYS
+                .iter()
+                .any(|k| b.attrs.contains_key(*k) && is_exec_key(&b.kind, k))
                 || EXEC_FLAGS.iter().any(|f| b.has(f))
                 || (is_event(&b.kind) && b.attrs.contains_key("type"));
-            let bad = if level == "basic" {
-                !BASIC_KINDS.contains(&b.kind.as_str())
-                    || TRIGGERS.iter().any(|k| b.attrs.contains_key(*k))
-                    || TRIGGER_FLAGS
-                        .iter()
-                        .chain(CATCH_ALL_FLAGS)
-                        .chain(TASK_FLAGS.iter())
-                        .any(|f| b.has(f))
-                    || b.attrs.contains_key("compensate")
-                    || exec_layer
-            } else {
-                b.attrs.keys().any(|k| analytic_excluded(k)) || exec_layer
-            };
+            let lang_05 = ["transaction", "complex"].contains(&b.kind.as_str())
+                || ["cancel", "test-before", "instantiate"]
+                    .iter()
+                    .any(|f| b.has(f))
+                || ((is_event(&b.kind) || b.kind == "eventgw") && b.has("parallel"))
+                || ["while", "loop-max", "activation", "task", "operation"]
+                    .iter()
+                    .any(|k| b.attrs.contains_key(*k))
+                || !b.extra.is_empty();
+            let bad = lang_05
+                || if level == "basic" {
+                    !BASIC_KINDS.contains(&b.kind.as_str())
+                        || TRIGGERS.iter().any(|k| b.attrs.contains_key(*k))
+                        || TRIGGER_FLAGS
+                            .iter()
+                            .chain(CATCH_ALL_FLAGS)
+                            .chain(TASK_FLAGS.iter())
+                            .any(|f| b.has(f))
+                        || b.attrs.contains_key("compensate")
+                        || exec_layer
+                } else {
+                    b.attrs.keys().any(|k| analytic_excluded(&b.kind, k)) || exec_layer
+                };
             if bad {
                 found.push(Diag::new(
                     "R040",
@@ -1238,6 +1889,24 @@ impl Checker<'_> {
                     &[("keyword", b.kind.clone()), ("level", s(level))],
                 ));
             }
+        }
+        // process data, declarations and correlation of language 0.5 (level full only)
+        let decl_05 = d
+            .data
+            .values()
+            .map(|x| &x.base)
+            .filter(|b| IO_KINDS.contains(&b.kind.as_str()) || b.attrs.contains_key("type"))
+            .chain(d.items.values())
+            .chain(d.globals.values())
+            .chain(d.interfaces.values().map(|x| &x.base))
+            .chain(d.keys.values().map(|x| &x.base));
+        for b in decl_05 {
+            found.push(Diag::new(
+                "R040",
+                b.line,
+                b.id.as_deref(),
+                &[("keyword", b.kind.clone()), ("level", s(level))],
+            ));
         }
         if level == "basic"
             && (!d.decisions.is_empty() || !d.forms.is_empty() || d.simulate.is_some())

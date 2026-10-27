@@ -1,0 +1,26 @@
+tok 0.5 "Instantiation"
+
+pool sklep "Sklep"
+  receive zamowienie "Przyjęcie zamówienia" instantiate message="Zamówienie"
+  task wysylka "Wysyłka"
+  end wyslano "Wysłano"
+
+pool archiwum "Archiwum"
+  eventgw start-gw "Co przyszło najpierw?" instantiate parallel
+  catch wniosek "Wniosek" message="Wniosek"
+  catch skan "Skan" message="Skan"
+  task rejestracja "Rejestracja"
+  end zarejestrowano "Zarejestrowano"
+  end skan-e "Skan zapisany"
+
+pool klient "Klient"
+
+flow zamowienie -> wysylka -> wyslano
+flow start-gw -> wniosek
+flow start-gw -> skan
+flow wniosek -> rejestracja -> zarejestrowano
+flow skan -> skan-e
+
+message klient -> zamowienie "Zamówienie"
+message klient -> wniosek "Wniosek"
+message klient -> skan "Skan"

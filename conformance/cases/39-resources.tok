@@ -1,0 +1,13 @@
+tok 0.5 "Resources and performers"
+
+start s "Czytelnik zgłasza się"
+user wypozycz "Wypożyczenie" by=bibliotekarz duration="5m"
+service rejestr "Rejestracja w systemie" by=system
+manual wydanie "Wydanie książki" by=bibliotekarz
+end e "Książka wypożyczona"
+
+flow s -> wypozycz -> rejestr -> wydanie -> e
+
+simulate cases=10 seed=1 arrival="exp(10m)"
+resource bibliotekarz "Bibliotekarz" count=2
+resource system count=1

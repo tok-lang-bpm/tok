@@ -31,6 +31,17 @@ cases/29-listeners	0	0	0	0	0	0	0	0	0	34
 cases/30-version-tag	0	0	0	0	0	0	0	0	0	210
 cases/31-levels	0	0	0	0	0	0	0	0	0	95
 cases/32-err-03	0	0	0	0	0	0	0	0	0	192
+cases/33-transaction	0	0	0	0	0	2	0	0	0	525
+cases/34-complex	0	0	0	0	0	6	0	0	0	330
+cases/35-loop	0	0	0	0	0	0	0	0	0	122
+cases/36-multiple	0	0	0	0	0	1	0	0	0	107
+cases/37-instantiate	2	0	0	0	0	2	1	0	0	312
+cases/38-process-data	0	1	0	0	0	0	0	1	0	118
+cases/39-resources	0	0	0	0	0	0	0	0	0	46
+cases/40-global-interface	0	0	0	0	0	0	0	0	0	58
+cases/41-correlation	0	0	0	0	0	0	0	0	0	150
+cases/42-executable-05	0	0	0	0	0	2	0	0	0	828
+cases/43-err-05	0	1	0	0	0	1	0	1	0	570
 import/01-wypozyczenie-pierwszy-model	0	0	0	0	0	2	0	0	0	328
 import/02-wypozyczenie-wymagania-norm	0	0	0	0	0	3	0	0	0	1017
 import/03-rejestracja-pisma-z-bledem	0	0	0	0	0	4	0	0	0	621

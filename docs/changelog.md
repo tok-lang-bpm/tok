@@ -2,6 +2,31 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version may change the language; a patch version never does.
 
+## [Unreleased]
+
+Language 0.5 (`tok 0.5` in the header; documents written for 0.1 and 0.3 stay valid and mean the same): the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute. Reference: `docs/spec.md` §4, §5.1.1, §5.2.1, §5.3, §5.4, §5.6, §6.3, §7.1, §7.2, §10.4, §13–§15; design notes and the decisions taken during implementation in `docs/design-0.5.md`; the BPMN rules the checker enforces, with their clauses, in `docs/bpmn-rules.md`.
+
+### Added
+
+- `transaction` (BPMN `transaction`, `method=`), cancel end and boundary events (flag `cancel`); the simulator cancels the transaction, runs the compensation handlers of its completed activities and continues from the cancel boundary event.
+- `complex` gateway with `activation="FEEL"` (`activationCondition`; the variable `_activationCount` in the simulator).
+- Standard loop attributes `while=`, `test-before`, `loop-max=` (`loopCondition`, `testBefore`, `loopMaximum`), simulated.
+- Multiple and parallel multiple events: repeated and combined trigger attributes, the flag `parallel`; simulated on catching events.
+- Instantiation: `receive … instantiate`, `eventgw … instantiate [parallel]`.
+- Process data: `item` (`itemDefinition`), `input`, `output` (`ioSpecification`), `property`, `type=` (`itemSubjectRef`); in 0.5 documents `reads` and `writes` connect data with generated data inputs and outputs of the activity.
+- Resources and performers: in 0.5 documents `resource` exports a BPMN `resource` and `by=` a `performer` (`humanPerformer` on user and manual tasks).
+- `global` tasks (`call … task=`), `interface` with `operation` lines (`operation=` on service, send and receive tasks, `supportedInterfaceRef`).
+- Correlation keys: `key` with `prop` lines (`correlationKey`, `correlationProperty`).
+- Checker codes `R060`–`R066`; `C100`–`C110` for elements Camunda 8.10 does not execute in executable documents; the levels `basic` and `analytic` reject every element of 0.5 (`R040`).
+- BPMN import reads all of the above back (an imported file that uses them is printed as `tok 0.5`); import of `transaction`, `complexGateway`, multiple event definitions, `ioSpecification`, properties, global tasks and correlation keys no longer drops or simplifies them.
+- Drawing: data input and output shapes, the parallel multiple marker, instantiating event-based gateways and receive tasks, call activities of global tasks.
+- Conformance cases 33–43, with expected outputs produced by the Rust engine (`TOK_BLESS=1 cargo test -p tok-core --test conformance`); the Julia core passes them at the core level.
+
+### Changed
+
+- The BPMN validator counts an instantiating receive task or event-based gateway as the start of a process (`W040`, `W041`) and accepts a complex gateway as the join of any split (`W051`).
+- The cheat sheet printed by `tok cheatsheet` describes language 0.5.
+
 ## [0.4.0] — 2026-10-27
 
 The language is unchanged (language 0.3). From this release the Rust engine is the only engine: every new feature is written once, in Rust, and Python and R call it.

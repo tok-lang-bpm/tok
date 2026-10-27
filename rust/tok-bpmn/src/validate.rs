@@ -989,9 +989,15 @@ pub fn validate_model(md: &Model, opts: &ValidateOptions) -> Vec<Issue> {
         if nodes.is_empty() {
             continue;
         }
+        // an instantiating receive task or event-based gateway starts the process like a
+        // start event (BPMN 2.0.2, 10.3.3 Receive Task and 10.6.6)
         let starts: Vec<Option<String>> = nodes
             .iter()
-            .filter(|n| md.tag(**n) == "startEvent")
+            .filter(|n| {
+                md.tag(**n) == "startEvent"
+                    || (matches!(md.tag(**n).as_str(), "receiveTask" | "eventBasedGateway")
+                        && md.attr(**n, "instantiate") == Some("true"))
+            })
             .map(|n| md.id_of(*n).map(str::to_string))
             .collect();
         let is_top = md.tag(cont) == "process";
@@ -1141,6 +1147,11 @@ pub fn validate_model(md: &Model, opts: &ValidateOptions) -> Vec<Issue> {
             continue;
         }
         if gt == "eventBasedGateway" && jt == "exclusiveGateway" {
+            continue;
+        }
+        // a complex gateway joins any split by its activation condition, and the branches
+        // of a complex split are joined like those of an inclusive one
+        if jt == "complexGateway" || (gt == "complexGateway" && jt == "inclusiveGateway") {
             continue;
         }
         let skutek = match gt.as_str() {

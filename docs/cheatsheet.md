@@ -1,27 +1,33 @@
-# tok 0.3 — cheat sheet
+# tok 0.5 — cheat sheet
 
 One statement per line. Blocks by indentation (spaces). `#` starts a comment.
 Every statement starts with a keyword. Identifiers: `[A-Za-z_][A-Za-z0-9_-]*`, unique. Labels: "quoted text".
 Attributes: `key=value` (value: word, number or "text") and bare flags.
 
 ```
-tok 0.3 "Title" [executable]                       # header, first line (0.1 documents stay valid)
+tok 0.5 "Title" [executable]                       # header, first line (0.1 and 0.3 documents stay valid)
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
 end ID "Label" [message="M" | error="E" | escalation="X" | signal="S" | terminate]
 catch ID "Label" message="M" | timer=PT2H | signal="S" | condition="feel" | link="L"
 throw ID "Label" [message="M" | escalation="X" | signal="S" | link="L" | compensate]
 boundary ID "Label" on=ACTIVITY timer=P7D [noninterrupting]   # also message/error/escalation/signal
+    several triggers = multiple event: message="A" message="B" signal="C"; + parallel = all of them (catching)
 
 task | user | manual | service | script | rule | send | receive | call   ID "Label"
     flags: loop parallel sequential compensation
     user … form=F        rule … decision=D result=var        script … expr="feel" result=var
-    service … type="job"  send/receive … message="M"          call … process=P
+    service … type="job"  send/receive … message="M"          call … process=P | task=GLOBAL
+    loop while="feel" [test-before] [loop-max=5]              receive … instantiate (starts the process)
+    service|send|receive … operation=OP                       user … by=RESOURCE (performer)
 sub ID "Label"           # embedded sub-process: indented block with its own start and end
 adhoc ID "Label"         # ad-hoc sub-process: activities in any order, no start or end events
 eventsub ID "Label"      # event sub-process: block starts with a start event with a trigger
+transaction ID "Label" [method=compensate|store|image]   # block like sub; inside: end ID cancel
+boundary ID on=TRANSACTION cancel                        # leaves the transaction after cancel
 
-xor | and | or | eventgw   ID ["Question?"]
+xor | and | or | eventgw | complex   ID ["Question?"]
+complex ID "?" activation="_activationCount >= 2"        eventgw ID instantiate [parallel]
 
 pool ID "Label" [process=P] [executable]    # with a block: participant + process
   lane ID "Label"                           # lanes nest; nodes go inside lanes
@@ -32,9 +38,18 @@ flow G -> D "tak" when="amount > 100"       # one flow: label, FEEL condition
 flow G -> E "nie" default                   # default flow
 message A -> B "Label"                      # message flow between pools (nodes or pools)
 
-data ID "Label" [state="złożony"] [collection]
-store ID "Label"
-reads ACTIVITY DATA          writes ACTIVITY DATA
+data ID "Label" [state="złożony"] [type=ITEM] [collection]
+store ID "Label" [type=ITEM]
+reads ACTIVITY DATA          writes ACTIVITY DATA     # DATA: data, store, input, output, property
+item ID "Label" [structure=Name|xsd:string] [kind=information|physical] [collection]
+input ID "Label" [type=ITEM] [collection] [on=ACTIVITY]    output ID … (same)
+property ID "Label" [type=ITEM] [on=ACTIVITY|EVENT]
+
+global ID "Label" [kind=task|user|manual|script|rule]       # called by call … task=ID
+interface ID "Label"
+  operation ID "Label" in="Message" [out="Message"] [error="Error" …]
+key ID "Label"                               # correlation key (needs pools)
+  prop NAME message="Message" path="expression"
 note ID "Text" [on=ID]       group ID "Label" members="A B C"
 
 decision ID "Label" hit=first               # unique | first | any | priority | collect
@@ -72,6 +87,10 @@ end e … message="M" type="job"          catch|boundary … condition="x > 1" e
 any … listeners="start: job-type; end: job-type (5)"   (user tasks also: creating, assigning, updating, completing, canceling)
 tok 0.3 "T" executable version-tag="v1"   pool p … version-tag="v1"
 ```
+
+Language 0.5 elements (transaction, cancel, complex, loop conditions, multiple events, instantiate, process data,
+global tasks, operations, keys) are BPMN only: `--level basic|analytic` rejects them, and in executable documents
+for Camunda they are reported as `C100`–`C110`. In 0.5 documents `resource` and `by=` also export BPMN performers.
 
 Commands: `tok check F` · `tok fmt F [-w]` · `tok bpmn F` · `tok svg F` · `tok export F [-o DIR]` ·
 `tok import F.bpmn` · `tok sim F` · `tok eval F DECISION name=value …` · `--lang pl` · `--json`

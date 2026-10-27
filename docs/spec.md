@@ -1,8 +1,10 @@
-# tok — Language Specification, version 0.3
+# tok — Language Specification, version 0.5
 
 tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decision tables it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
-This document is normative. The reference implementation is the Python package in `python/`; the Julia package in `julia/` implements the core (parsing, checking, formatting, BPMN export) against the same conformance corpus.
+This document is normative. The reference implementation is the Rust engine in `rust/` (the `tok` command and the Python and R packages run it); the pure-Python implementation in `python/` is frozen at language 0.3, and the Julia package in `julia/` implements the core (parsing, formatting, core diagnostics, BPMN export) against the same conformance corpus.
+
+Language 0.5 adds the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute: transactions and cancel events (§5.3), the complex gateway (§5.4), the attributes of the standard loop (§5.2.1), multiple and parallel multiple events (§5.1.1), instantiating receive tasks and event-based gateways (§5.2, §5.4), process data (§7.1), resources and performers (§7.2), global tasks, interfaces and operations (§5.6) and correlation keys (§6.3). Every BPMN 2.0.2 rule the checker enforces is listed with its clause in `bpmn-rules.md`.
 
 ## 1. Design goals
 
@@ -17,11 +19,7 @@ This document is normative. The reference implementation is the Python package i
 
 ## 2. Lexical structure
 
-A document is UTF-8 text. It is read line by line; a line ends at `
-`, `
-
-` or `
-`. A byte order mark at the start is ignored.
+A document is UTF-8 text. It is read line by line; a line ends at `\n`, `\r\n` or `\r`. A byte order mark at the start is ignored.
 
 - **Comments** start with `#` outside a string and run to the end of the line.
 - **Blank lines** and comment-only lines are ignored.
@@ -54,17 +52,19 @@ flag           a bare WORD after the identifier and label: a boolean set to true
 
 Attributes may appear in any order; the formatter prints them in the order of the attribute tables below. An unknown attribute key is a warning (`R010`); an unknown flag is an error (`R011`).
 
+A key is normally given once; when it is repeated, the last value counts. In a document of language 0.5 the trigger keys of events (`message`, `timer`, `signal`, `error`, `escalation`, `condition`, `link`, §5.1.1) and `error` on an `operation` (§5.6) may repeat: every value counts, in written order, and the formatter prints the values of one key together.
+
 ## 4. Document structure
 
 The first statement is the header:
 
 ```
-tok 0.3 "Interlibrary loan" executable
+tok 0.5 "Interlibrary loan" executable
 ```
 
 | Part | Meaning |
 |---|---|
-| `tok 0.3` | language version (required). Accepted versions: `0.1` and `0.3`; a document written for 0.1 means the same under 0.3. The language version follows the minor version of the release that changed the language. |
+| `tok 0.5` | language version (required). Accepted versions: `0.1`, `0.3` and `0.5`; a document written for an earlier version means the same under 0.5. The language version follows the minor version of the release that changed the language. Two things depend on the declared version, so that older documents keep their meaning: only a 0.5 document may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), and only in a 0.5 document do `resource` and `by=` also describe BPMN resources and performers (§7.2). Everything else of 0.5 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5`. |
 | label | document title; becomes `definitions/@name` and the default process name |
 | `id=` | identifier of the definitions element (default: `definitions`) |
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
@@ -75,6 +75,7 @@ After the header come top-level statements in any order:
 
 - **flow nodes** (§5), **flows** (§6), **data** (§7) and **artifacts** (§8) — in a document without pools these form one process whose identifier is `process` (override with `process=ID` in the header);
 - **pools** with their lanes and flow nodes (§5.5);
+- **declarations** of language 0.5: item definitions (§7.1), global tasks and interfaces (§5.6), correlation keys (§6.3);
 - **decisions** (§9), **forms** (§10.2), **simulation statements** (§11).
 
 References may point forward: a flow may name a node declared later.
@@ -97,23 +98,38 @@ KIND ID ["Label"] [attributes]
 | `throw` | `intermediateThrowEvent` | none or a trigger |
 | `boundary` | `boundaryEvent` | needs `on=ID` (the activity) and a trigger |
 
-Trigger attributes (at most one per event):
+Trigger attributes (one per event; several make a multiple event, §5.1.1):
 
-| Attribute | Trigger | Allowed on |
-|---|---|---|
-| `message="Name"` | message | start, end, catch, throw, boundary |
-| `timer=VALUE` | timer: ISO 8601 duration (`P14D`, `PT2H`), date-time (`2027-01-15T09:00`), or cycle (`R3/PT1H`, quote it if it contains a space) | start, catch, boundary |
-| `signal="Name"` | signal | start, end, catch, throw, boundary |
-| `error="Name"` | error | end, boundary, start of an event sub-process |
-| `escalation="Name"` | escalation | end, throw, boundary, start of an event sub-process |
-| `condition="FEEL"` | conditional | start, catch, boundary |
-| `link="Name"` | link | catch, throw |
-| `terminate` (flag) | terminate | end |
-| `compensate` (flag) | compensation | throw, end, boundary |
+| Attribute | Trigger | Allowed on | Combines with others |
+|---|---|---|---|
+| `message="Name"` | message | start, end, catch, throw, boundary | yes |
+| `timer=VALUE` | timer: ISO 8601 duration (`P14D`, `PT2H`), date-time (`2027-01-15T09:00`), or cycle (`R3/PT1H`, quote it if it contains a space) | start, catch, boundary | yes |
+| `signal="Name"` | signal | start, end, catch, throw, boundary | yes |
+| `error="Name"` | error | end, boundary, start of an event sub-process | yes |
+| `escalation="Name"` | escalation | end, throw, boundary, start of an event sub-process | yes |
+| `condition="FEEL"` | conditional | start, catch, boundary | yes |
+| `link="Name"` | link | catch, throw | no |
+| `terminate` (flag) | terminate | end | no |
+| `compensate` (flag) | compensation | throw, end, boundary | no |
+| `cancel` (flag) | cancel (language 0.5) | end inside a transaction, boundary of a transaction (§5.3) | no |
+| `error`, `escalation` (flags without a name) | any error, any escalation | boundary, start of an event sub-process | no |
 
-Other event attributes: `on=ID` (boundary only), `noninterrupting` (flag; boundary events and event sub-process starts), `correlation="FEEL"` (message catch events in executable documents, §10).
+Other event attributes: `on=ID` (boundary only), `noninterrupting` (flag; boundary events and event sub-process starts), `parallel` (flag; a parallel multiple event, §5.1.1), `correlation="FEEL"` (message catch events in executable documents, §10).
 
 Messages, signals, errors and escalations are declared implicitly by name. Two triggers with the same name refer to the same declaration. `error` and `escalation` accept an optional `code="…"`.
+
+#### 5.1.1 Multiple and parallel multiple events (language 0.5)
+
+```
+start zgloszenie "Zgłoszenie e-mailem lub przez formularz" message="E-mail" message="Formularz"
+catch potwierdzenie "Potwierdzenie i płatność" message="Potwierdzenie" signal="Wpłata" parallel
+end koniec "Powiadomienia" message="Do klienta" signal="Zamknięto"
+```
+
+- An event with two or more triggers is a multiple event. A trigger attribute may repeat, and different trigger attributes may be combined, within the positions of the table above. Each trigger exports one event definition (identifiers `ID-def`, `ID-def-2`, …, in the order of the table and then in written order).
+- On catching events (`start`, `catch`, `boundary`) BPMN reads several triggers as "any one of them". The flag `parallel` (`parallelMultiple="true"`) makes all of them necessary; it needs two or more triggers on a catching event (`R062`).
+- On throwing events (`throw`, `end`) all triggers are thrown.
+- The triggers marked "no" in the last column cannot be combined with other triggers (`R062`).
 
 ### 5.2 Activities
 
@@ -133,19 +149,38 @@ Activity attributes:
 
 | Attribute | Meaning |
 |---|---|
-| `loop` (flag) | standard loop |
+| `loop` (flag) | standard loop (§5.2.1) |
+| `while="FEEL"`, `test-before` (flag), `loop-max=N` | condition, test position and maximum of the standard loop (language 0.5, §5.2.1) |
 | `parallel` / `sequential` (flag) | multi-instance, parallel or sequential |
 | `compensation` (flag) | the activity is a compensation handler |
 | `message="Name"` | message of a `send` or `receive` task |
+| `instantiate` (flag) | a `receive` task that starts the process (language 0.5, `instantiate="true"`): it has no incoming sequence flows and stands where a start event would (`R063`) |
+| `operation=ID` | the operation (§5.6) a `service`, `send` or `receive` task performs (`operationRef`, language 0.5) |
 | `process=ID` | called process of a `call` activity |
+| `task=ID` | called global task (§5.6) of a `call` activity; `process=` and `task=` are exclusive (`R065`, language 0.5) |
 | `form=ID` | form shown in a `user` task (§10.2) |
 | `decision=ID` | decision called by a `rule` task (§9) |
 | `expr="FEEL"` | expression evaluated by a `script` task |
 | `result=NAME` | variable that receives the result of `decision=` or `expr=` |
 | `type="job-type"` | job type of a `service` or `send` task in an executable model |
-| `by=ID` | resource that performs the activity in simulation (§11) |
+| `by=ID` | resource that performs the activity in simulation (§11) and, in a document of language 0.5, its BPMN performer (§7.2) |
 | `duration="DIST"` | processing time in simulation (§11) |
 | `assign="NAME=DIST; …"` | variables set when the activity completes in simulation (§11) |
+
+#### 5.2.1 Standard loop
+
+```
+service proba "Próba połączenia" loop while="proby < 3" test-before loop-max=5
+```
+
+| tok | BPMN `standardLoopCharacteristics` |
+|---|---|
+| `loop` (flag) | the element itself |
+| `while="FEEL"` | `loopCondition`: the activity repeats while it is true |
+| `test-before` (flag) | `testBefore="true"`: the condition is evaluated before every iteration (default: after, so the activity runs at least once) |
+| `loop-max=N` | `loopMaximum`, a whole number |
+
+`while`, `test-before` and `loop-max` require `loop`, and `loop-max` is a whole number (`R061`).
 
 ### 5.3 Sub-processes
 
@@ -166,6 +201,30 @@ adhoc ID ["Label"] [active="EXPR"] [until="EXPR"] [wait] [sequential]
 
 `adhoc` is an ad-hoc sub-process: its activities are performed in any order and as often as needed, without sequence flows from a start event (flows between inner activities are allowed). It contains at least one activity and no start or end events (`R050`). `active`, `until` and `wait` belong to the executable layer (§10.3); `sequential` sets the BPMN ordering attribute. `eventsub` is an event sub-process: it has no incoming or outgoing sequence flows and its block starts with exactly one start event with a trigger.
 
+**Transactions** (language 0.5):
+
+```
+transaction rezerwacja "Rezerwacja pokoju i biletu"
+  start s
+  service pokoj "Rezerwacja pokoju" compensate=zwolnij-pokoj
+  service zwolnij-pokoj "Zwolnienie pokoju" compensation
+  xor ok "Czy udało się?"
+  end gotowe
+  end anuluj "Anulowanie" cancel
+  flow s -> pokoj -> ok -> gotowe "tak" when="ok"
+  flow ok -> anuluj "nie" default
+boundary anulowano "Rezerwacja anulowana" on=rezerwacja cancel
+```
+
+| tok | BPMN |
+|---|---|
+| `transaction ID ["Label"]` + block | `transaction`, a sub-process with the same block rules as `sub` and the attributes of activities |
+| `method=compensate\|store\|image` | `method` (`##Compensate`, `##Store`, `##Image`); printed only when given (the BPMN default is compensate) |
+| `end … cancel` | end event with `cancelEventDefinition`; only directly inside a transaction (`R060`) |
+| `boundary … on=T cancel` | boundary event with `cancelEventDefinition`; `on=` names a transaction; always interrupting (`R060`) |
+
+Compensation inside a transaction uses the syntax of §10.3 (`compensate=`, `compensation`, `throw … compensate`): a cancel end event rolls back the completed activities of the transaction through their compensation handlers, and the process continues from the cancel boundary event.
+
 ### 5.4 Gateways
 
 | Kind | BPMN element |
@@ -174,8 +233,17 @@ adhoc ID ["Label"] [active="EXPR"] [until="EXPR"] [wait] [sequential]
 | `and` | `parallelGateway` |
 | `or` | `inclusiveGateway` |
 | `eventgw` | `eventBasedGateway` |
+| `complex` | `complexGateway` (language 0.5) |
 
 A splitting gateway's label should be a question (`"Czy książka dostępna?"`); conditions and labels belong to its outgoing flows (§6).
+
+```
+complex wybor "Czy zebrano dość recenzji?" activation="_activationCount >= 2"
+eventgw start-gw "Co przyszło najpierw?" instantiate parallel
+```
+
+- `complex` with `activation="FEEL"` → `activationCondition`: as a join it fires when the condition holds for the arriving tokens; the variable `_activationCount` is the number of tokens that have arrived. Its outgoing flows take `when=` and `default` like those of an inclusive gateway.
+- `eventgw … instantiate` → `instantiate="true"`: the gateway starts the process; with `parallel` → `eventGatewayType="Parallel"`. Such a gateway has no incoming sequence flows, `parallel` requires `instantiate`, and the gateway stands in a process, not in a sub-process (`R063`).
 
 ### 5.5 Pools and lanes
 
@@ -193,6 +261,27 @@ pool ID ["Label"]            # no block: a black-box pool
 - A lane's block declares the flow nodes that belong to that lane. Lanes may nest. If a pool has lanes, every top-level flow node of its process must be inside a lane (`R030`).
 - If a document contains at least one pool, flow nodes may not appear at top level (`R031`).
 
+### 5.6 Global tasks, interfaces and operations (language 0.5)
+
+```
+global sprawdzenie "Sprawdzenie tożsamości" kind=user
+call sprawdz "Sprawdzenie tożsamości" task=sprawdzenie
+
+interface katalog "Katalog biblioteczny"
+  operation szukaj "Wyszukanie rekordu" in="Zapytanie" out="Rekord" error="Brak rekordu"
+service wyszukaj "Wyszukanie w katalogu" operation=szukaj
+```
+
+| Statement | BPMN |
+|---|---|
+| `global ID ["Label"] [kind=task\|user\|manual\|script\|rule]` (top level) | `globalTask`, `globalUserTask`, `globalManualTask`, `globalScriptTask`, `globalBusinessRuleTask` (default `task`; another value is `R065`) |
+| `call … task=ID` | `calledElement` pointing to the global task (`R066` when it is not declared) |
+| `interface ID ["Label"]` (top level) with a block of `operation` lines | `interface` (its `name` is the label, or the identifier) |
+| `operation ID ["Label"] in="Message" [out="Message"] [error="Error" …]` | `operation` with `inMessageRef`, `outMessageRef` and one `errorRef` per `error=`; `in=` is required (`R013`) |
+| `operation=ID` on `service`, `send` and `receive` tasks | `operationRef`; the process that contains the task lists the interface in `supportedInterfaceRef` |
+
+Message and error names are those of the document (§5.1). `global` and `interface` are top-level statements; `operation` lines are allowed only in the block of an `interface` (`P004`).
+
 ## 6. Flows
 
 ### 6.1 Sequence flows
@@ -205,7 +294,7 @@ flow G -> E "nie" default               # default flow of G
 
 - A `flow` line contains two or more node identifiers separated by `->`.
 - A line with a label or attributes must contain exactly one arrow (`R020`). Label and attributes describe that flow.
-- Flow attributes: `when="FEEL"` (condition expression), `default` (flag: the default flow of a splitting `xor`/`or` gateway or activity), `p=NUMBER` (branch probability in simulation, §11), `id=ID` (explicit identifier).
+- Flow attributes: `when="FEEL"` (condition expression), `default` (flag: the default flow of a splitting `xor`/`or`/`complex` gateway or activity), `p=NUMBER` (branch probability in simulation, §11), `id=ID` (explicit identifier).
 - Flow identifiers are derived as `f-SOURCE-TARGET`, with `-2`, `-3`… on repeated pairs, unless `id=` is given.
 - Flow lines may appear anywhere: at top level, inside a pool, lane or sub-process block. The container of a flow is determined by its endpoints; both endpoints must be in the same process or sub-process (`R021`).
 
@@ -217,19 +306,66 @@ message A -> B ["Label"] [message="Name"]
 
 `A` and `B` are flow nodes or pools in different pools (`R022`). The label names the message flow; `message=` links it to a message declaration (default: the label).
 
+### 6.3 Correlation keys (language 0.5)
+
+```
+key zamowienie "Numer zamówienia"
+  prop numer message="Zamówienie" path="zamowienie.numer"
+  prop numer message="Potwierdzenie" path="potwierdzenie.nr"
+```
+
+- `key ID ["Label"]` (top level) → `correlationKey` of the collaboration. BPMN 2.0.2 keeps correlation keys only in collaborations (`tCollaboration`), so a document with `key` needs pools (`R013`).
+- Each `prop NAME message="M" path="…"` line belongs to the key above it; both attributes are required (`R013`). Every distinct `NAME` becomes one `correlationProperty` (identifier `CorrelationProperty_NAME`, shared by all keys that use the name), with one `correlationPropertyRetrievalExpression` per line: `messageRef` of the message `M` (§5.1) and `messagePath` with the `path` text.
+- `correlation=` of executable documents (§10.1) is the Camunda form of correlation and is independent of `key`.
+
 ## 7. Data
 
 ```
-data ID ["Label"] [state="złożony"] [collection]
-store ID ["Label"]
+data ID ["Label"] [state="złożony"] [type=ITEM] [collection]
+store ID ["Label"] [type=ITEM]
 reads ACTIVITY DATA
 writes ACTIVITY DATA
 ```
 
 - `data` declares a data object reference (and its data object). Several `data` statements may share a label to show different states of one document; each needs its own identifier.
 - `store` declares a data store reference; its data store is shared by all references with the same label.
-- `reads` creates a data input association from the data element to the activity; `writes` creates a data output association.
+- `reads` creates a data input association from the data element to the activity; `writes` creates a data output association. The data element may be a data object, a data store, or (language 0.5) an input, output or property (§7.1).
 - Data elements belong to the process (or sub-process) in whose block they are declared, or to the process of the first activity that reads or writes them.
+- In a document of language 0.5 each association connects the data element with a data input (`ACTIVITY-in-N`) or data output (`ACTIVITY-out-N`) of the activity's `ioSpecification`, named after the data element, as BPMN 2.0.2 §10.4 describes; documents of 0.1 and 0.3 keep the target property that Camunda Modeler writes (`__targetRef_placeholder`).
+- **State transitions.** Data objects carry `state=`; a transition is an activity that reads a data object in one state and writes it (another `data` statement with the same label) in another. The checker warns when an activity reads and writes a data object in the same state (`R064`).
+
+### 7.1 Process data (language 0.5)
+
+```
+item wniosek-typ "Wniosek" structure="Wniosek"
+item kwota-typ structure="xsd:decimal"
+input wniosek "Wniosek o zakup" type=wniosek-typ
+output decyzja "Decyzja"
+property licznik "Licznik prób" on=proba
+input kryteria "Kryteria oceny" on=ocena collection
+```
+
+| Statement | BPMN |
+|---|---|
+| `item ID ["Label"] [structure=NAME] [kind=information\|physical] [collection]` (top level) | `itemDefinition` with `structureRef`, `itemKind`, `isCollection`; the label is its `documentation` (an item definition has no name) |
+| `input ID ["Label"] [type=ITEM] [collection] [on=ACTIVITY]` | `dataInput` of the process (or of the sub-process in whose block it stands, or of the activity named by `on=`), in its `ioSpecification`; one `inputSet` lists every input |
+| `output ID ["Label"] [type=ITEM] [collection] [on=ACTIVITY]` | `dataOutput`, likewise, with one `outputSet` |
+| `property ID ["Label"] [type=ITEM] [on=ID]` | `property` of the process (or sub-process), or of the activity or event named by `on=` |
+| `type=ITEM` on `data`, `store`, `input`, `output`, `property` | `itemSubjectRef` (of the data object for `data`, of the reference for `store`) |
+
+- `input`, `output` and `property` stand wherever `data` may stand and are printed with the data of their block.
+- `structure=` is a qualified XML name: a type name without a prefix (`Wniosek`) or an XML Schema type (`xsd:string`; the exporter declares the prefix). Anything else, such as a file path, is `R013`; `kind=` other than `information` or `physical` is `R013`.
+- A reference of `type=` to an undeclared item is `R066`; `on=` must name an activity (for `property` also an event).
+- A process input or output is drawn as a data input or output shape. Inputs and outputs of activities are not drawn.
+
+### 7.2 Resources and performers
+
+```
+resource bibliotekarz "Bibliotekarz" count=2
+user wypozycz "Wypożyczenie" by=bibliotekarz
+```
+
+In a document of language 0.5, `resource` (§11) also exports a BPMN `resource` (its `name` is the label, or the identifier), and `by=` exports a `performer` of the activity (`humanPerformer` on `user` and `manual` tasks) with `resourceRef`. `count=` remains a simulation setting. In documents of 0.1 and 0.3 both stay simulation statements only.
 
 ## 8. Artifacts
 
@@ -333,6 +469,24 @@ The second kind follows the convention of Camunda Modeler. A document that is no
 
 **Process version.** `version-tag="v1"` on the header (document without pools) or on a pool → `zeebe:versionTag`.
 
+### 10.4 Elements Camunda 8 does not execute (language 0.5)
+
+In executable documents for Camunda (`target=camunda`, the default for executable documents) every element of language 0.5 that Camunda 8.10 does not execute is reported with a code naming it; descriptive and analytic documents, and executable documents with another `target=`, are not affected.
+
+| Code | Severity | Element |
+|---|---|---|
+| `C100` | error | transaction |
+| `C101` | error | cancel end or boundary event |
+| `C102` | error | complex gateway |
+| `C103` | error | standard loop with `while=`, `test-before` or `loop-max=` |
+| `C104` | error | multiple event (several triggers) |
+| `C105` | error | parallel multiple event |
+| `C106` | error | instantiating receive task |
+| `C107` | error | instantiating event-based gateway |
+| `C108` | error | call activity of a global task (`task=`) |
+| `C109` | warning | `operation=` (ignored: workers take jobs by `type=`) |
+| `C110` | warning | correlation key (ignored: messages are correlated by `correlation=`) |
+
 ## 11. Simulation
 
 Simulation statements give a tok model the parameters of a discrete-event simulation. They have no effect on BPMN export.
@@ -375,11 +529,13 @@ Durations are a number followed by a unit: `s`, `m` (minutes), `h`, `d`. In `uni
 
 **Semantics.** Each case starts at its arrival time with its `variable`s drawn. Tokens move along sequence flows. An activity with `by=` queues (first come, first served) until a performer is free, then holds it for its duration. At an `xor` gateway the first outgoing flow (in document order) whose `when` holds is taken, else the default flow; if the flows have `p=` instead, one is drawn. An `or` gateway activates every flow whose condition holds (or which is drawn with its `p`), else the default. An `and` gateway activates all outgoing flows and a joining `and` waits for all incoming tokens; a joining `or` waits for the tokens that were actually activated. An `eventgw` races its following catch events: timers fire after their duration, messages after their `delay`. A boundary timer fires if the activity is still running when the timer elapses: an interrupting one cancels the activity, a non-interrupting one starts an extra token. `rule` tasks evaluate their decision, `script` tasks their expression. Time in the log is simulated calendar time without working-hours calendars (version 0.1).
 
+**Language 0.5.** Transactions run like sub-processes; a cancel end event stops the transaction, runs the compensation handlers of its completed activities (latest completed first) and then continues from the cancel boundary event of the transaction (without one, the token ends there). A complex gateway splits like an `or` gateway; as a join it lets one token through as soon as `activation` holds, with `_activationCount` the number of tokens arrived so far, absorbs the later tokens and resets when all expected tokens have arrived (without `activation` it joins like `or`). A standard loop repeats while `while` holds, at most `loop-max` times, with `loopCounter` the number of finished iterations, testing before the first iteration with `test-before` and otherwise after each one. A catching multiple event fires on the first of its triggers (on the last with `parallel`); its timers use their durations, its other triggers the event's `delay=`. When a process has no start event, an instantiating receive task or event-based gateway starts the cases. `docs/simulation.md` gives the details.
+
 The simulation produces an **event log** (one row per activity instance: case, activity, resource, enqueue, start, end) and **indicators**: number of cases per end event, cycle time (mean, median, 90th percentile), waiting and processing time per activity, utilization per resource.
 
 ## 12. FEEL subset
 
-Conditions, script expressions and decision cells use a subset of FEEL (DMN 1.5, chapter 10). The subset is defined in `feel.md`. Expressions outside the subset are passed unchanged to the exported XML and reported by `tok check` as `F001` (a warning); the simulator cannot evaluate them.
+Conditions, script expressions, loop conditions (`while`), activation conditions (`activation`, with the variable `_activationCount`) and decision cells use a subset of FEEL (DMN 1.5, chapter 10). The subset is defined in `feel.md`. Expressions outside the subset are passed unchanged to the exported XML and reported by `tok check` as `F001` (a warning); the simulator cannot evaluate them.
 
 ## 13. Validation
 
@@ -402,18 +558,21 @@ The full list is in `diagnostics.md`. The `--level` option restricts the accepte
 |---|---|
 | `basic` | `start`, `end`, `task`, `user`, `service`, `manual`, `xor`, `and`, pools, lanes, message flows, data, notes; no attributes of the executable layer |
 | `analytic` | everything except the executable profile and layer (§10.1, §10.3), forms and decisions |
-| `full` (default) | everything |
+| `full` (default) | everything, including all elements of language 0.5 |
+
+The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules.
 
 ## 14. Canonical form
 
 `tok fmt` prints a document in this order and style:
 
 1. the header;
-2. top-level flow nodes in declaration order, then pools (each with its lanes and nodes in declaration order);
-   `data` and `store` statements are printed at the end of the block they were declared in (pool, sub-process or top level);
-3. all sequence flows, in declaration order, as chains: a chain continues while the next flow has no label or attributes, starts at the last node of the previous flow, and that node has exactly one outgoing flow;
-4. message flows; 5. `reads` and `writes`; 6. notes and groups; 7. decisions; 8. forms; 9. simulation statements (`simulate`, `resource`, `variable`);
-10. two-space indentation, one space between tokens, labels always quoted, attributes in the order of the tables in this document, blank line between sections.
+2. `item` and `global` statements, then each `interface` with its operations;
+3. top-level flow nodes in declaration order, then pools (each with its lanes and nodes in declaration order);
+   `data`, `store`, `input`, `output` and `property` statements are printed at the end of the block they were declared in (pool, sub-process or top level);
+4. all sequence flows, in declaration order, as chains: a chain continues while the next flow has no label or attributes, starts at the last node of the previous flow, and that node has exactly one outgoing flow;
+5. message flows; 6. each `key` with its `prop` lines; 7. `reads` and `writes`; 8. notes and groups; 9. decisions; 10. forms; 11. simulation statements (`simulate`, `resource`, `variable`);
+12. two-space indentation, one space between tokens, labels always quoted, attributes in the order of the tables in this document (the values of a repeated key together, in written order), blank line between sections.
 
 Comments are kept. A comment line is attached to the statement that follows it and printed above it; a comment at the end of a line stays at the end of that statement's line. Comments at the end of the document are printed last.
 
@@ -427,7 +586,9 @@ An implementation conforms at level **core** if, for every document in `conforma
 2. its `fmt` output equals `expected/*.tok`;
 3. its BPMN export, ignoring diagram interchange (`bpmndi`) and attribute order, equals `expected/*.bpmn`.
 
-Level **full** adds DMN and form export, FEEL evaluation (`expected/*.eval.json`) and simulation with a fixed seed (`expected/*.sim.json`, compared within tolerance, since random number generators differ between languages).
+Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export, FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
+
+Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33 and following cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110` and the errors `R060`–`R066`); their expected outputs are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
 
 ## 16. Example
 

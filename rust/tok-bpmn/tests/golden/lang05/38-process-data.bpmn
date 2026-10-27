@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="tok" exporterVersion="0.5" id="definitions" name="Process data" targetNamespace="http://bpmn.io/schema/bpmn" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <bpmn:itemDefinition id="wniosek-typ" structureRef="Wniosek">
+    <bpmn:documentation>Wniosek</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="decyzja-typ" itemKind="Information" structureRef="xsd:string" />
+  <bpmn:itemDefinition id="teczka-typ" isCollection="true" itemKind="Physical">
+    <bpmn:documentation>Teczka</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:dataStore id="akta-store" name="Akta" />
+  <bpmn:process id="process" isExecutable="false" name="Process data">
+    <bpmn:ioSpecification id="process-io">
+      <bpmn:dataInput id="wniosek" itemSubjectRef="wniosek-typ" name="Wniosek o zakup" />
+      <bpmn:dataOutput id="decyzja" itemSubjectRef="decyzja-typ" name="Decyzja" />
+      <bpmn:inputSet id="process-inputs">
+        <bpmn:dataInputRefs>wniosek</bpmn:dataInputRefs>
+      </bpmn:inputSet>
+      <bpmn:outputSet id="process-outputs">
+        <bpmn:dataOutputRefs>decyzja</bpmn:dataOutputRefs>
+      </bpmn:outputSet>
+    </bpmn:ioSpecification>
+    <bpmn:property id="termin" name="Termin" />
+    <bpmn:startEvent id="s" name="Wniosek wpłynął" />
+    <bpmn:userTask id="ocena" name="Ocena wniosku">
+      <bpmn:ioSpecification id="ocena-io">
+        <bpmn:dataInput id="kryteria" isCollection="true" name="Kryteria oceny" />
+        <bpmn:dataInput id="ocena-in-1" name="Wniosek o zakup" />
+        <bpmn:dataInput id="ocena-in-2" name="Skan wniosku" />
+        <bpmn:dataOutput id="ocena-out-3" name="Skan wniosku" />
+        <bpmn:dataOutput id="ocena-out-4" name="Decyzja" />
+        <bpmn:inputSet id="ocena-inputs">
+          <bpmn:dataInputRefs>kryteria</bpmn:dataInputRefs>
+          <bpmn:dataInputRefs>ocena-in-1</bpmn:dataInputRefs>
+          <bpmn:dataInputRefs>ocena-in-2</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="ocena-outputs">
+          <bpmn:dataOutputRefs>ocena-out-3</bpmn:dataOutputRefs>
+          <bpmn:dataOutputRefs>ocena-out-4</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:property id="licznik" name="Licznik prób" />
+      <bpmn:dataInputAssociation id="ocena-dia-1">
+        <bpmn:sourceRef>wniosek</bpmn:sourceRef>
+        <bpmn:targetRef>ocena-in-1</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="ocena-dia-2">
+        <bpmn:sourceRef>skan</bpmn:sourceRef>
+        <bpmn:targetRef>ocena-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-3">
+        <bpmn:sourceRef>ocena-out-3</bpmn:sourceRef>
+        <bpmn:targetRef>skan-ocena</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-4">
+        <bpmn:sourceRef>ocena-out-4</bpmn:sourceRef>
+        <bpmn:targetRef>decyzja</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:task id="archiwizacja" name="Archiwizacja">
+      <bpmn:ioSpecification id="archiwizacja-io">
+        <bpmn:dataOutput id="archiwizacja-out-5" name="Akta" />
+        <bpmn:inputSet id="archiwizacja-inputs" />
+        <bpmn:outputSet id="archiwizacja-outputs">
+          <bpmn:dataOutputRefs>archiwizacja-out-5</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="archiwizacja-doa-5">
+        <bpmn:sourceRef>archiwizacja-out-5</bpmn:sourceRef>
+        <bpmn:targetRef>akta</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Wniosek rozpatrzony" />
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-archiwizacja" sourceRef="ocena" targetRef="archiwizacja" />
+    <bpmn:sequenceFlow id="f-archiwizacja-e" sourceRef="archiwizacja" targetRef="e" />
+    <bpmn:dataObject id="skan-object" itemSubjectRef="wniosek-typ" name="Skan wniosku" />
+    <bpmn:dataObjectReference dataObjectRef="skan-object" id="skan" name="Skan wniosku">
+      <bpmn:dataState id="skan-state" name="złożony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="skan-ocena-object" name="Skan wniosku" />
+    <bpmn:dataObjectReference dataObjectRef="skan-ocena-object" id="skan-ocena" name="Skan wniosku">
+      <bpmn:dataState id="skan-ocena-state" name="oceniony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataStoreReference dataStoreRef="akta-store" id="akta" itemSubjectRef="teczka-typ" name="Akta" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="wniosek_di" bpmnElement="wniosek">
+        <dc:Bounds x="30" y="160" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6" y="215" width="84" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="decyzja_di" bpmnElement="decyzja">
+        <dc:Bounds x="298" y="260" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="296" y="315" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="6" y="93" width="84" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ocena_di" bpmnElement="ocena">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archiwizacja_di" bpmnElement="archiwizacja">
+        <dc:Bounds x="266" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="416" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="380" y="93" width="108" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skan_di" bpmnElement="skan">
+        <dc:Bounds x="148" y="160" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="93" y="213" width="68" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skan-ocena_di" bpmnElement="skan-ocena">
+        <dc:Bounds x="148" y="260" width="36" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="132" y="315" width="68" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="akta_di" bpmnElement="akta">
+        <dc:Bounds x="291" y="160" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="304" y="215" width="24" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="ocena-dia-1_di" bpmnElement="ocena-dia-1">
+        <di:waypoint x="66" y="167" />
+        <di:waypoint x="125" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ocena-dia-2_di" bpmnElement="ocena-dia-2">
+        <di:waypoint x="166" y="160" />
+        <di:waypoint x="166" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ocena-doa-3_di" bpmnElement="ocena-doa-3">
+        <di:waypoint x="166" y="110" />
+        <di:waypoint x="166" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ocena-doa-4_di" bpmnElement="ocena-doa-4">
+        <di:waypoint x="194" y="110" />
+        <di:waypoint x="299" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="archiwizacja-doa-5_di" bpmnElement="archiwizacja-doa-5">
+        <di:waypoint x="316" y="110" />
+        <di:waypoint x="316" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-ocena_di" bpmnElement="f-s-ocena">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ocena-archiwizacja_di" bpmnElement="f-ocena-archiwizacja">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-archiwizacja-e_di" bpmnElement="f-archiwizacja-e">
+        <di:waypoint x="366" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

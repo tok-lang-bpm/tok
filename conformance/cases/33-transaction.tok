@@ -1,0 +1,23 @@
+tok 0.5 "Transaction"
+
+start s "Zamówienie wycieczki"
+transaction rezerwacja "Rezerwacja pokoju i biletu" method=compensate
+  start ts
+  service pokoj "Rezerwacja pokoju" compensate=zwolnij-pokoj
+  service zwolnij-pokoj "Zwolnienie pokoju" compensation
+  service bilet "Zakup biletu" compensate=zwrot-biletu
+  service zwrot-biletu "Zwrot biletu" compensation
+  xor ok "Czy udało się?"
+  end gotowe "Zarezerwowano"
+  end anuluj "Anulowanie" cancel
+  flow ts -> pokoj -> bilet -> ok
+  flow ok -> gotowe "tak" when="ok"
+  flow ok -> anuluj "nie" default
+boundary anulowano "Rezerwacja anulowana" on=rezerwacja cancel
+user potwierdzenie "Potwierdzenie rezerwacji"
+user informacja "Informacja o anulowaniu"
+end e "Wycieczka zarezerwowana"
+end e2 "Wycieczka anulowana"
+
+flow s -> rezerwacja -> potwierdzenie -> e
+flow anulowano -> informacja -> e2

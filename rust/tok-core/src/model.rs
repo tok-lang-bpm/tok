@@ -7,8 +7,8 @@ pub const EVENT_KINDS: &[&str] = &["start", "end", "catch", "throw", "boundary"]
 pub const TASK_KINDS: &[&str] = &[
     "task", "user", "service", "manual", "script", "rule", "send", "receive", "call",
 ];
-pub const SUB_KINDS: &[&str] = &["sub", "eventsub", "adhoc"];
-pub const GATEWAY_KINDS: &[&str] = &["xor", "and", "or", "eventgw"];
+pub const SUB_KINDS: &[&str] = &["sub", "eventsub", "adhoc", "transaction"];
+pub const GATEWAY_KINDS: &[&str] = &["xor", "and", "or", "eventgw", "complex"];
 
 pub const TRIGGERS: &[&str] = &[
     "message",
@@ -19,7 +19,20 @@ pub const TRIGGERS: &[&str] = &[
     "condition",
     "link",
 ];
-pub const TRIGGER_FLAGS: &[&str] = &["terminate", "compensate"];
+pub const TRIGGER_FLAGS: &[&str] = &["terminate", "compensate", "cancel"];
+/// Triggers that cannot be combined with other triggers (language 0.5, R062).
+pub const SINGLE_TRIGGERS: &[&str] = &["terminate", "cancel", "compensate", "link"];
+/// Attribute keys that may repeat on one statement (language 0.5): the triggers of a
+/// multiple event and the errors of an operation.
+pub const REPEATABLE_KEYS: &[&str] = &[
+    "message",
+    "timer",
+    "signal",
+    "error",
+    "escalation",
+    "condition",
+    "link",
+];
 /// Catch-all flags (no name): catch every error or escalation (language 0.3).
 pub const CATCH_ALL_FLAGS: &[&str] = &["error", "escalation"];
 
@@ -51,12 +64,16 @@ pub const EVENT_FLAGS: &[&str] = &[
     "noninterrupting",
     "terminate",
     "compensate",
+    "cancel",
     "error",
     "escalation",
+    "parallel",
 ];
 pub const TASK_KEYS: &[&str] = &[
     "message",
+    "operation",
     "process",
+    "task",
     "form",
     "decision",
     "expr",
@@ -67,6 +84,8 @@ pub const TASK_KEYS: &[&str] = &[
     "child-vars",
     "parent-vars",
     "business-id",
+    "while",
+    "loop-max",
     "collection",
     "item",
     "output",
@@ -95,7 +114,33 @@ pub const TASK_KEYS: &[&str] = &[
     "duration",
     "assign",
 ];
-pub const TASK_FLAGS: &[&str] = &["loop", "parallel", "sequential", "compensation", "wait"];
+pub const TASK_FLAGS: &[&str] = &[
+    "loop",
+    "test-before",
+    "parallel",
+    "sequential",
+    "compensation",
+    "wait",
+    "instantiate",
+];
+/// Attributes of a complex gateway (language 0.5).
+pub const COMPLEX_KEYS: &[&str] = &["activation"];
+/// Flags of an event-based gateway (language 0.5).
+pub const EVENTGW_FLAGS: &[&str] = &["instantiate", "parallel"];
+/// Values of `method=` on a transaction and their BPMN form.
+pub const TRANSACTION_METHODS: &[(&str, &str)] = &[
+    ("compensate", "##Compensate"),
+    ("store", "##Store"),
+    ("image", "##Image"),
+];
+/// Values of `kind=` on `global` and the BPMN element of each.
+pub const GLOBAL_KINDS: &[(&str, &str)] = &[
+    ("task", "globalTask"),
+    ("user", "globalUserTask"),
+    ("manual", "globalManualTask"),
+    ("script", "globalScriptTask"),
+    ("rule", "globalBusinessRuleTask"),
+];
 
 /// The executable layer of language 0.3 (spec §10.3): meaningful only in executable
 /// documents, rejected at the levels basic and analytic.
@@ -151,9 +196,11 @@ pub const EXPR_KEYS: &[&str] = &[
     "output-item",
     "until",
     "active",
+    "while",
+    "activation",
 ];
 /// Language versions accepted in the header.
-pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3"];
+pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5"];
 
 pub const HEADER_KEYS: &[&str] = &[
     "id",
@@ -169,7 +216,7 @@ pub const POOL_FLAGS: &[&str] = &["executable"];
 pub const FLOW_KEYS: &[&str] = &["id", "when", "p"];
 pub const FLOW_FLAGS: &[&str] = &["default"];
 pub const MESSAGE_KEYS: &[&str] = &["id", "message", "delay"];
-pub const DATA_KEYS: &[&str] = &["state"];
+pub const DATA_KEYS: &[&str] = &["state", "type"];
 pub const DATA_FLAGS: &[&str] = &["collection"];
 pub const NOTE_KEYS: &[&str] = &["on"];
 pub const GROUP_KEYS: &[&str] = &["members"];
@@ -178,6 +225,16 @@ pub const FIELD_KEYS: &[&str] = &["type", "options", "min", "max", "default"];
 pub const FIELD_FLAGS: &[&str] = &["required"];
 pub const SIMULATE_KEYS: &[&str] = &["cases", "seed", "arrival", "start"];
 pub const RESOURCE_KEYS: &[&str] = &["count"];
+/// Process data of language 0.5: `input`, `output`, `property`.
+pub const IO_KINDS: &[&str] = &["input", "output", "property"];
+pub const IO_KEYS: &[&str] = &["type", "on"];
+pub const IO_FLAGS: &[&str] = &["collection"];
+pub const ITEM_KEYS: &[&str] = &["structure", "kind"];
+pub const ITEM_FLAGS: &[&str] = &["collection"];
+pub const ITEM_KINDS: &[&str] = &["information", "physical"];
+pub const GLOBAL_KEYS: &[&str] = &["kind"];
+pub const OPERATION_KEYS: &[&str] = &["in", "out", "error"];
+pub const PROP_KEYS: &[&str] = &["message", "path"];
 
 pub const HIT_POLICIES: &[&str] = &["unique", "first", "any", "priority", "collect"];
 pub const FIELD_TYPES: &[&str] = &[
@@ -212,6 +269,8 @@ pub fn node_keys(kind: &str) -> &'static [&'static str] {
         EVENT_KEYS
     } else if TASK_KINDS.contains(&kind) || is_sub(kind) {
         TASK_KEYS
+    } else if kind == "complex" {
+        COMPLEX_KEYS
     } else {
         &[]
     }
@@ -223,6 +282,8 @@ pub fn node_flags(kind: &str) -> &'static [&'static str] {
         EVENT_FLAGS
     } else if TASK_KINDS.contains(&kind) || is_sub(kind) {
         TASK_FLAGS
+    } else if kind == "eventgw" {
+        EVENTGW_FLAGS
     } else {
         &[]
     }
@@ -238,6 +299,9 @@ pub struct Base {
     pub id: Option<String>,
     pub label: Option<String>,
     pub attrs: Attrs,
+    /// Further values of repeated keys (`REPEATABLE_KEYS`) in written order; the first
+    /// value of each key is in `attrs` (language 0.5).
+    pub extra: Vec<(String, String)>,
     pub flags: Vec<String>,
     pub line: usize,
     pub comments: Vec<String>,
@@ -258,11 +322,23 @@ impl Base {
             id,
             label,
             attrs,
+            extra: Vec::new(),
             flags,
             line,
             comments: Vec::new(),
             trailing: None,
         }
+    }
+    /// Every value of `key`: the one in `attrs`, then the repeated ones.
+    pub fn values(&self, key: &str) -> Vec<&str> {
+        let mut out: Vec<&str> = self.attr(key).into_iter().collect();
+        out.extend(
+            self.extra
+                .iter()
+                .filter(|(k, _)| k == key)
+                .map(|(_, v)| v.as_str()),
+        );
+        out
     }
     pub fn has(&self, flag: &str) -> bool {
         self.flags.iter().any(|f| f == flag)
@@ -303,7 +379,8 @@ pub struct MessageFlow {
     pub explicit_id: bool,
 }
 
-/// A data object (`data`) or data store (`store`).
+/// A data object (`data`), a data store (`store`), or (language 0.5) a data input
+/// (`input`), data output (`output`) or property (`property`).
 #[derive(Debug, Clone, Default)]
 pub struct Data {
     pub base: Base,
@@ -394,6 +471,20 @@ pub struct Form {
     pub items: Vec<FormItem>,
 }
 
+/// An interface with its operations (language 0.5).
+#[derive(Debug, Clone, Default)]
+pub struct Interface {
+    pub base: Base,
+    pub operations: Vec<Base>,
+}
+
+/// A correlation key with its `prop` lines (language 0.5).
+#[derive(Debug, Clone, Default)]
+pub struct CorrelationKey {
+    pub base: Base,
+    pub props: Vec<Base>,
+}
+
 /// Kind and line of a registered identifier (for duplicate and reference checks).
 #[derive(Debug, Clone)]
 pub struct IdEntry {
@@ -426,11 +517,20 @@ pub struct Document {
     pub simulate: Option<Base>,
     pub resources: IndexMap<String, Base>,
     pub variables: Vec<Base>,
+    pub items: IndexMap<String, Base>,
+    pub globals: IndexMap<String, Base>,
+    pub interfaces: IndexMap<String, Interface>,
+    pub keys: IndexMap<String, CorrelationKey>,
     pub end_comments: Vec<String>,
     pub ids: IndexMap<String, IdEntry>,
 }
 
 impl Document {
+    /// The header declares language 0.5: `resource` and `by=` also describe BPMN
+    /// resources, and an event may have several triggers.
+    pub fn lang_05(&self) -> bool {
+        !matches!(self.version.as_deref(), Some("0.1" | "0.3") | None)
+    }
     pub fn executable(&self) -> bool {
         self.flags.iter().any(|f| f == "executable")
     }

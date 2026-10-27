@@ -2,16 +2,21 @@
 
 const ID_RE = r"^[A-Za-z_][A-Za-z0-9_-]*$"
 
-const NODE_LIKE = Set{String}([NODE_KINDS..., "flow", "message", "data", "store", "reads", "writes", "note"])
+const NODE_LIKE = Set{String}([NODE_KINDS..., "flow", "message", "data", "store", "reads", "writes", "note",
+                                "input", "output", "property"])
 const ALLOWED = Dict{String,Set{String}}(
-    "top" => union(NODE_LIKE, Set(["pool", "group", "decision", "form", "simulate", "resource", "variable"])),
+    "top" => union(NODE_LIKE, Set(["pool", "group", "decision", "form", "simulate", "resource", "variable",
+                                   "item", "global", "interface", "key"])),
     "pool" => union(NODE_LIKE, Set(["lane"])),
     "lane" => union(NODE_LIKE, Set(["lane"])),
     "sub" => NODE_LIKE,
     "eventsub" => NODE_LIKE,
     "adhoc" => NODE_LIKE,
+    "transaction" => NODE_LIKE,
     "decision" => Set{String}(),
     "form" => Set(["text", "field"]),
+    "interface" => Set(["operation"]),
+    "key" => Set(["prop"]),
 )
 const KEYWORDS = union(values(ALLOWED)..., Set(["tok"]))
 
@@ -65,10 +70,15 @@ function register!(p::Parser, el::Elem, line_no::Int)
     return true
 end
 
-"Parse [STRING] attributes from toks[start:]. Return (label, attrs, flags, ok)."
-function parse_tail(p::Parser, toks::Vector{Token}, start::Int, line_no::Int; allow_label=true)
+"""
+Parse [STRING] attributes from toks[start:]. Return (label, attrs, flags, ok, extra).
+A repeated key replaces the earlier value, except that with `repeat` the further
+values of REPEATABLE_KEYS are kept in `extra` (language 0.5).
+"""
+function parse_tail(p::Parser, toks::Vector{Token}, start::Int, line_no::Int; allow_label=true, repeat=false)
     label = nothing
     attrs = Dict{String,String}()
+    extra = Tuple{String,String}[]
     flags = String[]
     i = start
     n = length(toks)
@@ -81,19 +91,23 @@ function parse_tail(p::Parser, toks::Vector{Token}, start::Int, line_no::Int; al
         if t.kind == WORD && i + 1 <= n && toks[i+1].kind == EQUALS
             if i + 2 > n || !(toks[i+2].kind in (WORD, NUMBER, STRING))
                 err!(p, "P007", line_no; near=t.value)
-                return label, attrs, flags, false
+                return label, attrs, flags, false, extra
             end
-            attrs[t.value] = toks[i+2].value
+            if repeat && t.value in REPEATABLE_KEYS && haskey(attrs, t.value)
+                push!(extra, (t.value, toks[i+2].value))
+            else
+                attrs[t.value] = toks[i+2].value
+            end
             i += 3
         elseif t.kind == WORD
             push!(flags, t.value)
             i += 1
         else
             err!(p, "P007", line_no; near=t.value)
-            return label, attrs, flags, false
+            return label, attrs, flags, false, extra
         end
     end
-    return label, attrs, flags, true
+    return label, attrs, flags, true, extra
 end
 
 function run!(p::Parser)
@@ -209,8 +223,10 @@ function statement!(p::Parser, line::Line, ctx::Ctx)::StResult
     kw == "lane" && return st_lane!(p, line, ctx)
     kw == "flow" && return st_flow!(p, line, ctx)
     kw == "message" && return st_message!(p, line, ctx)
-    kw == "data" && return st_data!(p, line, ctx, "data")
-    kw == "store" && return st_data!(p, line, ctx, "store")
+    kw in ("data", "store", "input", "output", "property") && return st_data!(p, line, ctx, kw)
+    kw in ("item", "global") && return st_declaration!(p, line, kw)
+    kw in ("interface", "key") && return st_block_declaration!(p, line, kw)
+    kw in ("operation", "prop") && return st_member!(p, line, ctx, kw)
     kw == "reads" && return st_assoc!(p, line, ctx, "reads")
     kw == "writes" && return st_assoc!(p, line, ctx, "writes")
     kw == "note" && return st_simple!(p, line, "note", p.doc.notes)
@@ -237,7 +253,7 @@ end
 function add_child!(p::Parser, ctx::Ctx, id::String)
     if ctx.kind == "top"
         push!(p.doc.top, id)
-    elseif ctx.kind in ("pool", "lane", "sub", "eventsub", "adhoc") && ctx.owner !== nothing
+    elseif ctx.kind in ("pool", "lane", SUB_KINDS...) && ctx.owner !== nothing
         push!(ctx.owner.children, id)
     end
 end
@@ -248,8 +264,10 @@ function st_node!(p::Parser, line::Line, ctx::Ctx)::StResult
     if nid === nothing
         return (Elem(kind, nothing), kind in SUB_KINDS, nothing)
     end
-    label, attrs, flags, _ = parse_tail(p, line.tokens, 3, line.number)
+    # a key written twice in a 0.1 or 0.3 document keeps its last value, as before
+    label, attrs, flags, _, extra = parse_tail(p, line.tokens, 3, line.number; repeat=lang_05(p.doc))
     node = Elem(kind, nid; label=label, attrs=attrs, flags=flags, line=line.number)
+    node.extra = extra
     take_comments!(p, node, line)
     node.scope = ctx.scope
     node.pool = ctx.pool
@@ -544,6 +562,48 @@ function st_variable!(p::Parser, line::Line, ctx::Ctx)::StResult
     take_comments!(p, v, line)
     push!(p.doc.variables, v)
     return (v, false, nothing)
+end
+
+"`item` and `global` (language 0.5): top-level declarations without a block."
+function st_declaration!(p::Parser, line::Line, kind::String)::StResult
+    id = need_id(p, line)
+    id === nothing && return noresult(kind)
+    label, attrs, flags, _ = parse_tail(p, line.tokens, 3, line.number)
+    e = Elem(kind, id; label=label, attrs=attrs, flags=flags, line=line.number)
+    take_comments!(p, e, line)
+    if register!(p, e, line.number)
+        (kind == "item" ? p.doc.items : p.doc.globals)[id] = e
+    end
+    return (e, false, nothing)
+end
+
+"`interface` and `key` (language 0.5): declarations with a block of `operation` or `prop` lines."
+function st_block_declaration!(p::Parser, line::Line, kind::String)::StResult
+    id = need_id(p, line)
+    id === nothing && return (Elem(kind, nothing), true, nothing)
+    label, attrs, flags, _ = parse_tail(p, line.tokens, 3, line.number)
+    e = Elem(kind, id; label=label, attrs=attrs, flags=flags, line=line.number)
+    take_comments!(p, e, line)
+    register!(p, e, line.number) || return (e, true, nothing)
+    (kind == "interface" ? p.doc.interfaces : p.doc.keys)[id] = e
+    return (e, true, Ctx(kind; owner=e))
+end
+
+"`operation` of an interface and `prop` of a correlation key (language 0.5)."
+function st_member!(p::Parser, line::Line, ctx::Ctx, kind::String)::StResult
+    id = need_id(p, line)
+    id === nothing && return noresult(kind)
+    label, attrs, flags, _, extra = parse_tail(p, line.tokens, 3, line.number; repeat=kind == "operation")
+    e = Elem(kind, id; label=label, attrs=attrs, flags=flags, line=line.number)
+    e.extra = extra
+    take_comments!(p, e, line)
+    if kind == "operation"
+        register!(p, e, line.number) && push!(ctx.owner.items, e)
+    else
+        occursin(ID_RE, id) || err!(p, "R004", line.number, id; id=id)
+        push!(ctx.owner.items, e)
+    end
+    return (e, false, nothing)
 end
 
 "Split a table row into cells by '|' outside quotes. Empty cells mark '||'. `nothing` on unbalanced quotes."

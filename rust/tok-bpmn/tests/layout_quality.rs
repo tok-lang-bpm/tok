@@ -2,7 +2,8 @@
 //!
 //! For every model the metrics must be no worse than those stored in
 //! `tests/layout/metrics.tsv` and than those of the layout of tok 0.3 (the port of `bpmn.py`,
-//! `tests/layout/baseline-0.3.tsv`). The laid-out XML must report the same BPMN errors and
+//! `tests/layout/baseline-0.3.tsv`; documents of language 0.5, which tok 0.3 could not
+//! draw, have only stored metrics). The laid-out XML must report the same BPMN errors and
 //! warnings as its input and have diagram interchange for every element (no `D01`, `D02`).
 //!
 //! The table is printed with `cargo test -p tok-bpmn --test layout_quality -- --nocapture`.
@@ -80,6 +81,9 @@ fn layout_quality_is_not_worse() {
         let bless = std::env::var_os("TOK_BLESS").is_some();
         for (what, table) in [("stored", &stored), ("0.3", &baseline)] {
             if bless && what == "stored" {
+                continue;
+            }
+            if what == "0.3" && c.lang_05 {
                 continue;
             }
             let Some(b) = table.get(&c.name) else {

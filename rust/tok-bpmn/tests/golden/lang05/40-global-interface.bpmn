@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="tok" exporterVersion="0.5" id="definitions" name="Global tasks and interfaces" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Nowy_rekord" name="Nowy rekord" />
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:message id="Message_Rekord" name="Rekord" />
+  <bpmn:error id="Error_Brak_rekordu" name="Brak rekordu" />
+  <bpmn:error id="Error_Katalog_niedostepny" name="Katalog niedostępny" />
+  <bpmn:interface id="katalog" name="Katalog biblioteczny">
+    <bpmn:operation id="szukaj" name="Wyszukanie rekordu">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+      <bpmn:outMessageRef>Message_Rekord</bpmn:outMessageRef>
+      <bpmn:errorRef>Error_Brak_rekordu</bpmn:errorRef>
+      <bpmn:errorRef>Error_Katalog_niedostepny</bpmn:errorRef>
+    </bpmn:operation>
+    <bpmn:operation id="zapisz" name="zapisz">
+      <bpmn:inMessageRef>Message_Nowy_rekord</bpmn:inMessageRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:globalUserTask id="sprawdzenie" name="Sprawdzenie tożsamości" />
+  <bpmn:globalTask id="archiwizacja" name="Archiwizacja" />
+  <bpmn:process id="process" isExecutable="false" name="Global tasks and interfaces">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:startEvent id="s" name="Zamówienie" />
+    <bpmn:callActivity calledElement="sprawdzenie" id="sprawdz" name="Sprawdzenie tożsamości" />
+    <bpmn:serviceTask id="wyszukaj" name="Wyszukanie w katalogu" operationRef="szukaj" />
+    <bpmn:sendTask id="zapis" messageRef="Message_Nowy_rekord" name="Zapis rekordu" operationRef="zapisz" />
+    <bpmn:callActivity calledElement="archiwizacja" id="archiwum" name="Archiwizacja" />
+    <bpmn:endEvent id="e" name="Gotowe" />
+    <bpmn:sequenceFlow id="f-s-sprawdz" sourceRef="s" targetRef="sprawdz" />
+    <bpmn:sequenceFlow id="f-sprawdz-wyszukaj" sourceRef="sprawdz" targetRef="wyszukaj" />
+    <bpmn:sequenceFlow id="f-wyszukaj-zapis" sourceRef="wyszukaj" targetRef="zapis" />
+    <bpmn:sequenceFlow id="f-zapis-archiwum" sourceRef="zapis" targetRef="archiwum" />
+    <bpmn:sequenceFlow id="f-archiwum-e" sourceRef="archiwum" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="20" y="93" width="56" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sprawdz_di" bpmnElement="sprawdz">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyszukaj_di" bpmnElement="wyszukaj">
+        <dc:Bounds x="266" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zapis_di" bpmnElement="zapis">
+        <dc:Bounds x="416" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archiwum_di" bpmnElement="archiwum">
+        <dc:Bounds x="566" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="716" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="717" y="93" width="34" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-sprawdz_di" bpmnElement="f-s-sprawdz">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-sprawdz-wyszukaj_di" bpmnElement="f-sprawdz-wyszukaj">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyszukaj-zapis_di" bpmnElement="f-wyszukaj-zapis">
+        <di:waypoint x="366" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zapis-archiwum_di" bpmnElement="f-zapis-archiwum">
+        <di:waypoint x="516" y="70" />
+        <di:waypoint x="566" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-archiwum-e_di" bpmnElement="f-archiwum-e">
+        <di:waypoint x="666" y="70" />
+        <di:waypoint x="716" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

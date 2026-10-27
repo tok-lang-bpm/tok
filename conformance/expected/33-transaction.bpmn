@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Transaction" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Transaction">
+    <bpmn:startEvent id="s" name="Zamówienie wycieczki" />
+    <bpmn:transaction id="rezerwacja" method="##Compensate" name="Rezerwacja pokoju i biletu">
+      <bpmn:startEvent id="ts" />
+      <bpmn:serviceTask id="pokoj" name="Rezerwacja pokoju" />
+      <bpmn:boundaryEvent attachedToRef="pokoj" id="pokoj-compensate">
+        <bpmn:compensateEventDefinition id="pokoj-compensate-def" />
+      </bpmn:boundaryEvent>
+      <bpmn:serviceTask id="zwolnij-pokoj" isForCompensation="true" name="Zwolnienie pokoju" />
+      <bpmn:serviceTask id="bilet" name="Zakup biletu" />
+      <bpmn:boundaryEvent attachedToRef="bilet" id="bilet-compensate">
+        <bpmn:compensateEventDefinition id="bilet-compensate-def" />
+      </bpmn:boundaryEvent>
+      <bpmn:serviceTask id="zwrot-biletu" isForCompensation="true" name="Zwrot biletu" />
+      <bpmn:exclusiveGateway default="f-ok-anuluj" id="ok" name="Czy udało się?" />
+      <bpmn:endEvent id="gotowe" name="Zarezerwowano" />
+      <bpmn:endEvent id="anuluj" name="Anulowanie">
+        <bpmn:cancelEventDefinition id="anuluj-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ts-pokoj" sourceRef="ts" targetRef="pokoj" />
+      <bpmn:sequenceFlow id="f-pokoj-bilet" sourceRef="pokoj" targetRef="bilet" />
+      <bpmn:sequenceFlow id="f-bilet-ok" sourceRef="bilet" targetRef="ok" />
+      <bpmn:sequenceFlow id="f-ok-gotowe" name="tak" sourceRef="ok" targetRef="gotowe">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">ok</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="f-ok-anuluj" name="nie" sourceRef="ok" targetRef="anuluj" />
+      <bpmn:association associationDirection="One" id="pokoj-compensate-assoc" sourceRef="pokoj-compensate" targetRef="zwolnij-pokoj" />
+      <bpmn:association associationDirection="One" id="bilet-compensate-assoc" sourceRef="bilet-compensate" targetRef="zwrot-biletu" />
+    </bpmn:transaction>
+    <bpmn:boundaryEvent attachedToRef="rezerwacja" id="anulowano" name="Rezerwacja anulowana">
+      <bpmn:cancelEventDefinition id="anulowano-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="potwierdzenie" name="Potwierdzenie rezerwacji" />
+    <bpmn:userTask id="informacja" name="Informacja o anulowaniu" />
+    <bpmn:endEvent id="e" name="Wycieczka zarezerwowana" />
+    <bpmn:endEvent id="e2" name="Wycieczka anulowana" />
+    <bpmn:sequenceFlow id="f-s-rezerwacja" sourceRef="s" targetRef="rezerwacja" />
+    <bpmn:sequenceFlow id="f-rezerwacja-potwierdzenie" sourceRef="rezerwacja" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-e" sourceRef="potwierdzenie" targetRef="e" />
+    <bpmn:sequenceFlow id="f-anulowano-informacja" sourceRef="anulowano" targetRef="informacja" />
+    <bpmn:sequenceFlow id="f-informacja-e2" sourceRef="informacja" targetRef="e2" />
+  </bpmn:process>
+</bpmn:definitions>

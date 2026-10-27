@@ -42,6 +42,13 @@ const QUOTED_KEYS: &[&str] = &[
     "business-id",
     "version",
     "version-tag",
+    // language 0.5
+    "while",
+    "activation",
+    "structure",
+    "in",
+    "out",
+    "path",
 ];
 
 const EXECUTION_LISTENER_EVENTS: &[&str] = &["start", "end"];
@@ -150,6 +157,11 @@ fn tail(el: &Base, keys: &[&str], flags: &[&str], quote_type: bool) -> Vec<Strin
             parts.push(f.clone());
         }
     }
+    let repeated = |parts: &mut Vec<String>, k: &str| {
+        for (_, v) in el.extra.iter().filter(|(x, _)| x == k) {
+            parts.push(format!("{k}={}", value(k, v)));
+        }
+    };
     for k in keys {
         if let Some(v) = el.attrs.get(*k) {
             let shown = if *k == "type" && quote_type {
@@ -158,6 +170,7 @@ fn tail(el: &Base, keys: &[&str], flags: &[&str], quote_type: bool) -> Vec<Strin
                 value(k, v)
             };
             parts.push(format!("{k}={shown}"));
+            repeated(&mut parts, k);
         }
     }
     let mut rest: Vec<&String> = el
@@ -168,8 +181,18 @@ fn tail(el: &Base, keys: &[&str], flags: &[&str], quote_type: bool) -> Vec<Strin
     rest.sort();
     for k in rest {
         parts.push(format!("{k}={}", value(k, &el.attrs[k])));
+        repeated(&mut parts, k);
     }
     parts
+}
+
+/// Attribute keys and flags of a data statement in canonical order.
+fn data_tables(kind: &str) -> (&'static [&'static str], &'static [&'static str]) {
+    if IO_KINDS.contains(&kind) {
+        (IO_KEYS, IO_FLAGS)
+    } else {
+        (DATA_KEYS, DATA_FLAGS)
+    }
 }
 
 fn comment(c: &str) -> String {
@@ -272,6 +295,42 @@ impl Printer<'_> {
         }
         self.out.push(line);
 
+        if !d.items.is_empty() || !d.globals.is_empty() {
+            self.blank();
+            for it in d.items.values() {
+                self.emit_base(
+                    0,
+                    &join(&["item", it.id()], tail(it, ITEM_KEYS, ITEM_FLAGS, false)),
+                    it,
+                );
+            }
+            for g in d.globals.values() {
+                self.emit_base(
+                    0,
+                    &join(&["global", g.id()], tail(g, GLOBAL_KEYS, &[], false)),
+                    g,
+                );
+            }
+        }
+        for x in d.interfaces.values() {
+            self.blank();
+            self.emit_base(
+                0,
+                &join(&["interface", x.base.id()], tail(&x.base, &[], &[], false)),
+                &x.base,
+            );
+            for op in &x.operations {
+                self.emit_base(
+                    1,
+                    &join(
+                        &["operation", op.id()],
+                        tail(op, OPERATION_KEYS, &[], false),
+                    ),
+                    op,
+                );
+            }
+        }
+
         if !d.top.is_empty() {
             self.blank();
             self.children(&d.top, 0);
@@ -306,6 +365,21 @@ impl Printer<'_> {
                     parts.push(format!("id={}", m.base.id()));
                 }
                 self.emit_base(0, &parts.join(" "), &m.base);
+            }
+        }
+        for k in d.keys.values() {
+            self.blank();
+            self.emit_base(
+                0,
+                &join(&["key", k.base.id()], tail(&k.base, &[], &[], false)),
+                &k.base,
+            );
+            for p in &k.props {
+                self.emit_base(
+                    1,
+                    &join(&["prop", p.id()], tail(p, PROP_KEYS, &[], false)),
+                    p,
+                );
             }
         }
         if !d.assocs.is_empty() {
@@ -426,9 +500,10 @@ impl Printer<'_> {
             }
         }
         for x in datas {
+            let (keys, flags) = data_tables(&x.base.kind);
             let text = join(
                 &[x.base.kind.as_str(), x.base.id()],
-                tail(&x.base, DATA_KEYS, DATA_FLAGS, false),
+                tail(&x.base, keys, flags, false),
             );
             self.emit_base(indent, &text, &x.base);
         }

@@ -31,17 +31,20 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | `laneSet/lane`, `childLaneSet` | nested `lane` blocks; a node goes into the deepest lane that lists it in `flowNodeRef` |
 | `startEvent` … `boundaryEvent` | `start`, `end`, `catch`, `throw`, `boundary` (`on=` from `attachedToRef`) |
 | `task`, `userTask`, `serviceTask`, `manualTask`, `scriptTask`, `businessRuleTask`, `sendTask`, `receiveTask` | `task`, `user`, `service`, `manual`, `script`, `rule`, `send`, `receive` |
-| `callActivity/@calledElement` | `call … process=` |
+| `callActivity/@calledElement` | `call … process=`; `call … task=` when it names a global task |
 | `subProcess`, `subProcess[@triggeredByEvent="true"]` | `sub`, `eventsub` |
-| `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway` | `xor`, `and`, `or`, `eventgw` |
+| `transaction` (`method`) | `transaction` (`method=`) |
+| `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | `xor`, `and`, `or`, `eventgw`, `complex` (`activationCondition` → `activation=`) |
+| `instantiate="true"` of a receive task or event-based gateway, `eventGatewayType="Parallel"` | flags `instantiate`, `parallel` |
 | `messageEventDefinition` | `message="NAME"` (the name of the referenced `message`) |
 | `timerEventDefinition` | `timer=VALUE` (from `timeDuration`, `timeCycle` or `timeDate`) |
 | `signal…`, `error…`, `escalationEventDefinition` | `signal=`, `error=`, `escalation=` with the declaration's name; `code=` from `errorCode` / `escalationCode` |
 | `conditionalEventDefinition` | `condition="…"` (a leading `=` is removed) |
 | `linkEventDefinition/@name` | `link=` |
-| `terminateEventDefinition`, `compensateEventDefinition` | flags `terminate`, `compensate` |
+| `terminateEventDefinition`, `compensateEventDefinition`, `cancelEventDefinition` | flags `terminate`, `compensate`, `cancel` |
+| several event definitions on one event, `parallelMultiple="true"` | several trigger attributes (a multiple event), flag `parallel` |
 | `cancelActivity="false"`, `isInterrupting="false"` | flag `noninterrupting` |
-| `standardLoopCharacteristics` | flag `loop` |
+| `standardLoopCharacteristics` (`loopCondition`, `testBefore`, `loopMaximum`) | flag `loop` (`while=`, `test-before`, `loop-max=`) |
 | `multiInstanceLoopCharacteristics` | flag `parallel` or `sequential` |
 | `isForCompensation="true"` | flag `compensation` |
 | `sendTask/@messageRef`, `receiveTask/@messageRef` | `message=` |
@@ -50,6 +53,15 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | `messageFlow` | `message A -> B "label"`; `message=` only when the referenced message's name differs from the label |
 | `dataObjectReference` (+ `dataState`, `dataObject/@isCollection`) | `data ID "label" state=… collection` |
 | `dataStoreReference` | `store ID "label"` |
+| `itemSubjectRef` of a data object, data store reference, data input or output, property | `type=` |
+| `itemDefinition` (`structureRef`, `itemKind`, `isCollection`, `documentation`) | `item ID "documentation" structure= kind= collection`; a `structureRef` with a namespace prefix other than XML Schema loses the prefix, with a warning |
+| `ioSpecification/dataInput`, `dataOutput` of a process or sub-process | `input`, `output` in its block |
+| `dataInput`, `dataOutput`, `property` of an activity (other than those its data associations use) | `input`, `output`, `property … on=ACTIVITY` |
+| `property` of a process | `property` |
+| `resource`, `performer` / `humanPerformer` / `potentialOwner` with `resourceRef` | `resource`, `by=` |
+| `globalTask`, `globalUserTask`, `globalManualTask`, `globalScriptTask`, `globalBusinessRuleTask` | `global ID "name" kind=…` |
+| `interface`, `operation` (`inMessageRef`, `outMessageRef`, `errorRef`), `operationRef` | `interface` with `operation … in= out= error=`, `operation=` |
+| `correlationKey` of the collaboration with `correlationProperty` and its retrieval expressions | `key` with `prop NAME message= path=` |
 | `dataInputAssociation/sourceRef` | `reads ACTIVITY DATA` |
 | `dataOutputAssociation/targetRef` | `writes ACTIVITY DATA` |
 | `textAnnotation` + `association` | `note ID "text" on=TARGET` |
@@ -80,7 +92,7 @@ Camunda 8 extensions (namespace `http://camunda.org/schema/zeebe/1.0`):
 | `zeebe:executionListeners`, `zeebe:taskListeners` | `listeners=` |
 | `zeebe:versionTag` of a process | `version-tag=` on the header or the pool |
 
-A file that uses any of these constructs is printed with the header `tok 0.3`; other files keep `tok 0.1`.
+A file that uses any of these constructs is printed with the header `tok 0.3`; a file that uses an element of language 0.5 (transaction, cancel, complex gateway, loop attributes, multiple events, instantiation, process data, resources and performers, global tasks, interfaces, correlation keys) is printed with `tok 0.5`; other files keep `tok 0.1`.
 
 ## Identifiers
 
@@ -94,12 +106,9 @@ These elements are reported and skipped, or simplified:
 
 | Element | Behaviour |
 |---|---|
-| `complexGateway`, choreographies, conversations, global tasks, participant associations, correlation keys | skipped; sequence flows to a skipped node are dropped |
-| `transaction`, `adHocSubProcess` | imported as an embedded `sub` |
-| `ioSpecification` (inputs, outputs, input and output sets) | skipped; `reads` and `writes` are kept |
-| several event definitions on one event (multiple, parallel multiple) | only the first one is imported |
+| choreographies, conversations, participant associations | skipped; sequence flows to a skipped node are dropped |
+| input and output sets of an `ioSpecification`, data input and output associations of events | the sets are not stored (tok writes one set of all inputs and one of all outputs) |
 | `eventDefinitionRef` (reusable event definitions) | skipped |
-| `activityRef` of a compensation event | skipped |
 | lanes inside a sub-process | ignored; the sub-process nodes stay in the sub-process |
 | a node in a pool with lanes but in no lane | kept directly in the pool; `tok check` then reports `R030` |
 | group membership | BPMN stores no member list; add `members="…"` by hand |
@@ -114,3 +123,5 @@ The test suite (`python/tests/test_import.py`) checks:
 
 1. for every example in `examples/` and for a document using pools, lanes, a sub-process, an event sub-process, escalation, an event-based gateway, data and notes: parse → export → import → print → parse → export gives the same semantic XML as the first export;
 2. every BPMN model of the companion course imports, prints, parses again without diagnostics, formats stably and re-exports without BPMN errors.
+
+For language 0.5 the Rust test `rust/tok-core/tests/import_05.rs` checks that every conformance case of 0.5 without errors survives export → import → print → parse → export with the same semantic XML, without warnings, and is printed as `tok 0.5`.

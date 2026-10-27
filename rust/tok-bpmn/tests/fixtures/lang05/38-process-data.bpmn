@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsd="http://www.w3.org/2001/XMLSchema" exporter="tok" exporterVersion="0.5" id="definitions" name="Process data" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:itemDefinition id="wniosek-typ" structureRef="Wniosek">
+    <bpmn:documentation>Wniosek</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="decyzja-typ" itemKind="Information" structureRef="xsd:string" />
+  <bpmn:itemDefinition id="teczka-typ" isCollection="true" itemKind="Physical">
+    <bpmn:documentation>Teczka</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:dataStore id="akta-store" name="Akta" />
+  <bpmn:process id="process" isExecutable="false" name="Process data">
+    <bpmn:ioSpecification id="process-io">
+      <bpmn:dataInput id="wniosek" itemSubjectRef="wniosek-typ" name="Wniosek o zakup" />
+      <bpmn:dataOutput id="decyzja" itemSubjectRef="decyzja-typ" name="Decyzja" />
+      <bpmn:inputSet id="process-inputs">
+        <bpmn:dataInputRefs>wniosek</bpmn:dataInputRefs>
+      </bpmn:inputSet>
+      <bpmn:outputSet id="process-outputs">
+        <bpmn:dataOutputRefs>decyzja</bpmn:dataOutputRefs>
+      </bpmn:outputSet>
+    </bpmn:ioSpecification>
+    <bpmn:property id="termin" name="Termin" />
+    <bpmn:startEvent id="s" name="Wniosek wpłynął" />
+    <bpmn:userTask id="ocena" name="Ocena wniosku">
+      <bpmn:ioSpecification id="ocena-io">
+        <bpmn:dataInput id="kryteria" isCollection="true" name="Kryteria oceny" />
+        <bpmn:dataInput id="ocena-in-1" name="Wniosek o zakup" />
+        <bpmn:dataInput id="ocena-in-2" name="Skan wniosku" />
+        <bpmn:dataOutput id="ocena-out-3" name="Skan wniosku" />
+        <bpmn:dataOutput id="ocena-out-4" name="Decyzja" />
+        <bpmn:inputSet id="ocena-inputs">
+          <bpmn:dataInputRefs>kryteria</bpmn:dataInputRefs>
+          <bpmn:dataInputRefs>ocena-in-1</bpmn:dataInputRefs>
+          <bpmn:dataInputRefs>ocena-in-2</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="ocena-outputs">
+          <bpmn:dataOutputRefs>ocena-out-3</bpmn:dataOutputRefs>
+          <bpmn:dataOutputRefs>ocena-out-4</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:property id="licznik" name="Licznik prób" />
+      <bpmn:dataInputAssociation id="ocena-dia-1">
+        <bpmn:sourceRef>wniosek</bpmn:sourceRef>
+        <bpmn:targetRef>ocena-in-1</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="ocena-dia-2">
+        <bpmn:sourceRef>skan</bpmn:sourceRef>
+        <bpmn:targetRef>ocena-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-3">
+        <bpmn:sourceRef>ocena-out-3</bpmn:sourceRef>
+        <bpmn:targetRef>skan-ocena</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-4">
+        <bpmn:sourceRef>ocena-out-4</bpmn:sourceRef>
+        <bpmn:targetRef>decyzja</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:task id="archiwizacja" name="Archiwizacja">
+      <bpmn:ioSpecification id="archiwizacja-io">
+        <bpmn:dataOutput id="archiwizacja-out-5" name="Akta" />
+        <bpmn:inputSet id="archiwizacja-inputs" />
+        <bpmn:outputSet id="archiwizacja-outputs">
+          <bpmn:dataOutputRefs>archiwizacja-out-5</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="archiwizacja-doa-5">
+        <bpmn:sourceRef>archiwizacja-out-5</bpmn:sourceRef>
+        <bpmn:targetRef>akta</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Wniosek rozpatrzony" />
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-archiwizacja" sourceRef="ocena" targetRef="archiwizacja" />
+    <bpmn:sequenceFlow id="f-archiwizacja-e" sourceRef="archiwizacja" targetRef="e" />
+    <bpmn:dataObject id="skan-object" itemSubjectRef="wniosek-typ" name="Skan wniosku" />
+    <bpmn:dataObjectReference dataObjectRef="skan-object" id="skan" name="Skan wniosku">
+      <bpmn:dataState id="skan-state" name="złożony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="skan-ocena-object" name="Skan wniosku" />
+    <bpmn:dataObjectReference dataObjectRef="skan-ocena-object" id="skan-ocena" name="Skan wniosku">
+      <bpmn:dataState id="skan-ocena-state" name="oceniony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataStoreReference dataStoreRef="akta-store" id="akta" itemSubjectRef="teczka-typ" name="Akta" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,8 +1,19 @@
-//! Conformance corpus: canonical text, core diagnostics and semantic BPMN XML must equal
-//! the expected files produced by the Python reference implementation byte for byte.
+//! Conformance corpus: canonical text, core diagnostics, semantic BPMN XML and the codes of
+//! `tok check` at every level must equal the expected files byte for byte.
+//!
+//! The expected files of cases written for language 0.1 and 0.3 (01–32) are produced by
+//! the Python reference implementation (`conformance/generate.py`). Those of cases whose
+//! header declares a newer language (33 and following) are produced by this engine:
+//!
+//! ```text
+//! TOK_BLESS=1 cargo test -p tok-core --test conformance
+//! ```
+//!
+//! writes them (and never touches the files of 01–32); review the differences before
+//! committing.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tok_core::check::{BpmnIssue, BpmnRules};
 
@@ -38,6 +49,45 @@ fn corpus() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../conformance")
 }
 
+fn write(path: &Path, text: &str) {
+    fs::write(path, text).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
+}
+
+/// Expected outputs of a case of language 0.5 or newer, as `generate.py` writes them for
+/// the older cases.
+fn bless(expected: &Path, stem: &str, text: &str, codes: &str) {
+    let (doc, diags) = tok_core::parse(text);
+    write(&expected.join(format!("{stem}.tok")), &tok_core::fmt(&doc));
+    write(&expected.join(format!("{stem}.diag")), codes);
+    let bpmn_path = expected.join(format!("{stem}.bpmn"));
+    let levels_path = expected.join(format!("{stem}.levels"));
+    if diags.iter().any(tok_core::Diag::is_error) {
+        for p in [&bpmn_path, &levels_path] {
+            if p.exists() {
+                fs::remove_file(p).expect("remove a stale expected file");
+            }
+        }
+        return;
+    }
+    write(&bpmn_path, &tok_core::export::semantic_xml(&doc, None));
+    write(&levels_path, &levels(text));
+}
+
+/// `basic: …`, `analytic: …` and `full: …` lines with the sorted codes of `tok check`.
+fn levels(text: &str) -> String {
+    let mut got = String::new();
+    for level in ["basic", "analytic", "full"] {
+        let (mut doc_l, _) = tok_core::parse(text);
+        let mut codes: Vec<String> = tok_core::check(&mut doc_l, level, Some(&Rules))
+            .into_iter()
+            .map(|d| d.code)
+            .collect();
+        codes.sort();
+        got.push_str(&format!("{level}: {}\n", codes.join(" ")));
+    }
+    got
+}
+
 #[test]
 fn conformance_corpus() {
     let cases = corpus().join("cases");
@@ -62,6 +112,9 @@ fn conformance_corpus() {
             .collect();
         codes.sort();
         let diag_text: String = codes.iter().map(|c| format!("{c}\n")).collect();
+        if std::env::var_os("TOK_BLESS").is_some() && doc.lang_05() {
+            bless(&expected, stem, &text, &diag_text);
+        }
         let exp_diag = fs::read_to_string(expected.join(format!("{stem}.diag"))).expect("diag");
         if diag_text != exp_diag {
             failures.push(format!(
@@ -78,20 +131,7 @@ fn conformance_corpus() {
         let levels_path = expected.join(format!("{stem}.levels"));
         if levels_path.exists() {
             let exp = fs::read_to_string(&levels_path).expect("levels");
-            let mut got = String::new();
-            for level in ["basic", "analytic", "full"] {
-                let (mut doc_l, _) = tok_core::parse(&text);
-                let mut codes: Vec<String> = tok_core::check(&mut doc_l, level, Some(&Rules))
-                    .into_iter()
-                    .map(|d| d.code)
-                    .collect();
-                codes.sort();
-                got.push_str(&format!(
-                    "{level}: {}
-",
-                    codes.join(" ")
-                ));
-            }
+            let got = levels(&text);
             if got != exp {
                 failures.push(format!(
                     "{stem}.levels differs:

@@ -57,6 +57,11 @@ pub fn is_data(t: &str) -> bool {
 pub fn is_container(t: &str) -> bool {
     t == "process" || is_subp(t)
 }
+/// Data drawn as a shape: data object and store references and the data inputs and
+/// outputs of a process (those of activities are not drawn; they never get a shape).
+pub fn is_data_shape(t: &str) -> bool {
+    is_data(t) || t == "dataInput" || t == "dataOutput"
+}
 
 /// `local(tag)`: local name of BPMN/DI elements; extension elements get `ext:`.
 pub fn local(tag: &str) -> String {
@@ -356,6 +361,22 @@ impl Model {
             None => true,
             Some(cls) => self.doc.findall(cls, &m("lane")).is_empty(),
         }
+    }
+
+    /// Data inputs and outputs of the `ioSpecification` of a process, in document order.
+    pub fn process_io(&self, proc: Id) -> Vec<Id> {
+        let mut res = Vec::new();
+        if self.tag(proc) != "process" {
+            return res;
+        }
+        for io in self.doc.findall(proc, &m("ioSpecification")) {
+            for c in self.doc.children(io) {
+                if matches!(self.tag(*c).as_str(), "dataInput" | "dataOutput") {
+                    res.push(*c);
+                }
+            }
+        }
+        res
     }
 
     pub fn has_flow_children(&self, e: Id) -> bool {

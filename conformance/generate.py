@@ -9,6 +9,10 @@ For every cases/NAME.tok it writes:
     expected/NAME.bpmn  semantic BPMN XML (only when the document has no errors)
     expected/NAME.levels  all diagnostic codes of `tok check` at the levels basic, analytic and full
                           (full conformance level; only when the document has no parse errors)
+
+The pure-Python implementation reads language 0.3, so only the cases written for language 0.1
+and 0.3 (01-32) are generated here. The expected outputs of cases of newer language versions
+(33 and following) are produced by the Rust engine; see README.md.
 """
 
 import io
@@ -33,6 +37,15 @@ def write(path, text):
         f.write(text)
 
 
+def language_version(text):
+    """The language version in the header of a tok document (None without a header)."""
+    for line in text.lstrip("\ufeff").splitlines():
+        words = line.split("#", 1)[0].split()
+        if words:
+            return words[1] if words[0] == "tok" and len(words) > 1 else None
+    return None
+
+
 def main():
     cases = os.path.join(HERE, "cases")
     expected = os.path.join(HERE, "expected")
@@ -43,6 +56,8 @@ def main():
         stem = name[:-4]
         with io.open(os.path.join(cases, name), encoding="utf-8", newline="") as f:
             text = f.read()
+        if language_version(text) not in ("0.1", "0.3", None):
+            continue
         doc, diags = parse(text)
         codes = sorted(d.code for d in diags if d.code in CORE_CODES)
         write(os.path.join(expected, stem + ".tok"), fmt(doc))

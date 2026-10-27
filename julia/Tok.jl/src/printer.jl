@@ -10,7 +10,9 @@ const QUOTED_KEYS = Set(["when", "expr", "condition", "correlation", "duration",
                          "collection", "output-item", "until", "active", "inputs", "outputs", "headers",
                          "listeners", "events", "url", "body", "query", "headers-in", "assignee",
                          "candidate-users", "candidate-groups", "due", "follow-up", "business-id", "version",
-                         "version-tag"])
+                         "version-tag",
+                         # language 0.5
+                         "while", "activation", "structure", "in", "out", "path"])
 
 const EXECUTION_LISTENER_EVENTS = ("start", "end")
 
@@ -42,7 +44,8 @@ end
 ljust(s::AbstractString, w::Int) = s * " "^max(0, w - length(s))
 
 "Label, flags and attributes of an element in canonical order."
-function tail(el, attrs::Dict{String,String}, flags::Vector{String}, label, keys, cflags; quote_type=false)
+function tail(el, attrs::Dict{String,String}, flags::Vector{String}, label, keys, cflags; quote_type=false,
+              extra=Tuple{String,String}[])
     parts = String[]
     label !== nothing && push!(parts, q(label))
     for f in cflags
@@ -54,14 +57,26 @@ function tail(el, attrs::Dict{String,String}, flags::Vector{String}, label, keys
     for k in keys
         if haskey(attrs, k)
             push!(parts, k * "=" * ((k == "type" && quote_type) ? q(attrs[k]) : value(k, attrs[k])))
+            repeated!(parts, extra, k)
         end
     end
     for k in sort(collect(keys_of(attrs)))
-        k in keys || push!(parts, k * "=" * value(k, attrs[k]))
+        if !(k in keys)
+            push!(parts, k * "=" * value(k, attrs[k]))
+            repeated!(parts, extra, k)
+        end
     end
     return parts
 end
-tail(el::Elem, keys, cflags; quote_type=false) = tail(el, el.attrs, el.flags, el.label, keys, cflags; quote_type=quote_type)
+tail(el::Elem, keys, cflags; quote_type=false) =
+    tail(el, el.attrs, el.flags, el.label, keys, cflags; quote_type=quote_type, extra=el.extra)
+
+"Further values of a repeated key, after its first value (language 0.5)."
+function repeated!(parts::Vector{String}, extra, k)
+    for (x, v) in extra
+        x == k && push!(parts, k * "=" * value(k, v))
+    end
+end
 
 keys_of(d::Dict) = collect(keys(d))
 
@@ -117,6 +132,23 @@ function run!(pr::Printer)
     end
     push!(pr.out, line)
 
+    if !isempty(d.items) || !isempty(d.globals)
+        blank!(pr)
+        for it in ovalues(d.items)
+            emit!(pr, 0, join(["item", it.id, tail(it, ITEM_KEYS, ITEM_FLAGS)...], " "), it)
+        end
+        for g in ovalues(d.globals)
+            emit!(pr, 0, join(["global", g.id, tail(g, GLOBAL_KEYS, ())...], " "), g)
+        end
+    end
+    for x in ovalues(d.interfaces)
+        blank!(pr)
+        emit!(pr, 0, join(["interface", x.id, tail(x, (), ())...], " "), x)
+        for op in x.items
+            emit!(pr, 1, join(["operation", op.id, tail(op, OPERATION_KEYS, ())...], " "), op)
+        end
+    end
+
     if !isempty(d.top)
         blank!(pr)
         children!(pr, d.top, 0)
@@ -136,6 +168,13 @@ function run!(pr::Printer)
             parts = ["message", m.source, "->", m.target, tail(m, MESSAGE_KEYS, ())...]
             m.explicit_id && push!(parts, "id=" * m.id)
             emit!(pr, 0, join(parts, " "), m)
+        end
+    end
+    for k in ovalues(d.keys)
+        blank!(pr)
+        emit!(pr, 0, join(["key", k.id, tail(k, (), ())...], " "), k)
+        for x in k.items
+            emit!(pr, 1, join(["prop", x.id, tail(x, PROP_KEYS, ())...], " "), x)
         end
     end
     if !isempty(d.assocs)
@@ -207,7 +246,8 @@ function children!(pr::Printer, ids::Vector{String}, indent::Int)
         end
     end
     for x in datas
-        emit!(pr, indent, join([x.kind, x.id, tail(x, DATA_KEYS, DATA_FLAGS)...], " "), x)
+        keys, flags = x.kind in IO_KINDS ? (IO_KEYS, IO_FLAGS) : (DATA_KEYS, DATA_FLAGS)
+        emit!(pr, indent, join([x.kind, x.id, tail(x, keys, flags)...], " "), x)
     end
 end
 

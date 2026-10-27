@@ -9,7 +9,7 @@ use roxmltree::Node as X;
 use crate::model::*;
 use crate::parser::is_id;
 use crate::pyutil::{ascii_fold, split_ws, strip};
-use crate::xml::{BPMN_NS, ZEEBE_NS};
+use crate::xml::{BPMN_NS, XSD_NS, ZEEBE_NS};
 
 /// An error that stops the import (not well-formed XML or not a BPMN document).
 #[derive(Debug, Clone)]
@@ -45,7 +45,8 @@ fn kind_of_tag(t: &str) -> Option<&'static str> {
         "inclusiveGateway" => "or",
         "eventBasedGateway" => "eventgw",
         "adHocSubProcess" => "adhoc",
-        "transaction" => "sub",
+        "transaction" => "transaction",
+        "complexGateway" => "complex",
         _ => return None,
     })
 }
@@ -61,6 +62,7 @@ fn definition_key(t: &str) -> Option<&'static str> {
         "linkEventDefinition" => "link",
         "terminateEventDefinition" => "terminate",
         "compensateEventDefinition" => "compensate",
+        "cancelEventDefinition" => "cancel",
         _ => return None,
     })
 }
@@ -274,7 +276,14 @@ impl<'a, 'i> Importer<'a, 'i> {
     }
 
     fn uses_03(&mut self) {
-        self.doc.version = Some("0.3".into());
+        if self.doc.version.as_deref() != Some("0.5") {
+            self.doc.version = Some("0.3".into());
+        }
+    }
+
+    /// The document uses elements of language 0.5.
+    fn uses_05(&mut self) {
+        self.doc.version = Some("0.5".into());
     }
 
     /// Compensation boundary events with an association to a handler: tok writes them as
@@ -366,11 +375,8 @@ impl<'a, 'i> Importer<'a, 'i> {
             let t = local(e);
             if [
                 "choreography",
-                "globalTask",
-                "globalUserTask",
-                "globalManualTask",
-                "globalScriptTask",
-                "globalBusinessRuleTask",
+                "globalChoreographyTask",
+                "globalConversation",
             ]
             .contains(&t)
             {
@@ -534,7 +540,6 @@ impl<'a, 'i> Importer<'a, 'i> {
                     "callConversation",
                     "conversationLink",
                     "participantAssociation",
-                    "correlationKey",
                 ]
                 .contains(&t)
                 {
@@ -547,6 +552,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
         }
         self.flows_and_artifacts();
+        self.declarations_05(collab);
         self.derive_flow_ids();
         Ok((self.doc, self.warnings))
     }
@@ -806,6 +812,10 @@ impl<'a, 'i> Importer<'a, 'i> {
                 let nid = self.node(c, t, scope, pool);
                 order.children.push(nid.clone());
                 order.nodes.push(nid.clone());
+                let block = sub.or(pool).map(str::to_string);
+                for did in self.own_data(c, &nid, scope, block) {
+                    order.data.push(did);
+                }
                 let is_sub_kind = self
                     .doc
                     .nodes
@@ -818,14 +828,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                         n.children = inner.children.into_iter().chain(inner.data).collect();
                     }
                 }
-            } else if [
-                "complexGateway",
-                "choreographyTask",
-                "subChoreography",
-                "callChoreography",
-            ]
-            .contains(&t)
-            {
+            } else if ["choreographyTask", "subChoreography", "callChoreography"].contains(&t) {
                 self.warn(
                     c.attribute("id"),
                     &format!("{t} is not supported in tok and was skipped"),
@@ -841,12 +844,24 @@ impl<'a, 'i> Importer<'a, 'i> {
                     "lanes inside a sub-process are not supported and were ignored",
                     None,
                 );
-            } else if t == "ioSpecification" {
-                self.warn(
-                    e.attribute("id"),
-                    "process input/output specification was skipped",
-                    Some("ioSpec".into()),
-                );
+            } else if t == "ioSpecification" || t == "property" {
+                // data inputs, outputs and properties of the process or sub-process itself
+                let block = sub.or(pool).map(str::to_string);
+                if t == "property" {
+                    if let Some(did) = self.io_data(c, "property", scope, block, None) {
+                        order.data.push(did);
+                    }
+                } else {
+                    let made = implicit_io(e);
+                    for (x, kind) in io_items(c) {
+                        if x.attribute("id").is_some_and(|i| made.contains(i)) {
+                            continue;
+                        }
+                        if let Some(did) = self.io_data(x, kind, scope, block.clone(), None) {
+                            order.data.push(did);
+                        }
+                    }
+                }
             }
         }
         if sub.is_none() && pool.is_none() {
@@ -858,13 +873,6 @@ impl<'a, 'i> Importer<'a, 'i> {
 
     fn node(&mut self, e: X<'a, 'i>, t: &str, scope: &str, pool: Option<&str>) -> String {
         let mut kind = kind_of_tag(t).unwrap_or("task");
-        if t == "transaction" {
-            self.warn(
-                e.attribute("id"),
-                &format!("{t} imported as an embedded sub-process"),
-                None,
-            );
-        }
         if t == "subProcess" && e.attribute("triggeredByEvent") == Some("true") {
             kind = "eventsub";
         }
@@ -898,8 +906,19 @@ impl<'a, 'i> Importer<'a, 'i> {
         if kind == "call"
             && let Some(ce) = e.attribute("calledElement").filter(|c| !c.is_empty())
         {
-            n.base.attrs.insert("process".into(), ce.to_string());
+            let global = self
+                .by_id
+                .get(ce)
+                .is_some_and(|g| GLOBAL_KINDS.iter().any(|(_, t)| *t == local(*g)));
+            if global {
+                let t = self.tid_s(Some(ce));
+                n.base.attrs.insert("task".into(), t);
+                self.uses_05();
+            } else {
+                n.base.attrs.insert("process".into(), ce.to_string());
+            }
         }
+        self.node_05(e, &mut n);
         if kind == "adhoc" {
             self.uses_03();
             if e.attribute("ordering") == Some("Sequential") {
@@ -951,8 +970,22 @@ impl<'a, 'i> Importer<'a, 'i> {
         if is_event(kind) {
             self.event_definitions(e, &mut n);
         }
-        if find(e, "standardLoopCharacteristics").is_some() {
+        if let Some(lc) = find(e, "standardLoopCharacteristics") {
             n.base.flags.push("loop".into());
+            if lc.attribute("testBefore") == Some("true") {
+                n.base.flags.push("test-before".into());
+                self.uses_05();
+            }
+            if let Some(m) = lc.attribute("loopMaximum").filter(|v| !v.is_empty()) {
+                n.base.attrs.insert("loop-max".into(), m.to_string());
+                self.uses_05();
+            }
+            if let Some(c) = find(lc, "loopCondition")
+                && !strip(text(c).unwrap_or("")).is_empty()
+            {
+                n.base.attrs.insert("while".into(), strip_feel(text(c)));
+                self.uses_05();
+            }
         }
         if let Some(mi) = find(e, "multiInstanceLoopCharacteristics") {
             n.base.flags.push(
@@ -988,13 +1021,6 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
         }
         self.extensions(e, &mut n);
-        if find(e, "ioSpecification").is_some() && kind != "sub" {
-            self.warn(
-                Some(&nid),
-                "input/output specification was skipped",
-                Some(format!("io-{nid}")),
-            );
-        }
         self.doc.ids.insert(
             nid.clone(),
             IdEntry {
@@ -1029,16 +1055,31 @@ impl<'a, 'i> Importer<'a, 'i> {
                 );
             }
         }
-        let Some(c) = defs.first().copied() else {
-            return;
-        };
+        // several definitions make a multiple event (language 0.5)
         if defs.len() > 1 {
-            self.warn(
-                Some(&nid),
-                "multiple event definitions: only the first one was imported",
-                None,
-            );
+            self.uses_05();
         }
+        if e.attribute("parallelMultiple") == Some("true") {
+            n.base.flags.push("parallel".into());
+            self.uses_05();
+        }
+        for c in defs {
+            self.event_definition(c, n);
+        }
+    }
+
+    /// A trigger value: the first one of a key goes to the attributes, further ones (a
+    /// multiple event) to the repeated values.
+    fn put_trigger(n: &mut Node, key: &str, value: String) {
+        if n.base.attrs.contains_key(key) {
+            n.base.extra.push((key.to_string(), value));
+        } else {
+            n.base.attrs.insert(key.to_string(), value);
+        }
+    }
+
+    fn event_definition(&mut self, c: X<'a, 'i>, n: &mut Node) {
+        let nid = n.base.id().to_string();
         let key = definition_key(local(c)).unwrap_or("message");
         let label_or_id = n
             .base
@@ -1047,8 +1088,13 @@ impl<'a, 'i> Importer<'a, 'i> {
             .filter(|l| !l.is_empty())
             .unwrap_or_else(|| nid.clone());
         match key {
-            "terminate" | "compensate" => {
-                n.base.flags.push(key.into());
+            "terminate" | "compensate" | "cancel" => {
+                if !n.base.has(key) {
+                    n.base.flags.push(key.into());
+                }
+                if key == "cancel" {
+                    self.uses_05();
+                }
                 if key == "compensate"
                     && let Some(r) = c.attribute("activityRef").filter(|a| !a.is_empty())
                 {
@@ -1063,7 +1109,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                     Some(r) => self.named(r, "message"),
                     None => label_or_id.clone(),
                 };
-                n.base.attrs.insert("message".into(), name);
+                Self::put_trigger(n, "message", name);
                 if r.is_none() {
                     self.warn(Some(&nid), "message event without messageRef; the event label was used as message name", None);
                 }
@@ -1079,7 +1125,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 match c.attribute(attr.as_str()).filter(|r| !r.is_empty()) {
                     Some(r) => {
                         let name = self.named(r, key);
-                        n.base.attrs.insert(key.into(), name);
+                        Self::put_trigger(n, key, name);
                         let code_attr = format!("{key}Code");
                         if let Some(code) = self
                             .by_id
@@ -1097,7 +1143,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                         self.uses_03();
                     }
                     None => {
-                        n.base.attrs.insert(key.into(), label_or_id.clone());
+                        Self::put_trigger(n, key, label_or_id.clone());
                         let msg = format!(
                             "{key} event without a reference; the event label was used as name"
                         );
@@ -1122,15 +1168,12 @@ impl<'a, 'i> Importer<'a, 'i> {
                         "P1D".into()
                     }
                 };
-                n.base.attrs.insert("timer".into(), value);
+                Self::put_trigger(n, "timer", value);
             }
             "condition" => {
                 let x = find(c, "condition");
                 let v = strip_feel(x.and_then(text));
-                n.base.attrs.insert(
-                    "condition".into(),
-                    if v.is_empty() { "true".into() } else { v },
-                );
+                Self::put_trigger(n, "condition", if v.is_empty() { "true".into() } else { v });
             }
             _ => {
                 let v = c
@@ -1138,9 +1181,358 @@ impl<'a, 'i> Importer<'a, 'i> {
                     .filter(|v| !v.is_empty())
                     .map(str::to_string)
                     .unwrap_or(label_or_id);
-                n.base.attrs.insert("link".into(), v);
+                Self::put_trigger(n, "link", v);
             }
         }
+    }
+
+    /// Attributes of language 0.5 on a flow node: transaction method, activation condition,
+    /// instantiation, operation and performer.
+    fn node_05(&mut self, e: X<'a, 'i>, n: &mut Node) {
+        let kind = n.base.kind.clone();
+        if kind == "transaction" {
+            self.uses_05();
+            if let Some((m, _)) = e
+                .attribute("method")
+                .and_then(|v| TRANSACTION_METHODS.iter().find(|(_, x)| *x == v))
+            {
+                n.base.attrs.insert("method".into(), (*m).to_string());
+            }
+        }
+        if kind == "complex" {
+            self.uses_05();
+            if let Some(c) = find(e, "activationCondition")
+                && !strip(text(c).unwrap_or("")).is_empty()
+            {
+                n.base
+                    .attrs
+                    .insert("activation".into(), strip_feel(text(c)));
+            }
+        }
+        if (kind == "receive" || kind == "eventgw") && e.attribute("instantiate") == Some("true") {
+            n.base.flags.push("instantiate".into());
+            self.uses_05();
+        }
+        if kind == "eventgw" && e.attribute("eventGatewayType") == Some("Parallel") {
+            n.base.flags.push("parallel".into());
+            self.uses_05();
+        }
+        if matches!(kind.as_str(), "service" | "send" | "receive")
+            && let Some(o) = e.attribute("operationRef").filter(|o| !o.is_empty())
+        {
+            let t = self.tid_s(Some(o));
+            n.base.attrs.insert("operation".into(), t);
+            self.uses_05();
+        }
+        let role = children(e).find(|c| {
+            is_bpmn(*c) && matches!(local(*c), "performer" | "humanPerformer" | "potentialOwner")
+        });
+        if let Some(r) = role
+            .and_then(|r| find(r, "resourceRef"))
+            .and_then(text)
+            .map(strip)
+            .filter(|r| !r.is_empty())
+        {
+            let t = self.tid_s(Some(r));
+            n.base.attrs.insert("by".into(), t);
+            self.uses_05();
+        }
+    }
+
+    /// Data inputs, outputs and properties that an activity or event declares itself
+    /// (`input … on=ID`); those made for data associations (`reads`, `writes`) are left out.
+    fn own_data(
+        &mut self,
+        e: X<'a, 'i>,
+        nid: &str,
+        scope: &str,
+        block: Option<String>,
+    ) -> Vec<String> {
+        let mut out = Vec::new();
+        if matches!(local(e), "subProcess" | "adHocSubProcess" | "transaction") {
+            // read with the content of the sub-process (`container`)
+            return out;
+        }
+        let made = implicit_io(e);
+        if let Some(io) = find(e, "ioSpecification") {
+            for (x, kind) in io_items(io) {
+                if x.attribute("id").is_some_and(|i| made.contains(i)) {
+                    continue;
+                }
+                if let Some(did) = self.io_data(x, kind, scope, block.clone(), Some(nid)) {
+                    out.push(did);
+                }
+            }
+        }
+        let props: Vec<X> = findall(e, "property").collect();
+        for p in props {
+            if p.attribute("name") == Some("__targetRef_placeholder")
+                || p.attribute("id").is_some_and(|i| made.contains(i))
+            {
+                continue;
+            }
+            if let Some(did) = self.io_data(p, "property", scope, block.clone(), Some(nid)) {
+                out.push(did);
+            }
+        }
+        out
+    }
+
+    /// One `input`, `output` or `property` (language 0.5).
+    fn io_data(
+        &mut self,
+        x: X<'a, 'i>,
+        kind: &str,
+        scope: &str,
+        block: Option<String>,
+        on: Option<&str>,
+    ) -> Option<String> {
+        if kind == "property" && x.attribute("name") == Some("__targetRef_placeholder") {
+            return None;
+        }
+        let did = self.tid(x.attribute("id"))?;
+        let mut base = Base::new(
+            kind,
+            Some(did.clone()),
+            clean_label(x.attribute("name")),
+            Attrs::new(),
+            Vec::new(),
+            0,
+        );
+        if let Some(t) = x.attribute("itemSubjectRef").filter(|t| !t.is_empty()) {
+            let t = self.tid_s(Some(t));
+            base.attrs.insert("type".into(), t);
+        }
+        if kind != "property" && x.attribute("isCollection") == Some("true") {
+            base.flags.push("collection".into());
+        }
+        if let Some(o) = on {
+            base.attrs.insert("on".into(), o.to_string());
+        }
+        let mut d = Data {
+            base,
+            scope: None,
+            block: None,
+        };
+        if let Some(b) = block {
+            d.scope = Some(scope.to_string());
+            d.block = Some(b);
+        }
+        self.doc.ids.insert(
+            did.clone(),
+            IdEntry {
+                kind: kind.to_string(),
+                line: 0,
+            },
+        );
+        self.doc.data.insert(did.clone(), d);
+        self.uses_05();
+        Some(did)
+    }
+
+    /// Root elements of language 0.5: item definitions, resources, global tasks, interfaces,
+    /// and the correlation keys of the collaboration.
+    fn declarations_05(&mut self, collab: Option<X<'a, 'i>>) {
+        let root = self.root;
+        let mut props: IndexMap<String, X> = IndexMap::new();
+        let elems: Vec<X> = children(root).filter(|c| is_bpmn(*c)).collect();
+        for e in elems {
+            let t = local(e);
+            let name = || clean_label(e.attribute("name"));
+            match t {
+                "itemDefinition" => {
+                    let id = self.tid_s(e.attribute("id"));
+                    let label = find(e, "documentation").and_then(|x| clean_label(text(x)));
+                    let mut b =
+                        Base::new("item", Some(id.clone()), label, Attrs::new(), Vec::new(), 0);
+                    if let Some(s) = e.attribute("structureRef").filter(|s| !s.is_empty()) {
+                        // tok writes XML Schema types as xsd:NAME and other names without a
+                        // namespace prefix
+                        let v = match s.split_once(':') {
+                            None => s.to_string(),
+                            Some((p, name)) if e.lookup_namespace_uri(Some(p)) == Some(XSD_NS) => {
+                                format!("xsd:{name}")
+                            }
+                            Some((_, name)) => {
+                                self.warn(
+                                    e.attribute("id"),
+                                    &format!("namespace prefix of structureRef '{s}' was dropped"),
+                                    None,
+                                );
+                                name.to_string()
+                            }
+                        };
+                        b.attrs.insert("structure".into(), v);
+                    }
+                    match e.attribute("itemKind") {
+                        Some("Physical") => {
+                            b.attrs.insert("kind".into(), "physical".into());
+                        }
+                        Some("Information") => {
+                            b.attrs.insert("kind".into(), "information".into());
+                        }
+                        _ => {}
+                    }
+                    if e.attribute("isCollection") == Some("true") {
+                        b.flags.push("collection".into());
+                    }
+                    self.register_05("item", &id);
+                    self.doc.items.insert(id, b);
+                }
+                "resource" => {
+                    let id = self.tid_s(e.attribute("id"));
+                    let label = name().filter(|l| *l != id);
+                    let b = Base::new(
+                        "resource",
+                        Some(id.clone()),
+                        label,
+                        Attrs::new(),
+                        Vec::new(),
+                        0,
+                    );
+                    self.register_05("resource", &id);
+                    self.doc.resources.insert(id, b);
+                }
+                "interface" => {
+                    let id = self.tid_s(e.attribute("id"));
+                    let label = name().filter(|l| *l != id);
+                    let base = Base::new(
+                        "interface",
+                        Some(id.clone()),
+                        label,
+                        Attrs::new(),
+                        Vec::new(),
+                        0,
+                    );
+                    let mut operations = Vec::new();
+                    let ops: Vec<X> = findall(e, "operation").collect();
+                    for op in ops {
+                        let oid = self.tid_s(op.attribute("id"));
+                        let label = clean_label(op.attribute("name")).filter(|l| *l != oid);
+                        let mut b = Base::new(
+                            "operation",
+                            Some(oid.clone()),
+                            label,
+                            Attrs::new(),
+                            Vec::new(),
+                            0,
+                        );
+                        for (child, key, kind) in [
+                            ("inMessageRef", "in", "message"),
+                            ("outMessageRef", "out", "message"),
+                            ("errorRef", "error", "error"),
+                        ] {
+                            let refs: Vec<String> = children(op)
+                                .filter(|c| is_b(*c, child))
+                                .filter_map(|c| text(c).map(|t| strip(t).to_string()))
+                                .filter(|t| !t.is_empty())
+                                .collect();
+                            for r in refs {
+                                let v = self.named(&r, kind);
+                                if b.attrs.contains_key(key) {
+                                    b.extra.push((key.to_string(), v));
+                                } else {
+                                    b.attrs.insert(key.to_string(), v);
+                                }
+                            }
+                        }
+                        self.register_05("operation", &oid);
+                        operations.push(b);
+                    }
+                    self.register_05("interface", &id);
+                    self.doc
+                        .interfaces
+                        .insert(id, Interface { base, operations });
+                }
+                "correlationProperty" => {
+                    if let Some(i) = e.attribute("id") {
+                        props.insert(i.to_string(), e);
+                    }
+                }
+                _ => {
+                    if let Some((kind, _)) = GLOBAL_KINDS.iter().find(|(_, g)| *g == t) {
+                        let id = self.tid_s(e.attribute("id"));
+                        let mut b = Base::new(
+                            "global",
+                            Some(id.clone()),
+                            name(),
+                            Attrs::new(),
+                            Vec::new(),
+                            0,
+                        );
+                        if *kind != "task" {
+                            b.attrs.insert("kind".into(), (*kind).to_string());
+                        }
+                        self.register_05("global", &id);
+                        self.doc.globals.insert(id, b);
+                    }
+                }
+            }
+        }
+        let Some(c) = collab else {
+            return;
+        };
+        let keys: Vec<X> = findall(c, "correlationKey").collect();
+        for k in keys {
+            let id = self.tid_s(k.attribute("id"));
+            let base = Base::new(
+                "key",
+                Some(id.clone()),
+                clean_label(k.attribute("name")),
+                Attrs::new(),
+                Vec::new(),
+                0,
+            );
+            let mut key = CorrelationKey {
+                base,
+                props: Vec::new(),
+            };
+            let refs: Vec<String> = children(k)
+                .filter(|r| is_b(*r, "correlationPropertyRef"))
+                .filter_map(|r| text(r).map(|t| strip(t).to_string()))
+                .collect();
+            for r in refs {
+                let Some(p) = props.get(&r).copied() else {
+                    self.warn(Some(&r), "unknown correlation property reference", None);
+                    continue;
+                };
+                let pname = clean_label(p.attribute("name")).unwrap_or_else(|| r.clone());
+                let exprs: Vec<X> = findall(p, "correlationPropertyRetrievalExpression").collect();
+                for x in exprs {
+                    let mut b = Base::new(
+                        "prop",
+                        Some(pname.clone()),
+                        None,
+                        Attrs::new(),
+                        Vec::new(),
+                        0,
+                    );
+                    if let Some(m) = x.attribute("messageRef").filter(|m| !m.is_empty()) {
+                        let v = self.named(m, "message");
+                        b.attrs.insert("message".into(), v);
+                    }
+                    let path = find(x, "messagePath")
+                        .and_then(text)
+                        .map(strip)
+                        .unwrap_or("");
+                    b.attrs.insert("path".into(), path.to_string());
+                    key.props.push(b);
+                }
+            }
+            self.register_05("key", &id);
+            self.doc.keys.insert(id, key);
+        }
+    }
+
+    fn register_05(&mut self, kind: &str, id: &str) {
+        self.doc.ids.insert(
+            id.to_string(),
+            IdEntry {
+                kind: kind.to_string(),
+                line: 0,
+            },
+        );
+        self.uses_05();
     }
 
     fn extensions(&mut self, e: X<'a, 'i>, n: &mut Node) {
@@ -1408,6 +1800,15 @@ impl<'a, 'i> Importer<'a, 'i> {
             if obj.and_then(|o| o.attribute("isCollection")) == Some("true") {
                 x.base.flags.push("collection".into());
             }
+            if let Some(t) = obj
+                .and_then(|o| o.attribute("itemSubjectRef"))
+                .or(e.attribute("itemSubjectRef"))
+                .filter(|t| !t.is_empty())
+            {
+                let t = self.tid_s(Some(t));
+                x.base.attrs.insert("type".into(), t);
+                self.uses_05();
+            }
             x
         } else {
             let store = e
@@ -1415,7 +1816,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 .and_then(|r| self.by_id.get(r).copied());
             let label = clean_label(e.attribute("name"))
                 .or_else(|| store.and_then(|o| clean_label(o.attribute("name"))));
-            Data {
+            let mut x = Data {
                 base: Base::new(
                     "store",
                     Some(did.clone()),
@@ -1426,7 +1827,17 @@ impl<'a, 'i> Importer<'a, 'i> {
                 ),
                 scope: None,
                 block: None,
+            };
+            if let Some(t) = e
+                .attribute("itemSubjectRef")
+                .or(store.and_then(|s| s.attribute("itemSubjectRef")))
+                .filter(|t| !t.is_empty())
+            {
+                let t = self.tid_s(Some(t));
+                x.base.attrs.insert("type".into(), t);
+                self.uses_05();
             }
+            x
         };
         if let Some(b) = block {
             x.scope = Some(scope.to_string());
@@ -1753,6 +2164,37 @@ impl<'a, 'i> Importer<'a, 'i> {
             );
         }
     }
+}
+
+/// The data inputs and outputs of an `ioSpecification` with their tok statement.
+fn io_items<'a, 'i>(io: X<'a, 'i>) -> Vec<(X<'a, 'i>, &'static str)> {
+    children(io)
+        .filter_map(|x| match local(x) {
+            "dataInput" if is_bpmn(x) => Some((x, "input")),
+            "dataOutput" if is_bpmn(x) => Some((x, "output")),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Identifiers of the data inputs, outputs and properties of an activity that only serve
+/// its data associations: the targets of its input associations and the sources of its
+/// output associations (tok writes them for `reads` and `writes`).
+fn implicit_io(e: X) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for (assoc, end) in [
+        ("dataInputAssociation", "targetRef"),
+        ("dataOutputAssociation", "sourceRef"),
+    ] {
+        for a in children(e).filter(|c| is_b(*c, assoc)) {
+            for r in children(a).filter(|c| is_b(*c, end)) {
+                if let Some(t) = text(r) {
+                    out.insert(strip(t).to_string());
+                }
+            }
+        }
+    }
+    out
 }
 
 /// `-(?:dia|doa)-(\d+)$`

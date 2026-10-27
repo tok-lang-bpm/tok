@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Standard loop" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Standard loop">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="proba" name="Próba połączenia">
+      <bpmn:standardLoopCharacteristics loopMaximum="5" testBefore="true">
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">proby &lt; 3</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="poprawki" name="Naniesienie poprawek">
+      <bpmn:standardLoopCharacteristics>
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">not(zatwierdzono)</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:subProcess id="kontrola" name="Kontrola jakości">
+      <bpmn:standardLoopCharacteristics loopMaximum="3" />
+      <bpmn:startEvent id="ks" />
+      <bpmn:task id="sprawdz" name="Sprawdzenie" />
+      <bpmn:endEvent id="ke" />
+      <bpmn:sequenceFlow id="f-ks-sprawdz" sourceRef="ks" targetRef="sprawdz" />
+      <bpmn:sequenceFlow id="f-sprawdz-ke" sourceRef="sprawdz" targetRef="ke" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-proba" sourceRef="s" targetRef="proba" />
+    <bpmn:sequenceFlow id="f-proba-poprawki" sourceRef="proba" targetRef="poprawki" />
+    <bpmn:sequenceFlow id="f-poprawki-kontrola" sourceRef="poprawki" targetRef="kontrola" />
+    <bpmn:sequenceFlow id="f-kontrola-e" sourceRef="kontrola" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="87" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="34" y="128" width="28" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="proba_di" bpmnElement="proba">
+        <dc:Bounds x="116" y="65" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="poprawki_di" bpmnElement="poprawki">
+        <dc:Bounds x="266" y="65" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kontrola_di" bpmnElement="kontrola" isExpanded="true">
+        <dc:Bounds x="416" y="30" width="340" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ks_di" bpmnElement="ks">
+        <dc:Bounds x="446" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="sprawdz_di" bpmnElement="sprawdz">
+        <dc:Bounds x="532" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ke_di" bpmnElement="ke">
+        <dc:Bounds x="682" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="806" y="87" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="807" y="128" width="34" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-ks-sprawdz_di" bpmnElement="f-ks-sprawdz">
+        <di:waypoint x="482" y="110" />
+        <di:waypoint x="532" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-sprawdz-ke_di" bpmnElement="f-sprawdz-ke">
+        <di:waypoint x="632" y="110" />
+        <di:waypoint x="682" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-proba_di" bpmnElement="f-s-proba">
+        <di:waypoint x="66" y="105" />
+        <di:waypoint x="116" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-proba-poprawki_di" bpmnElement="f-proba-poprawki">
+        <di:waypoint x="216" y="105" />
+        <di:waypoint x="266" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-poprawki-kontrola_di" bpmnElement="f-poprawki-kontrola">
+        <di:waypoint x="366" y="105" />
+        <di:waypoint x="416" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-kontrola-e_di" bpmnElement="f-kontrola-e">
+        <di:waypoint x="756" y="105" />
+        <di:waypoint x="806" y="105" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

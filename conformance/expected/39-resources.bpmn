@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.5" id="definitions" name="Resources and performers" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:resource id="bibliotekarz" name="Bibliotekarz" />
+  <bpmn:resource id="system" name="system" />
+  <bpmn:process id="process" isExecutable="false" name="Resources and performers">
+    <bpmn:startEvent id="s" name="Czytelnik zgłasza się" />
+    <bpmn:userTask id="wypozycz" name="Wypożyczenie">
+      <bpmn:humanPerformer id="wypozycz-performer">
+        <bpmn:resourceRef>bibliotekarz</bpmn:resourceRef>
+      </bpmn:humanPerformer>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="rejestr" name="Rejestracja w systemie">
+      <bpmn:performer id="rejestr-performer">
+        <bpmn:resourceRef>system</bpmn:resourceRef>
+      </bpmn:performer>
+    </bpmn:serviceTask>
+    <bpmn:manualTask id="wydanie" name="Wydanie książki">
+      <bpmn:humanPerformer id="wydanie-performer">
+        <bpmn:resourceRef>bibliotekarz</bpmn:resourceRef>
+      </bpmn:humanPerformer>
+    </bpmn:manualTask>
+    <bpmn:endEvent id="e" name="Książka wypożyczona" />
+    <bpmn:sequenceFlow id="f-s-wypozycz" sourceRef="s" targetRef="wypozycz" />
+    <bpmn:sequenceFlow id="f-wypozycz-rejestr" sourceRef="wypozycz" targetRef="rejestr" />
+    <bpmn:sequenceFlow id="f-rejestr-wydanie" sourceRef="rejestr" targetRef="wydanie" />
+    <bpmn:sequenceFlow id="f-wydanie-e" sourceRef="wydanie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

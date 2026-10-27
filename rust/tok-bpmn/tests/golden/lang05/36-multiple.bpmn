@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Multiple events" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_E_mail" name="E-mail" />
+  <bpmn:message id="Message_Formularz" name="Formularz" />
+  <bpmn:message id="Message_Potwierdzenie" name="Potwierdzenie" />
+  <bpmn:message id="Message_Do_klienta" name="Do klienta" />
+  <bpmn:signal id="Signal_Wplata" name="Wpłata" />
+  <bpmn:signal id="Signal_Ponaglenie" name="Ponaglenie" />
+  <bpmn:signal id="Signal_Zamknieto" name="Zamknięto" />
+  <bpmn:escalation id="Escalation_Do_kierownika" name="Do kierownika" />
+  <bpmn:process id="process" isExecutable="false" name="Multiple events">
+    <bpmn:startEvent id="zgloszenie" name="Zgłoszenie e-mailem lub przez formularz">
+      <bpmn:messageEventDefinition id="zgloszenie-def" messageRef="Message_E_mail" />
+      <bpmn:messageEventDefinition id="zgloszenie-def-2" messageRef="Message_Formularz" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="rejestracja" name="Rejestracja zgłoszenia" />
+    <bpmn:intermediateCatchEvent id="potwierdzenie" name="Potwierdzenie i płatność" parallelMultiple="true">
+      <bpmn:messageEventDefinition id="potwierdzenie-def" messageRef="Message_Potwierdzenie" />
+      <bpmn:signalEventDefinition id="potwierdzenie-def-2" signalRef="Signal_Wplata" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:boundaryEvent attachedToRef="rejestracja" cancelActivity="false" id="przypomnienie" name="Przypomnienie lub ponaglenie">
+      <bpmn:timerEventDefinition id="przypomnienie-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+      <bpmn:signalEventDefinition id="przypomnienie-def-2" signalRef="Signal_Ponaglenie" />
+    </bpmn:boundaryEvent>
+    <bpmn:task id="monit" name="Wysłanie monitu" />
+    <bpmn:endEvent id="monit-e" name="Monit wysłany" />
+    <bpmn:intermediateThrowEvent id="ogloszenie" name="Ogłoszenie">
+      <bpmn:messageEventDefinition id="ogloszenie-def" messageRef="Message_Do_klienta" />
+      <bpmn:escalationEventDefinition escalationRef="Escalation_Do_kierownika" id="ogloszenie-def-2" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="koniec" name="Powiadomienia">
+      <bpmn:messageEventDefinition id="koniec-def" messageRef="Message_Do_klienta" />
+      <bpmn:signalEventDefinition id="koniec-def-2" signalRef="Signal_Zamknieto" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-zgloszenie-rejestracja" sourceRef="zgloszenie" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-potwierdzenie" sourceRef="rejestracja" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-ogloszenie" sourceRef="potwierdzenie" targetRef="ogloszenie" />
+    <bpmn:sequenceFlow id="f-ogloszenie-koniec" sourceRef="ogloszenie" targetRef="koniec" />
+    <bpmn:sequenceFlow id="f-przypomnienie-monit" sourceRef="przypomnienie" targetRef="monit" />
+    <bpmn:sequenceFlow id="f-monit-monit-e" sourceRef="monit" targetRef="monit-e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="zgloszenie_di" bpmnElement="zgloszenie">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-6" y="93" width="108" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="potwierdzenie_di" bpmnElement="potwierdzenie">
+        <dc:Bounds x="298" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="274" y="93" width="84" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="monit_di" bpmnElement="monit">
+        <dc:Bounds x="266" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="monit-e_di" bpmnElement="monit-e">
+        <dc:Bounds x="416" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="397" y="223" width="74" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ogloszenie_di" bpmnElement="ogloszenie">
+        <dc:Bounds x="416" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="406" y="93" width="56" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="koniec_di" bpmnElement="koniec">
+        <dc:Bounds x="502" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="483" y="93" width="74" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="przypomnienie_di" bpmnElement="przypomnienie">
+        <dc:Bounds x="168" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="85" y="131" width="96" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-zgloszenie-rejestracja_di" bpmnElement="f-zgloszenie-rejestracja">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-potwierdzenie_di" bpmnElement="f-rejestracja-potwierdzenie">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="298" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-potwierdzenie-ogloszenie_di" bpmnElement="f-potwierdzenie-ogloszenie">
+        <di:waypoint x="334" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ogloszenie-koniec_di" bpmnElement="f-ogloszenie-koniec">
+        <di:waypoint x="452" y="70" />
+        <di:waypoint x="502" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-przypomnienie-monit_di" bpmnElement="f-przypomnienie-monit">
+        <di:waypoint x="186" y="128" />
+        <di:waypoint x="186" y="200" />
+        <di:waypoint x="266" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-monit-monit-e_di" bpmnElement="f-monit-monit-e">
+        <di:waypoint x="366" y="200" />
+        <di:waypoint x="416" y="200" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

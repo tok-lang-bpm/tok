@@ -98,8 +98,32 @@ fn pentagon(cx: f64, cy: f64, r: f64) -> String {
         .join(" ")
 }
 
+/// Outline of a plus sign (parallel multiple events, parallel event-based gateways).
+fn plus_outline(cx: f64, cy: f64, r: f64, a: f64) -> String {
+    [
+        (-a, -r),
+        (a, -r),
+        (a, -a),
+        (r, -a),
+        (r, a),
+        (a, a),
+        (a, r),
+        (-a, r),
+        (-a, a),
+        (-r, a),
+        (-r, -a),
+        (-a, -a),
+    ]
+    .iter()
+    .map(|(dx, dy)| format!("{},{}", f1(cx + dx), f1(cy + dy)))
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+/// Marker of an event: `defs` are its event definitions, `filled` for throwing events and
+/// `parallel` for a parallel multiple event (all triggers are needed).
 #[allow(clippy::too_many_lines)]
-fn event_icon(defs: &[String], cx: f64, cy: f64, filled: bool) -> String {
+fn event_icon(defs: &[String], cx: f64, cy: f64, filled: bool, parallel: bool) -> String {
     let fill = if filled { STROKE } else { "#fff" };
     let ln = if filled { "#fff" } else { STROKE };
     let mut s = String::new();
@@ -281,7 +305,13 @@ fn event_icon(defs: &[String], cx: f64, cy: f64, filled: bool) -> String {
             _ => {}
         }
     }
-    if defs.len() > 1 {
+    if defs.len() > 1 && parallel {
+        s.push_str(&format!(
+            "<polygon points=\"{}\" fill=\"#fff\" stroke=\"{}\" stroke-width=\"1.2\"/>",
+            plus_outline(cx, cy, 9.0, 3.0),
+            STROKE
+        ));
+    } else if defs.len() > 1 {
         s.push_str(&format!(
             "<polygon points=\"{}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1.2\"/>",
             pentagon(cx, cy, 9.0),
@@ -426,6 +456,52 @@ fn task_icon(t: &str, x: f64, y: f64) -> String {
     s
 }
 
+/// Marker of an instantiating receive task: the envelope in a circle, like the marker of a
+/// message start event (BPMN 2.0.2, 10.3.3).
+fn instantiating_receive_icon(x: f64, y: f64) -> String {
+    let (cx, cy) = (x + 15.0, y + 15.0);
+    let mut s = format!(
+        "<circle cx=\"{}\" cy=\"{}\" r=\"10\" fill=\"#fff\" stroke=\"{}\" stroke-width=\"1.2\"/>",
+        f1(cx),
+        f1(cy),
+        STROKE
+    );
+    s.push_str(&format!(
+        "<rect x=\"{}\" y=\"{}\" width=\"13\" height=\"9\" fill=\"#fff\" stroke=\"{}\" stroke-width=\"1.1\"/>",
+        f1(cx - 6.5),
+        f1(cy - 4.5),
+        STROKE
+    ));
+    s.push_str(&format!(
+        "<polyline points=\"{},{} {},{} {},{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"1.1\"/>",
+        f1(cx - 6.5),
+        f1(cy - 4.5),
+        f1(cx),
+        f1(cy + 0.5),
+        f1(cx + 6.5),
+        f1(cy - 4.5),
+        STROKE
+    ));
+    s
+}
+
+/// The task type of the global task a call activity calls (BPMN 2.0.2, 10.3.6: such a call
+/// activity has a thick border and the marker of the task type, not the plus sign).
+fn called_global_task(md: &Model, e: Id) -> Option<&'static str> {
+    if md.tag(e) != "callActivity" {
+        return None;
+    }
+    let called = md.get(md.attr(e, "calledElement"))?;
+    Some(match md.tag(called).as_str() {
+        "globalTask" => "task",
+        "globalUserTask" => "userTask",
+        "globalManualTask" => "manualTask",
+        "globalScriptTask" => "scriptTask",
+        "globalBusinessRuleTask" => "businessRuleTask",
+        _ => return None,
+    })
+}
+
 #[allow(clippy::too_many_lines)]
 fn markers(md: &Model, e: Id, x: f64, y: f64, w: f64, h: f64) -> String {
     let t = md.tag(e);
@@ -444,7 +520,10 @@ fn markers(md: &Model, e: Id, x: f64, y: f64, w: f64, h: f64) -> String {
     if is_subp(&t) && !md.has_flow_children(e) {
         mk.push("plus");
     }
-    if t == "callActivity" && md.attr(e, "calledElement").is_some_and(|c| !c.is_empty()) {
+    if t == "callActivity"
+        && md.attr(e, "calledElement").is_some_and(|c| !c.is_empty())
+        && called_global_task(md, e).is_none()
+    {
         mk.push("plus");
     }
     if t == "adHocSubProcess" {
@@ -974,6 +1053,38 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
     Ok(p.join("\n"))
 }
 
+/// Outline of a data object (a page with a folded corner).
+fn data_object_shape(x: f64, y: f64, w: f64, h: f64) -> String {
+    format!(
+        "<path d=\"M{},{} h{} l10,10 v{} h-{} z M{},{} v10 h10\" fill=\"#fff\" stroke=\"{}\" \
+         stroke-width=\"1.3\" stroke-linejoin=\"round\"/>",
+        f1(x),
+        f1(y),
+        f1(w - 10.0),
+        f1(h - 10.0),
+        f1(w),
+        f1(x + w - 10.0),
+        f1(y),
+        STROKE
+    )
+}
+
+/// Collection marker (three vertical bars) at the bottom centre of a data shape.
+fn collection_marker(cx: f64, bottom: f64) -> String {
+    let mut s = String::new();
+    for dd in [-4.0, 0.0, 4.0] {
+        s.push_str(&format!(
+            "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{}\" stroke-width=\"2\"/>",
+            f1(cx + dd),
+            f1(bottom - 13.0),
+            f1(cx + dd),
+            f1(bottom - 4.0),
+            STROKE
+        ));
+    }
+    s
+}
+
 #[allow(clippy::too_many_lines)]
 fn draw_node(
     md: &Model,
@@ -998,9 +1109,26 @@ fn draw_node(
             STROKE,
             sw
         ));
-        s.push_str(&task_icon(t, x, y));
+        if t == "transaction" {
+            // collapsed transaction: double border, as the expanded one
+            s.push_str(&format!(
+                "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"8\" fill=\"none\" stroke=\"{}\"/>",
+                f1(x + 3.0),
+                f1(y + 3.0),
+                f1(w - 6.0),
+                f1(h - 6.0),
+                STROKE
+            ));
+        }
+        // a call activity calling a global task shows the marker of the task type
+        let kind = called_global_task(md, e).unwrap_or(t);
+        if t == "receiveTask" && md.attr(e, "instantiate") == Some("true") {
+            s.push_str(&instantiating_receive_icon(x, y));
+        } else {
+            s.push_str(&task_icon(kind, x, y));
+        }
         let has_icon = matches!(
-            t,
+            kind,
             "userTask"
                 | "serviceTask"
                 | "manualTask"
@@ -1076,7 +1204,8 @@ fn draw_node(
             ));
         }
         let filled = t == "endEvent" || t == "intermediateThrowEvent";
-        s.push_str(&event_icon(&defs, cx, cy, filled));
+        let parallel = !filled && md.attr(e, "parallelMultiple") == Some("true");
+        s.push_str(&event_icon(&defs, cx, cy, filled, parallel));
         if let (false, Some(b)) = (nm.is_empty(), lb) {
             labels.push(bounded_label(&nm, b, ""));
         } else if !nm.is_empty() {
@@ -1160,19 +1289,21 @@ fn draw_node(
                     f1(cy),
                     STROKE
                 ));
-                s.push_str(&format!(
-                    "<circle cx=\"{}\" cy=\"{}\" r=\"9.5\" fill=\"none\" stroke=\"{}\" stroke-width=\"1.2\"/>",
-                    f1(cx),
-                    f1(cy),
-                    STROKE
-                ));
-                if md.attr(e, "eventGatewayType") == Some("Parallel") {
+                // a gateway that starts the process has a single circle (BPMN 2.0.2, 10.6.6);
+                // the parallel type exists only for such gateways
+                let parallel = md.attr(e, "eventGatewayType") == Some("Parallel");
+                if !parallel && md.attr(e, "instantiate") != Some("true") {
                     s.push_str(&format!(
-                        "<path d=\"M{},{} h12 M{},{} v12\" stroke=\"{}\" stroke-width=\"2\"/>",
-                        f1(cx - 6.0),
-                        f1(cy),
+                        "<circle cx=\"{}\" cy=\"{}\" r=\"9.5\" fill=\"none\" stroke=\"{}\" stroke-width=\"1.2\"/>",
                         f1(cx),
-                        f1(cy - 6.0),
+                        f1(cy),
+                        STROKE
+                    ));
+                }
+                if parallel {
+                    s.push_str(&format!(
+                        "<polygon points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"1.2\"/>",
+                        plus_outline(cx, cy, 7.5, 2.5),
                         STROKE
                     ));
                 } else {
@@ -1198,30 +1329,10 @@ fn draw_node(
             ));
         }
     } else if t == "dataObjectReference" {
-        s.push_str(&format!(
-            "<path d=\"M{},{} h{} l10,10 v{} h-{} z M{},{} v10 h10\" fill=\"#fff\" stroke=\"{}\" \
-             stroke-width=\"1.3\" stroke-linejoin=\"round\"/>",
-            f1(x),
-            f1(y),
-            f1(w - 10.0),
-            f1(h - 10.0),
-            f1(w),
-            f1(x + w - 10.0),
-            f1(y),
-            STROKE
-        ));
+        s.push_str(&data_object_shape(x, y, w, h));
         let dobj = md.get(md.attr(e, "dataObjectRef"));
         if dobj.is_some_and(|o| md.attr(o, "isCollection") == Some("true")) {
-            for dd in [-4.0, 0.0, 4.0] {
-                s.push_str(&format!(
-                    "<line x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{}\" stroke-width=\"2\"/>",
-                    f1(cx + dd),
-                    f1(y + h - 13.0),
-                    f1(cx + dd),
-                    f1(y + h - 4.0),
-                    STROKE
-                ));
-            }
+            s.push_str(&collection_marker(cx, y + h));
         }
         let st = md.doc.find(e, &m("dataState"));
         let mut lab = if nm.is_empty() {
@@ -1240,6 +1351,36 @@ fn draw_node(
         } else if !lab.is_empty() {
             labels.push(text(
                 &wrap(&lab, 110.0, 10.0),
+                cx,
+                y + h + 13.0,
+                10,
+                "middle",
+                "",
+            ));
+        }
+    } else if t == "dataInput" || t == "dataOutput" {
+        // a data object with an arrow in the upper left corner: unfilled for an input,
+        // filled for an output
+        s.push_str(&data_object_shape(x, y, w, h));
+        s.push_str(&format!(
+            "<path d=\"M{},{} h9 v-3 l5,5 l-5,5 v-3 h-9 z\" fill=\"{}\" stroke=\"{}\" stroke-width=\"1\" \
+             stroke-linejoin=\"round\"/>",
+            f1(x + 5.0),
+            f1(y + 9.0),
+            if t == "dataOutput" { STROKE } else { "#fff" },
+            STROKE
+        ));
+        let item = md.get(md.attr(e, "itemSubjectRef"));
+        if md.attr(e, "isCollection") == Some("true")
+            || item.is_some_and(|i| md.attr(i, "isCollection") == Some("true"))
+        {
+            s.push_str(&collection_marker(cx, y + h));
+        }
+        if let (false, Some(b)) = (nm.is_empty(), lb) {
+            labels.push(bounded_label(&nm, b, ""));
+        } else if !nm.is_empty() {
+            labels.push(text(
+                &wrap(&nm, 110.0, 10.0),
                 cx,
                 y + h + 13.0,
                 10,

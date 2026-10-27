@@ -40,10 +40,25 @@ REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 # examples of the companion course, when its repository is checked out next to this one
 COURSE_EXAMPLES = os.path.normpath(os.path.join(REPO, "..", "tok-course", "przyklady"))
 
+
+def language_version(path):
+    """The language version in the header of a tok document (None without a header)."""
+    with open(path, encoding="utf-8-sig") as f:
+        for line in f:
+            words = line.split("#", 1)[0].split()
+            if words:
+                return words[1] if words[0] == "tok" and len(words) > 1 else None
+    return None
+
+
+# The pure-Python implementation reads language 0.3; documents of newer language versions
+# exist only for the engine and are checked by the Rust tests.
 DOCUMENTS = sorted(
-    glob.glob(os.path.join(REPO, "examples", "*.tok"))
+    path
+    for path in glob.glob(os.path.join(REPO, "examples", "*.tok"))
     + glob.glob(os.path.join(REPO, "conformance", "cases", "*.tok"))
     + glob.glob(os.path.join(COURSE_EXAMPLES, "*.tok"))
+    if language_version(path) in ("0.1", "0.3", None)
 )
 BPMN_FILES = sorted(glob.glob(os.path.join(REPO, "conformance", "import", "*.bpmn")))
 

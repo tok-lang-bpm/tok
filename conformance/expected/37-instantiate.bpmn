@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.5" id="definitions" name="Instantiation" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Wniosek" name="Wniosek" />
+  <bpmn:message id="Message_Skan" name="Skan" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="sklep" name="Sklep" processRef="sklep-process" />
+    <bpmn:participant id="archiwum" name="Archiwum" processRef="archiwum-process" />
+    <bpmn:participant id="klient" name="Klient" />
+    <bpmn:messageFlow id="m-klient-zamowienie" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="klient" targetRef="zamowienie" />
+    <bpmn:messageFlow id="m-klient-wniosek" messageRef="Message_Wniosek" name="Wniosek" sourceRef="klient" targetRef="wniosek" />
+    <bpmn:messageFlow id="m-klient-skan" messageRef="Message_Skan" name="Skan" sourceRef="klient" targetRef="skan" />
+  </bpmn:collaboration>
+  <bpmn:process id="sklep-process" isExecutable="false" name="Sklep">
+    <bpmn:receiveTask id="zamowienie" instantiate="true" messageRef="Message_Zamowienie" name="Przyjęcie zamówienia" />
+    <bpmn:task id="wysylka" name="Wysyłka" />
+    <bpmn:endEvent id="wyslano" name="Wysłano" />
+    <bpmn:sequenceFlow id="f-zamowienie-wysylka" sourceRef="zamowienie" targetRef="wysylka" />
+    <bpmn:sequenceFlow id="f-wysylka-wyslano" sourceRef="wysylka" targetRef="wyslano" />
+  </bpmn:process>
+  <bpmn:process id="archiwum-process" isExecutable="false" name="Archiwum">
+    <bpmn:eventBasedGateway eventGatewayType="Parallel" id="start-gw" instantiate="true" name="Co przyszło najpierw?" />
+    <bpmn:intermediateCatchEvent id="wniosek" name="Wniosek">
+      <bpmn:messageEventDefinition id="wniosek-def" messageRef="Message_Wniosek" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="skan" name="Skan">
+      <bpmn:messageEventDefinition id="skan-def" messageRef="Message_Skan" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="rejestracja" name="Rejestracja" />
+    <bpmn:endEvent id="zarejestrowano" name="Zarejestrowano" />
+    <bpmn:endEvent id="skan-e" name="Skan zapisany" />
+    <bpmn:sequenceFlow id="f-start-gw-wniosek" sourceRef="start-gw" targetRef="wniosek" />
+    <bpmn:sequenceFlow id="f-start-gw-skan" sourceRef="start-gw" targetRef="skan" />
+    <bpmn:sequenceFlow id="f-wniosek-rejestracja" sourceRef="wniosek" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-zarejestrowano" sourceRef="rejestracja" targetRef="zarejestrowano" />
+    <bpmn:sequenceFlow id="f-skan-skan-e" sourceRef="skan" targetRef="skan-e" />
+  </bpmn:process>
+</bpmn:definitions>

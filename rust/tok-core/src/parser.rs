@@ -6,7 +6,7 @@ use crate::model::*;
 use crate::pyutil::strip;
 
 const NODE_LIKE_EXTRA: &[&str] = &[
-    "flow", "message", "data", "store", "reads", "writes", "note",
+    "flow", "message", "data", "store", "reads", "writes", "note", "input", "output", "property",
 ];
 
 fn allowed(ctx: &str, kw: &str) -> bool {
@@ -15,19 +15,36 @@ fn allowed(ctx: &str, kw: &str) -> bool {
         "top" => {
             node_like
                 || [
-                    "pool", "group", "decision", "form", "simulate", "resource", "variable",
+                    "pool",
+                    "group",
+                    "decision",
+                    "form",
+                    "simulate",
+                    "resource",
+                    "variable",
+                    "item",
+                    "global",
+                    "interface",
+                    "key",
                 ]
                 .contains(&kw)
         }
         "pool" | "lane" => node_like || kw == "lane",
-        "sub" | "eventsub" | "adhoc" => node_like,
+        "sub" | "eventsub" | "adhoc" | "transaction" => node_like,
         "form" => kw == "text" || kw == "field",
+        "interface" => kw == "operation",
+        "key" => kw == "prop",
         _ => false,
     }
 }
 
 fn is_keyword(kw: &str) -> bool {
-    kw == "tok" || allowed("top", kw) || allowed("pool", kw) || allowed("form", kw)
+    kw == "tok"
+        || allowed("top", kw)
+        || allowed("pool", kw)
+        || allowed("form", kw)
+        || allowed("interface", kw)
+        || allowed("key", kw)
 }
 
 /// `[A-Za-z_][A-Za-z0-9_-]*`
@@ -48,6 +65,8 @@ enum Owner {
     Node(String),
     Decision(String),
     Form(String),
+    Interface(String),
+    Key(String),
 }
 
 #[derive(Debug, Clone)]
@@ -66,7 +85,9 @@ impl Ctx {
             | Owner::Lane(i)
             | Owner::Node(i)
             | Owner::Decision(i)
-            | Owner::Form(i) => Some(i),
+            | Owner::Form(i)
+            | Owner::Interface(i)
+            | Owner::Key(i) => Some(i),
             Owner::None => None,
         }
     }
@@ -92,6 +113,7 @@ impl Prev {
 struct Tail {
     label: Option<String>,
     attrs: Attrs,
+    extra: Vec<(String, String)>,
     flags: Vec<String>,
 }
 
@@ -155,6 +177,7 @@ impl Parser {
         true
     }
 
+    /// Label, attributes and flags; a repeated key replaces the earlier value.
     fn parse_tail(
         &mut self,
         toks: &[Token],
@@ -162,9 +185,26 @@ impl Parser {
         line_no: usize,
         allow_label: bool,
     ) -> Tail {
+        self.parse_tail_with(toks, start, line_no, allow_label, false)
+    }
+
+    /// Like `parse_tail`, but repeated `REPEATABLE_KEYS` keep every value (language 0.5).
+    fn parse_tail_multi(&mut self, toks: &[Token], start: usize, line_no: usize) -> Tail {
+        self.parse_tail_with(toks, start, line_no, true, true)
+    }
+
+    fn parse_tail_with(
+        &mut self,
+        toks: &[Token],
+        start: usize,
+        line_no: usize,
+        allow_label: bool,
+        repeat: bool,
+    ) -> Tail {
         let mut tail = Tail {
             label: None,
             attrs: Attrs::new(),
+            extra: Vec::new(),
             flags: Vec::new(),
         };
         let mut i = start;
@@ -182,8 +222,16 @@ impl Parser {
                     self.err("P007", line_no, None, &[("near", near)]);
                     return tail;
                 }
-                tail.attrs
-                    .insert(t.value.clone(), toks[i + 2].value.clone());
+                if repeat
+                    && REPEATABLE_KEYS.contains(&t.value.as_str())
+                    && tail.attrs.contains_key(&t.value)
+                {
+                    tail.extra
+                        .push((t.value.clone(), toks[i + 2].value.clone()));
+                } else {
+                    tail.attrs
+                        .insert(t.value.clone(), toks[i + 2].value.clone());
+                }
                 i += 3;
             } else if t.kind == Kind::Word {
                 tail.flags.push(t.value.clone());
@@ -362,7 +410,10 @@ impl Parser {
             "lane" => self.st_lane(line, ctx),
             "flow" => self.st_flow(line),
             "message" => self.st_message(line),
-            "data" | "store" => self.st_data(line, ctx, kw),
+            "data" | "store" | "input" | "output" | "property" => self.st_data(line, ctx, kw),
+            "item" | "global" => self.st_declaration(line, kw),
+            "interface" | "key" => self.st_block_declaration(line, kw),
+            "operation" | "prop" => self.st_member(line, ctx, kw),
             "reads" | "writes" => self.st_assoc(line, kw),
             "note" | "group" => self.st_note_group(line, kw),
             "decision" => self.st_decision(line),
@@ -419,7 +470,12 @@ impl Parser {
                 ctx: None,
             };
         };
-        let tail = self.parse_tail(&line.tokens, 2, line.number, true);
+        // a key written twice in a 0.1 or 0.3 document keeps its last value, as before
+        let tail = if self.doc.lang_05() {
+            self.parse_tail_multi(&line.tokens, 2, line.number)
+        } else {
+            self.parse_tail(&line.tokens, 2, line.number, true)
+        };
         let mut base = Base::new(
             &kind,
             Some(nid.clone()),
@@ -428,6 +484,7 @@ impl Parser {
             tail.flags,
             line.number,
         );
+        base.extra = tail.extra;
         self.take_comments(&mut base, line);
         let node = Node {
             base,
@@ -454,6 +511,7 @@ impl Parser {
                 kind: match kind.as_str() {
                     "sub" => "sub",
                     "adhoc" => "adhoc",
+                    "transaction" => "transaction",
                     _ => "eventsub",
                 },
                 scope: Some(nid.clone()),
@@ -614,6 +672,7 @@ impl Parser {
             tail = Tail {
                 label: None,
                 attrs: Attrs::new(),
+                extra: Vec::new(),
                 flags: Vec::new(),
             };
         }
@@ -1095,6 +1154,131 @@ impl Parser {
         self.take_comments(&mut base, line);
         self.doc.variables.push(base);
         Prev::plain("variable")
+    }
+
+    /// `item` and `global` (language 0.5): top-level declarations without a block.
+    fn st_declaration(&mut self, line: &Line, kind: &str) -> Prev {
+        let Some(id) = self.need_id(line, 1) else {
+            return Prev::plain(kind);
+        };
+        let tail = self.parse_tail(&line.tokens, 2, line.number, true);
+        let mut base = Base::new(
+            kind,
+            Some(id.clone()),
+            tail.label,
+            tail.attrs,
+            tail.flags,
+            line.number,
+        );
+        self.take_comments(&mut base, line);
+        if self.register(kind, &id, line.number) {
+            if kind == "item" {
+                self.doc.items.insert(id, base);
+            } else {
+                self.doc.globals.insert(id, base);
+            }
+        }
+        Prev::plain(kind)
+    }
+
+    /// `interface` and `key` (language 0.5): declarations with a block of `operation` or
+    /// `prop` lines.
+    fn st_block_declaration(&mut self, line: &Line, kind: &str) -> Prev {
+        let Some(id) = self.need_id(line, 1) else {
+            return Prev {
+                kind: kind.to_string(),
+                accepts: true,
+                ctx: None,
+            };
+        };
+        let tail = self.parse_tail(&line.tokens, 2, line.number, true);
+        let mut base = Base::new(
+            kind,
+            Some(id.clone()),
+            tail.label,
+            tail.attrs,
+            tail.flags,
+            line.number,
+        );
+        self.take_comments(&mut base, line);
+        if !self.register(kind, &id, line.number) {
+            return Prev {
+                kind: kind.to_string(),
+                accepts: true,
+                ctx: None,
+            };
+        }
+        let (ctx_kind, owner) = if kind == "interface" {
+            self.doc.interfaces.insert(
+                id.clone(),
+                Interface {
+                    base,
+                    operations: Vec::new(),
+                },
+            );
+            ("interface", Owner::Interface(id))
+        } else {
+            self.doc.keys.insert(
+                id.clone(),
+                CorrelationKey {
+                    base,
+                    props: Vec::new(),
+                },
+            );
+            ("key", Owner::Key(id))
+        };
+        Prev {
+            kind: kind.to_string(),
+            accepts: true,
+            ctx: Some(Ctx {
+                kind: ctx_kind,
+                scope: None,
+                lane: None,
+                pool: None,
+                owner,
+            }),
+        }
+    }
+
+    /// `operation` of an interface and `prop` of a correlation key (language 0.5).
+    fn st_member(&mut self, line: &Line, ctx: &Ctx, kind: &str) -> Prev {
+        let Some(id) = self.need_id(line, 1) else {
+            return Prev::plain(kind);
+        };
+        let tail = if kind == "operation" {
+            self.parse_tail_multi(&line.tokens, 2, line.number)
+        } else {
+            self.parse_tail(&line.tokens, 2, line.number, true)
+        };
+        let mut base = Base::new(
+            kind,
+            Some(id.clone()),
+            tail.label,
+            tail.attrs,
+            tail.flags,
+            line.number,
+        );
+        base.extra = tail.extra;
+        self.take_comments(&mut base, line);
+        match &ctx.owner {
+            Owner::Interface(i) => {
+                if self.register(kind, &id, line.number)
+                    && let Some(x) = self.doc.interfaces.get_mut(i)
+                {
+                    x.operations.push(base);
+                }
+            }
+            Owner::Key(k) => {
+                if !is_id(&id) {
+                    self.err("R004", line.number, Some(&id), &[("id", id.clone())]);
+                }
+                if let Some(x) = self.doc.keys.get_mut(k) {
+                    x.props.push(base);
+                }
+            }
+            _ => {}
+        }
+        Prev::plain(kind)
     }
 }
 

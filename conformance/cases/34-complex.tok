@@ -1,0 +1,28 @@
+tok 0.5 "Complex gateway"
+
+start s "Rękopis wpłynął"
+and rozdzial "Rozesłanie do recenzentów"
+user r1 "Recenzja 1"
+user r2 "Recenzja 2"
+user r3 "Recenzja 3"
+complex wybor "Czy zebrano dość recenzji?" activation="_activationCount >= 2"
+user decyzja "Decyzja redakcji"
+complex podzial "Które działania są potrzebne?"
+task korekta "Korekta"
+task sklad "Skład"
+or scalenie
+end e "Decyzja podjęta"
+
+flow s -> rozdzial
+flow rozdzial -> r1
+flow rozdzial -> r2
+flow rozdzial -> r3
+flow r1 -> wybor
+flow r2 -> wybor
+flow r3 -> wybor
+flow wybor -> decyzja -> podzial
+flow podzial -> korekta "korekta" when="poprawki"
+flow podzial -> sklad "skład" default
+flow korekta -> scalenie
+flow sklad -> scalenie
+flow scalenie -> e

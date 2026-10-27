@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="tok" exporterVersion="0.5" id="definitions" name="Instantiation" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Wniosek" name="Wniosek" />
+  <bpmn:message id="Message_Skan" name="Skan" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="sklep" name="Sklep" processRef="sklep-process" />
+    <bpmn:participant id="archiwum" name="Archiwum" processRef="archiwum-process" />
+    <bpmn:participant id="klient" name="Klient" />
+    <bpmn:messageFlow id="m-klient-zamowienie" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="klient" targetRef="zamowienie" />
+    <bpmn:messageFlow id="m-klient-wniosek" messageRef="Message_Wniosek" name="Wniosek" sourceRef="klient" targetRef="wniosek" />
+    <bpmn:messageFlow id="m-klient-skan" messageRef="Message_Skan" name="Skan" sourceRef="klient" targetRef="skan" />
+  </bpmn:collaboration>
+  <bpmn:process id="sklep-process" isExecutable="false" name="Sklep">
+    <bpmn:receiveTask id="zamowienie" instantiate="true" messageRef="Message_Zamowienie" name="Przyjęcie zamówienia" />
+    <bpmn:task id="wysylka" name="Wysyłka" />
+    <bpmn:endEvent id="wyslano" name="Wysłano" />
+    <bpmn:sequenceFlow id="f-zamowienie-wysylka" sourceRef="zamowienie" targetRef="wysylka" />
+    <bpmn:sequenceFlow id="f-wysylka-wyslano" sourceRef="wysylka" targetRef="wyslano" />
+  </bpmn:process>
+  <bpmn:process id="archiwum-process" isExecutable="false" name="Archiwum">
+    <bpmn:eventBasedGateway eventGatewayType="Parallel" id="start-gw" instantiate="true" name="Co przyszło najpierw?" />
+    <bpmn:intermediateCatchEvent id="wniosek" name="Wniosek">
+      <bpmn:messageEventDefinition id="wniosek-def" messageRef="Message_Wniosek" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="skan" name="Skan">
+      <bpmn:messageEventDefinition id="skan-def" messageRef="Message_Skan" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="rejestracja" name="Rejestracja" />
+    <bpmn:endEvent id="zarejestrowano" name="Zarejestrowano" />
+    <bpmn:endEvent id="skan-e" name="Skan zapisany" />
+    <bpmn:sequenceFlow id="f-start-gw-wniosek" sourceRef="start-gw" targetRef="wniosek" />
+    <bpmn:sequenceFlow id="f-start-gw-skan" sourceRef="start-gw" targetRef="skan" />
+    <bpmn:sequenceFlow id="f-wniosek-rejestracja" sourceRef="wniosek" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-zarejestrowano" sourceRef="rejestracja" targetRef="zarejestrowano" />
+    <bpmn:sequenceFlow id="f-skan-skan-e" sourceRef="skan" targetRef="skan-e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="sklep_di" bpmnElement="sklep" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="600" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="archiwum_di" bpmnElement="archiwum" isHorizontal="true">
+        <dc:Bounds x="0" y="180" width="600" height="230" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="klient_di" bpmnElement="klient" isHorizontal="true">
+        <dc:Bounds x="0" y="450" width="600" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zamowienie_di" bpmnElement="zamowienie">
+        <dc:Bounds x="60" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wysylka_di" bpmnElement="wysylka">
+        <dc:Bounds x="210" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslano_di" bpmnElement="wyslano">
+        <dc:Bounds x="360" y="52" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="358" y="93" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start-gw_di" bpmnElement="start-gw">
+        <dc:Bounds x="60" y="225" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="113" y="277" width="62" height="23" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wniosek_di" bpmnElement="wniosek">
+        <dc:Bounds x="160" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="218" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skan_di" bpmnElement="skan">
+        <dc:Bounds x="160" y="340" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="149" y="379" width="24" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
+        <dc:Bounds x="246" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zarejestrowano_di" bpmnElement="zarejestrowano">
+        <dc:Bounds x="396" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="374" y="273" width="80" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skan-e_di" bpmnElement="skan-e">
+        <dc:Bounds x="278" y="340" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="259" y="381" width="74" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="m-klient-zamowienie_di" bpmnElement="m-klient-zamowienie">
+        <di:waypoint x="110" y="450" />
+        <di:waypoint x="110" y="110" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="116" y="268" width="56" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-klient-wniosek_di" bpmnElement="m-klient-wniosek">
+        <di:waypoint x="210" y="450" />
+        <di:waypoint x="210" y="258" />
+        <di:waypoint x="194" y="258" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="215" y="342" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-klient-skan_di" bpmnElement="m-klient-skan">
+        <di:waypoint x="178" y="450" />
+        <di:waypoint x="178" y="376" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="183" y="434" width="24" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zamowienie-wysylka_di" bpmnElement="f-zamowienie-wysylka">
+        <di:waypoint x="160" y="70" />
+        <di:waypoint x="210" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wysylka-wyslano_di" bpmnElement="f-wysylka-wyslano">
+        <di:waypoint x="310" y="70" />
+        <di:waypoint x="360" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-start-gw-wniosek_di" bpmnElement="f-start-gw-wniosek">
+        <di:waypoint x="110" y="250" />
+        <di:waypoint x="160" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-start-gw-skan_di" bpmnElement="f-start-gw-skan">
+        <di:waypoint x="85" y="275" />
+        <di:waypoint x="85" y="358" />
+        <di:waypoint x="160" y="358" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wniosek-rejestracja_di" bpmnElement="f-wniosek-rejestracja">
+        <di:waypoint x="196" y="250" />
+        <di:waypoint x="246" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rejestracja-zarejestrowano_di" bpmnElement="f-rejestracja-zarejestrowano">
+        <di:waypoint x="346" y="250" />
+        <di:waypoint x="396" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-skan-skan-e_di" bpmnElement="f-skan-skan-e">
+        <di:waypoint x="196" y="358" />
+        <di:waypoint x="278" y="358" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

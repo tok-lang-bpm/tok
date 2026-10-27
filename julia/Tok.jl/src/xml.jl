@@ -7,7 +7,9 @@ const BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 const XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
 const ZEEBE_NS = "http://camunda.org/schema/zeebe/1.0"
 const MODELER_NS = "http://camunda.org/schema/modeler/1.0"
-const PREFIXES = Dict(BPMN_NS => "bpmn", XSI_NS => "xsi", ZEEBE_NS => "zeebe", MODELER_NS => "modeler")
+const XSD_NS = "http://www.w3.org/2001/XMLSchema"
+const PREFIXES = Dict(BPMN_NS => "bpmn", XSI_NS => "xsi", ZEEBE_NS => "zeebe", MODELER_NS => "modeler",
+                      XSD_NS => "xsd")
 
 const TAGS = Dict(
     "start" => "startEvent", "end" => "endEvent", "catch" => "intermediateCatchEvent",
@@ -15,14 +17,16 @@ const TAGS = Dict(
     "task" => "task", "user" => "userTask", "service" => "serviceTask", "manual" => "manualTask",
     "script" => "scriptTask", "rule" => "businessRuleTask", "send" => "sendTask", "receive" => "receiveTask",
     "call" => "callActivity", "sub" => "subProcess", "eventsub" => "subProcess", "adhoc" => "adHocSubProcess",
+    "transaction" => "transaction",
     "xor" => "exclusiveGateway", "and" => "parallelGateway", "or" => "inclusiveGateway",
-    "eventgw" => "eventBasedGateway",
+    "eventgw" => "eventBasedGateway", "complex" => "complexGateway",
 )
 const DEFINITION = Dict(
     "message" => "messageEventDefinition", "timer" => "timerEventDefinition", "signal" => "signalEventDefinition",
     "error" => "errorEventDefinition", "escalation" => "escalationEventDefinition",
     "condition" => "conditionalEventDefinition", "link" => "linkEventDefinition",
     "terminate" => "terminateEventDefinition", "compensate" => "compensateEventDefinition",
+    "cancel" => "cancelEventDefinition",
 )
 
 # ------------------------------------------------------------------ tiny DOM
@@ -34,9 +38,11 @@ mutable struct XElem
     children::Vector{XElem}
     text::Union{Nothing,String}
     tail::Union{Nothing,String}
+    # namespaces declared on this element although no tag or attribute name uses them
+    declare::Vector{String}
 end
 
-XElem(ns, name) = XElem(ns, name, Tuple{String,String,String}[], XElem[], nothing, nothing)
+XElem(ns, name) = XElem(ns, name, Tuple{String,String,String}[], XElem[], nothing, nothing, String[])
 
 function setattr!(e::XElem, name::String, v::AbstractString; ns::String="")
     for (k, (ans, an, _)) in enumerate(e.attrs)
@@ -147,13 +153,17 @@ mutable struct Exporter
     containers::ODict{XElem}
     root::XElem
     collab::Union{Nothing,XElem}
+    # data inputs and outputs of activities made for `reads` and `writes` (language 0.5):
+    # activity -> (input or output, identifier, name)
+    implicit_io::ODict{Vector{Tuple{String,String,String}}}
 end
 
 function Exporter(doc::Document, target=nothing)
     t = target !== nothing ? target : get(doc.attrs, "target", "camunda")
     camunda = executable_any(doc) && t == "camunda"
     decls = Dict(k => ODict{Decl}() for k in ("message", "signal", "error", "escalation"))
-    Exporter(doc, camunda, decls, ODict{String}(), ODict{XElem}(), XElem(BPMN_NS, "definitions"), nothing)
+    Exporter(doc, camunda, decls, ODict{String}(), ODict{XElem}(), XElem(BPMN_NS, "definitions"), nothing,
+             ODict{Vector{Tuple{String,String,String}}}())
 end
 
 bsub!(parent, name, attrs::Pair...) = subelem!(parent, BPMN_NS, name, attrs...)
@@ -249,8 +259,12 @@ function run!(ex::Exporter)
     export_artifacts!(ex)
     compensation_links!(ex)
     order_adhoc!(ex)
+    process_data!(ex)
+    performers!(ex)
+    supported_interfaces!(ex)
+    first_decls, last_decls = declarations_05!(ex)
 
-    decl = XElem[]
+    decl = first_decls
     for kind in ("message", "signal", "error", "escalation")
         reg = ex.decls[kind]
         for name in reg.keys
@@ -273,6 +287,7 @@ function run!(ex::Exporter)
         setattr!(e, "name", name)
         push!(decl, e)
     end
+    append!(decl, last_decls)
     for (k, e) in enumerate(decl)
         insert_at!(root, decl_slot + k - 1, e)
     end
@@ -335,6 +350,16 @@ function export_node!(ex::Exporter, container::XElem, n::Elem)
     if n.kind == "call" && haskey(a, "process") && !startswith(a["process"], "=")
         setattr!(e, "calledElement", a["process"])
     end
+    n.kind == "call" && haskey(a, "task") && setattr!(e, "calledElement", a["task"])
+    if n.kind == "transaction" && haskey(TRANSACTION_METHODS, get(a, "method", ""))
+        setattr!(e, "method", TRANSACTION_METHODS[a["method"]])
+    end
+    n.kind in ("receive", "eventgw") && has(n, "instantiate") && setattr!(e, "instantiate", "true")
+    n.kind == "eventgw" && has(n, "parallel") && setattr!(e, "eventGatewayType", "Parallel")
+    n.kind in ("start", "catch", "boundary") && has(n, "parallel") && setattr!(e, "parallelMultiple", "true")
+    if n.kind in ("service", "send", "receive") && haskey(a, "operation")
+        setattr!(e, "operationRef", a["operation"])
+    end
     if n.kind == "adhoc"
         has(n, "sequential") && setattr!(e, "ordering", "Sequential")
         ex.camunda && has(n, "wait") && setattr!(e, "cancelRemainingInstances", "false")
@@ -350,9 +375,15 @@ function export_node!(ex::Exporter, container::XElem, n::Elem)
     end
     ex.camunda && export_zeebe!(ex, e, n)
     n.kind in EVENT_KINDS && export_event_definition!(ex, e, n)
+    if n.kind == "complex" && haskey(a, "activation")
+        push!(e.children, formal(ex, "activationCondition", a["activation"]))
+    end
     if has(n, "loop")
-        bsub!(e, "standardLoopCharacteristics")
-    elseif n.kind != "adhoc" && (has(n, "parallel") || has(n, "sequential"))
+        lc = bsub!(e, "standardLoopCharacteristics")
+        has(n, "test-before") && setattr!(lc, "testBefore", "true")
+        haskey(a, "loop-max") && setattr!(lc, "loopMaximum", a["loop-max"])
+        haskey(a, "while") && push!(lc.children, formal(ex, "loopCondition", a["while"]))
+    elseif is_activity(n.kind) && n.kind != "adhoc" && (has(n, "parallel") || has(n, "sequential"))
         mi = bsub!(e, "multiInstanceLoopCharacteristics", "isSequential" => has(n, "sequential") ? "true" : "false")
         if ex.camunda && haskey(a, "collection")
             lc = Pair{String,String}["inputCollection" => feel(ex, a["collection"])]
@@ -384,6 +415,14 @@ function export_node!(ex::Exporter, container::XElem, n::Elem)
 end
 
 compensation_id(activity_id) = "$(activity_id)-compensate"
+
+"A child `NAME` with xsi:type tFormalExpression and the expression as text."
+function formal(ex::Exporter, name::String, expr::AbstractString)
+    c = XElem(BPMN_NS, name)
+    setattr!(c, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
+    c.text = feel(ex, expr)
+    return c
+end
 
 function binding!(attrs::Vector{Pair{String,String}}, a::Dict{String,String})
     haskey(a, "binding") && push!(attrs, "bindingType" => get(BINDINGS, a["binding"], a["binding"]))
@@ -539,39 +578,48 @@ function default_result(ex::Exporter, decision_id::String)
     return "result"
 end
 
+"""
+Event definitions of an event: every trigger in a document of language 0.5 (ids
+ID-def, ID-def-2, ...), only the first one in documents of language 0.1 and 0.3.
+"""
 function export_event_definition!(ex::Exporter, e::XElem, n::Elem)
     a = n.attrs
-    for key in TRIGGERS
-        haskey(a, key) || continue
-        df = bsub!(e, DEFINITION[key], "id" => "$(n.id)-def")
+    multiple = lang_05(ex.doc)
+    count = 0
+    function next_id()
+        count += 1
+        return count == 1 ? "$(n.id)-def" : "$(n.id)-def-$(count)"
+    end
+    for key in TRIGGERS, v in values_of(n, key)
+        count > 0 && !multiple && return
+        df = bsub!(e, DEFINITION[key], "id" => next_id())
         if key == "message"
-            info = declare!(ex, "message", a["message"])
+            info = declare!(ex, "message", v)
             haskey(a, "correlation") && (info.correlation = a["correlation"])
             setattr!(df, "messageRef", info.id)
         elseif key == "signal"
-            setattr!(df, "signalRef", declare!(ex, "signal", a["signal"]).id)
+            setattr!(df, "signalRef", declare!(ex, "signal", v).id)
         elseif key == "error"
-            setattr!(df, "errorRef", declare!(ex, "error", a["error"], get(a, "code", nothing)).id)
+            setattr!(df, "errorRef", declare!(ex, "error", v, get(a, "code", nothing)).id)
         elseif key == "escalation"
-            setattr!(df, "escalationRef", declare!(ex, "escalation", a["escalation"], get(a, "code", nothing)).id)
+            setattr!(df, "escalationRef", declare!(ex, "escalation", v, get(a, "code", nothing)).id)
         elseif key == "timer"
-            t = bsub!(df, timer_kind(a["timer"]))
+            t = bsub!(df, timer_kind(v))
             setattr!(t, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
-            t.text = a["timer"]
+            t.text = v
         elseif key == "condition"
             c = bsub!(df, "condition")
             setattr!(c, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
-            c.text = feel(ex, a["condition"])
+            c.text = feel(ex, v)
         elseif key == "link"
-            setattr!(df, "name", a["link"])
+            setattr!(df, "name", v)
         end
-        return
     end
     for flag in (TRIGGER_FLAGS..., CATCH_ALL_FLAGS...)
+        count > 0 && !multiple && return
         if has(n, flag)
-            df = bsub!(e, DEFINITION[flag], "id" => "$(n.id)-def")
+            df = bsub!(e, DEFINITION[flag], "id" => next_id())
             flag == "compensate" && haskey(a, "activity") && setattr!(df, "activityRef", a["activity"])
-            return
         end
     end
 end
@@ -664,11 +712,13 @@ end
 function export_data!(ex::Exporter)
     d = ex.doc
     for x in ovalues(d.data)
+        x.kind in IO_KINDS && continue
         scope = data_scope(ex, x)
         cont = scope === nothing ? nothing : get(ex.containers, scope, nothing)
         cont === nothing && continue
         if x.kind == "data"
             obj = bsub!(cont, "dataObject", "id" => "$(x.id)-object", "name" => x.label,
+                        "itemSubjectRef" => get(x.attrs, "type", nothing),
                         "isCollection" => has(x, "collection") ? "true" : nothing)
             ref = bsub!(cont, "dataObjectReference", "id" => x.id, "name" => x.label,
                         "dataObjectRef" => getattr(obj, "id"))
@@ -677,7 +727,8 @@ function export_data!(ex::Exporter)
             name = nonempty(x.label) ? x.label : x.id
             haskey(ex.stores, name) || (ex.stores[name] = "$(x.id)-store")
             sid = ex.stores[name]
-            bsub!(cont, "dataStoreReference", "id" => x.id, "name" => x.label, "dataStoreRef" => sid)
+            bsub!(cont, "dataStoreReference", "id" => x.id, "name" => x.label, "dataStoreRef" => sid,
+                  "itemSubjectRef" => get(x.attrs, "type", nothing))
         end
     end
     n = 0
@@ -686,6 +737,22 @@ function export_data!(ex::Exporter)
         (act === nothing || !haskey(d.data, a.target)) && continue
         n += 1
         pos = has_child(act, "extensionElements") ? 1 : 0
+        if lang_05(d)
+            # the association connects the data element with a data input or output of
+            # the activity's ioSpecification (BPMN 2.0.2, 10.4.1)
+            dx = d.data[a.target]
+            name = dx.label !== nothing ? dx.label : a.target
+            reads = a.kind == "reads"
+            io_id = "$(a.source)-$(reads ? "in" : "out")-$(n)"
+            assoc = XElem(BPMN_NS, reads ? "dataInputAssociation" : "dataOutputAssociation")
+            setattr!(assoc, "id", "$(a.source)-$(reads ? "dia" : "doa")-$(n)")
+            bsub!(assoc, "sourceRef").text = reads ? a.target : io_id
+            bsub!(assoc, "targetRef").text = reads ? io_id : a.target
+            insert_ranked!(act, assoc)
+            haskey(ex.implicit_io, a.source) || (ex.implicit_io[a.source] = Tuple{String,String,String}[])
+            push!(ex.implicit_io[a.source], (reads ? "input" : "output", io_id, name))
+            continue
+        end
         if a.kind == "reads"
             prop = XElem(BPMN_NS, "property")
             setattr!(prop, "id", "$(a.source)-in-$(n)")
@@ -703,6 +770,255 @@ function export_data!(ex::Exporter)
             insert_at!(act, after_props(act), assoc)
         end
     end
+end
+
+"""
+Position of a child in the BPMN schema order of activities, events and processes
+(tBaseElement, tCallableElement, tProcess, tActivity, tEvent); elements of the
+subtypes (event definitions, inner flow elements, scripts) come last.
+"""
+function schema_rank(name::AbstractString)
+    name == "documentation" && return 0
+    name == "extensionElements" && return 1
+    name == "supportedInterfaceRef" && return 2
+    name == "ioSpecification" && return 3
+    name == "ioBinding" && return 4
+    name == "property" && return 5
+    name == "dataInputAssociation" && return 6
+    name == "dataOutputAssociation" && return 7
+    name == "laneSet" && return 8
+    name in ("performer", "humanPerformer", "potentialOwner", "resourceRole") && return 9
+    name in ("standardLoopCharacteristics", "multiInstanceLoopCharacteristics") && return 10
+    return 11
+end
+
+"Insert `child` before the first child that comes later in the schema order."
+function insert_ranked!(parent::XElem, child::XElem)
+    r = schema_rank(child.name)
+    pos = findfirst(c -> c.ns == BPMN_NS && schema_rank(c.name) > r, parent.children)
+    pos === nothing ? push!(parent.children, child) : insert!(parent.children, pos, child)
+    return child
+end
+
+function text_elem(name::String, text::AbstractString)
+    e = XElem(BPMN_NS, name)
+    e.text = String(text)
+    return e
+end
+
+"A dataInput, dataOutput or property (item-aware elements of language 0.5)."
+function item_aware(name::String, x::Elem)
+    e = XElem(BPMN_NS, name)
+    setattr!(e, "id", x.id)
+    x.label === nothing || setattr!(e, "name", x.label)
+    haskey(x.attrs, "type") && setattr!(e, "itemSubjectRef", x.attrs["type"])
+    name != "property" && has(x, "collection") && setattr!(e, "isCollection", "true")
+    return e
+end
+
+"Identifier of the correlationProperty exported for a `prop` name."
+correlation_property_id(name) = "CorrelationProperty_" * slug(name)
+
+"The element (process, sub-process or activity) that owns an input, output or property."
+function io_owner(ex::Exporter, x::Elem)
+    d = ex.doc
+    haskey(x.attrs, "on") && return x.attrs["on"]
+    nonempty(x.scope) && return x.scope
+    for p in d.pools
+        p.blackbox || return process_id(p)
+    end
+    return default_process_id(d)
+end
+
+"ioSpecification with the data inputs and outputs, and property elements."
+function process_data!(ex::Exporter)
+    d = ex.doc
+    owners = ODict{Vector{Elem}}()
+    for x in ovalues(d.data)
+        x.kind in IO_KINDS || continue
+        o = io_owner(ex, x)
+        haskey(owners, o) || (owners[o] = Elem[])
+        push!(owners[o], x)
+    end
+    for act in ex.implicit_io.keys
+        haskey(owners, act) || (owners[act] = Elem[])
+    end
+    for owner in owners.keys
+        xs = owners[owner]
+        implicit = get(ex.implicit_io, owner, Tuple{String,String,String}[])
+        el = find_id(ex, owner)
+        el === nothing && continue
+        if any(x -> x.kind in ("input", "output"), xs) || !isempty(implicit)
+            io = XElem(BPMN_NS, "ioSpecification")
+            setattr!(io, "id", "$(owner)-io")
+            ids = Dict("input" => String[], "output" => String[])
+            for (kind, tag) in (("input", "dataInput"), ("output", "dataOutput"))
+                for x in xs
+                    x.kind == kind || continue
+                    push!(io.children, item_aware(tag, x))
+                    push!(ids[kind], x.id)
+                end
+                for (k, id, name) in implicit
+                    k == kind || continue
+                    push!(io.children, setattr!(setattr!(XElem(BPMN_NS, tag), "id", id), "name", name))
+                    push!(ids[kind], id)
+                end
+            end
+            ins = bsub!(io, "inputSet", "id" => "$(owner)-inputs")
+            for i in ids["input"]
+                push!(ins.children, text_elem("dataInputRefs", i))
+            end
+            outs = bsub!(io, "outputSet", "id" => "$(owner)-outputs")
+            for i in ids["output"]
+                push!(outs.children, text_elem("dataOutputRefs", i))
+            end
+            insert_ranked!(el, io)
+        end
+        for x in xs
+            x.kind == "property" && insert_ranked!(el, item_aware("property", x))
+        end
+    end
+end
+
+"performer (humanPerformer on user and manual tasks) of activities with `by=` (language 0.5)."
+function performers!(ex::Exporter)
+    d = ex.doc
+    lang_05(d) || return
+    for n in ovalues(d.nodes)
+        r = get(n.attrs, "by", nothing)
+        (r === nothing || !haskey(d.resources, r) || !is_activity(n.kind)) && continue
+        p = XElem(BPMN_NS, n.kind in ("user", "manual") ? "humanPerformer" : "performer")
+        setattr!(p, "id", "$(n.id)-performer")
+        push!(p.children, text_elem("resourceRef", r))
+        el = find_id(ex, n.id)
+        el === nothing || insert_ranked!(el, p)
+    end
+end
+
+"The process (not sub-process) that contains a node."
+function process_of(ex::Exporter, n::Elem)
+    scope = n.scope
+    while scope !== nothing && haskey(ex.doc.nodes, scope)
+        scope = ex.doc.nodes[scope].scope
+    end
+    return scope
+end
+
+"supportedInterfaceRef of processes whose tasks use operations."
+function supported_interfaces!(ex::Exporter)
+    d = ex.doc
+    refs = ODict{Vector{String}}()
+    for n in ovalues(d.nodes)
+        op = get(n.attrs, "operation", nothing)
+        op === nothing && continue
+        ifcs = [x for x in ovalues(d.interfaces) if any(o -> o.id == op, x.items)]
+        isempty(ifcs) && continue
+        pid = process_of(ex, n)
+        pid === nothing && continue
+        haskey(refs, pid) || (refs[pid] = String[])
+        ifcs[1].id in refs[pid] || push!(refs[pid], ifcs[1].id)
+    end
+    for pid in refs.keys
+        el = find_id(ex, pid)
+        el === nothing && continue
+        for i in refs[pid]
+            insert_ranked!(el, text_elem("supportedInterfaceRef", i))
+        end
+    end
+end
+
+"""
+Root elements of language 0.5: item definitions (placed before the other
+declarations), and resources, correlation properties, interfaces and global tasks
+(placed after them). Correlation keys go into the collaboration.
+"""
+function declarations_05!(ex::Exporter)
+    d = ex.doc
+    first = XElem[]
+    last = XElem[]
+    for it in ovalues(d.items)
+        e = XElem(BPMN_NS, "itemDefinition")
+        setattr!(e, "id", it.id)
+        nonempty(it.label) && push!(e.children, text_elem("documentation", it.label))
+        haskey(it.attrs, "structure") && setattr!(e, "structureRef", it.attrs["structure"])
+        if haskey(it.attrs, "kind")
+            setattr!(e, "itemKind", it.attrs["kind"] == "physical" ? "Physical" : "Information")
+        end
+        has(it, "collection") && setattr!(e, "isCollection", "true")
+        if startswith(get(it.attrs, "structure", ""), "xsd:") && !(XSD_NS in ex.root.declare)
+            push!(ex.root.declare, XSD_NS)
+        end
+        push!(first, e)
+    end
+    if lang_05(d)
+        for r in ovalues(d.resources)
+            e = XElem(BPMN_NS, "resource")
+            setattr!(e, "id", r.id)
+            setattr!(e, "name", nonempty(r.label) ? r.label : r.id)
+            push!(last, e)
+        end
+    end
+    props = ODict{XElem}()
+    keys = XElem[]
+    for k in ovalues(d.keys)
+        ke = XElem(BPMN_NS, "correlationKey")
+        setattr!(ke, "id", k.id)
+        k.label === nothing || setattr!(ke, "name", k.label)
+        seen = String[]
+        for p in k.items
+            name = p.id
+            pid = correlation_property_id(name)
+            if !haskey(props, name)
+                e = XElem(BPMN_NS, "correlationProperty")
+                setattr!(e, "id", pid)
+                setattr!(e, "name", name)
+                props[name] = e
+            end
+            if haskey(p.attrs, "message")
+                rx = XElem(BPMN_NS, "correlationPropertyRetrievalExpression")
+                setattr!(rx, "messageRef", declare!(ex, "message", p.attrs["message"]).id)
+                mp = text_elem("messagePath", get(p.attrs, "path", ""))
+                setattr!(mp, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
+                push!(rx.children, mp)
+                push!(props[name].children, rx)
+            end
+            if !(pid in seen)
+                push!(ke.children, text_elem("correlationPropertyRef", pid))
+                push!(seen, pid)
+            end
+        end
+        push!(keys, ke)
+    end
+    append!(last, ovalues(props))
+    if !isempty(keys) && !isempty(d.pools)
+        c = find_id(ex, get(d.attrs, "collaboration", "collaboration"))
+        c === nothing || append!(c.children, keys)
+    end
+    for x in ovalues(d.interfaces)
+        e = XElem(BPMN_NS, "interface")
+        setattr!(e, "id", x.id)
+        setattr!(e, "name", nonempty(x.label) ? x.label : x.id)
+        for op in x.items
+            o = bsub!(e, "operation", "id" => op.id, "name" => nonempty(op.label) ? op.label : op.id)
+            if haskey(op.attrs, "in")
+                push!(o.children, text_elem("inMessageRef", declare!(ex, "message", op.attrs["in"]).id))
+            end
+            if haskey(op.attrs, "out")
+                push!(o.children, text_elem("outMessageRef", declare!(ex, "message", op.attrs["out"]).id))
+            end
+            for err in values_of(op, "error")
+                push!(o.children, text_elem("errorRef", declare!(ex, "error", err).id))
+            end
+        end
+        push!(last, e)
+    end
+    for g in ovalues(d.globals)
+        e = XElem(BPMN_NS, get(GLOBAL_KINDS, get(g.attrs, "kind", ""), "globalTask"))
+        setattr!(e, "id", g.id)
+        g.label === nothing || setattr!(e, "name", g.label)
+        push!(last, e)
+    end
+    return first, last
 end
 
 first_container(ex::Exporter) = isempty(ex.containers) ? nothing : ex.containers[ex.containers.keys[1]]
@@ -783,6 +1099,7 @@ function write_elem(io::IO, e::XElem, root::Bool)
         used = Set{String}()
         iter_elems(e) do x
             x.ns == "" || push!(used, x.ns)
+            union!(used, x.declare)
             for (ans, _, _) in x.attrs
                 ans == "" || push!(used, ans)
             end

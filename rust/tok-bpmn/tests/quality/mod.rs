@@ -43,6 +43,9 @@ pub struct Case {
     pub xml: String,
     /// Part of this repository (the course examples are optional).
     pub in_repo: bool,
+    /// A tok document of language 0.5 or newer, which the layout of tok 0.3 could not
+    /// draw: it has no baseline of 0.3.
+    pub lang_05: bool,
 }
 
 struct Rules;
@@ -109,6 +112,7 @@ fn add_tok(out: &mut Vec<Case>, group: &str, dir: &Path, in_repo: bool) {
             name: format!("{group}/{}", stem(&p)),
             xml: tok_core::export::export_xml(&doc, None),
             in_repo,
+            lang_05: doc.lang_05(),
         });
     }
 }
@@ -122,6 +126,7 @@ fn add_bpmn(out: &mut Vec<Case>, group: &str, dir: &Path) {
             name: format!("{group}/{}", stem(&p)),
             xml: String::from_utf8_lossy(&bytes).to_string(),
             in_repo: true,
+            lang_05: false,
         });
     }
 }
@@ -292,6 +297,8 @@ fn is_node_tag(t: &str) -> bool {
         || t.ends_with("Gateway")
         || t == "dataObjectReference"
         || t == "dataStoreReference"
+        || t == "dataInput"
+        || t == "dataOutput"
         || t == "textAnnotation"
 }
 

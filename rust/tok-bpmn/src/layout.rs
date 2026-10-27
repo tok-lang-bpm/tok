@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::model::{Model, is_act, is_data, is_flownode, is_gw, is_subp, m};
+use crate::model::{Model, is_act, is_data, is_data_shape, is_flownode, is_gw, is_subp, m};
 use crate::pyfmt::round_str;
 use crate::refine;
 use crate::svg::wrap;
@@ -86,7 +86,7 @@ fn node_size(md: &Model, e: Id) -> (i64, i64) {
     if is_gw(&t) {
         return (50, 50);
     }
-    if t == "dataObjectReference" {
+    if t == "dataObjectReference" || t == "dataInput" || t == "dataOutput" {
         return (36, 50);
     }
     if t == "dataStoreReference" {
@@ -129,7 +129,9 @@ fn layout_container(
         .copied()
         .filter(|c| md.is_event_sub(*c))
         .collect();
-    let extras: Vec<Id> = kids
+    // the data inputs and outputs of a process are placed after its data objects, in the
+    // columns next to the activities that read and write them
+    let mut extras: Vec<Id> = kids
         .iter()
         .copied()
         .filter(|c| {
@@ -137,6 +139,7 @@ fn layout_container(
             is_data(&t) || t == "textAnnotation"
         })
         .collect();
+    extras.extend(md.process_io(cont));
     let kid = |e: Id| key(md.id_of(e));
     let mut sizes: HashMap<String, (i64, i64)> = HashMap::new();
     for &n in nodes.iter().chain(evsubs.iter()) {
@@ -402,6 +405,7 @@ fn layout_container(
             link(&t, &s, &mut assoc_target);
         }
     }
+    let last_layer = ids.iter().map(|i| layer[i]).max().unwrap_or(0);
     for &x in &extras {
         let xid = kid(x);
         let targets = assoc_target.get(&xid).cloned().unwrap_or_default();
@@ -442,14 +446,24 @@ fn layout_container(
             host = hosts.first().cloned();
         }
 
+        // a process input stands in the column before its reader, an output in the column
+        // after its writer (when there is one), so that they do not pile up under it
+        let xt = md.tag(x);
         let pref = match host.filter(|h| idset.contains(h)) {
             Some(h) => {
-                layer.insert(xid.clone(), layer[&h]);
+                let hl = layer[&h];
+                let l = match xt.as_str() {
+                    "dataInput" => (hl - 1).max(0),
+                    "dataOutput" => (hl + 1).min(last_layer),
+                    _ => hl,
+                };
+                layer.insert(xid.clone(), l);
                 lane_idx.insert(xid.clone(), lane_idx[&h]);
                 row[&h] + 1
             }
             None => {
-                layer.insert(xid.clone(), 0);
+                let l = if xt == "dataOutput" { last_layer } else { 0 };
+                layer.insert(xid.clone(), l);
                 lane_idx.insert(xid.clone(), 0);
                 0
             }
@@ -744,7 +758,7 @@ fn obstacles_for(
             continue;
         };
         let t = md.tag(e);
-        if is_flownode(&t) || is_data(&t) || t == "textAnnotation" {
+        if is_flownode(&t) || is_data_shape(&t) || t == "textAnnotation" {
             if t == "boundaryEvent" && skip.contains(&key(md.attr(e, "attachedToRef"))) {
                 continue;
             }

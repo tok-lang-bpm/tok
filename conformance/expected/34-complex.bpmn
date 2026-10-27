@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Complex gateway" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Complex gateway">
+    <bpmn:startEvent id="s" name="Rękopis wpłynął" />
+    <bpmn:parallelGateway id="rozdzial" name="Rozesłanie do recenzentów" />
+    <bpmn:userTask id="r1" name="Recenzja 1" />
+    <bpmn:userTask id="r2" name="Recenzja 2" />
+    <bpmn:userTask id="r3" name="Recenzja 3" />
+    <bpmn:complexGateway id="wybor" name="Czy zebrano dość recenzji?">
+      <bpmn:activationCondition xsi:type="bpmn:tFormalExpression">_activationCount &gt;= 2</bpmn:activationCondition>
+    </bpmn:complexGateway>
+    <bpmn:userTask id="decyzja" name="Decyzja redakcji" />
+    <bpmn:complexGateway default="f-podzial-sklad" id="podzial" name="Które działania są potrzebne?" />
+    <bpmn:task id="korekta" name="Korekta" />
+    <bpmn:task id="sklad" name="Skład" />
+    <bpmn:inclusiveGateway id="scalenie" />
+    <bpmn:endEvent id="e" name="Decyzja podjęta" />
+    <bpmn:sequenceFlow id="f-s-rozdzial" sourceRef="s" targetRef="rozdzial" />
+    <bpmn:sequenceFlow id="f-rozdzial-r1" sourceRef="rozdzial" targetRef="r1" />
+    <bpmn:sequenceFlow id="f-rozdzial-r2" sourceRef="rozdzial" targetRef="r2" />
+    <bpmn:sequenceFlow id="f-rozdzial-r3" sourceRef="rozdzial" targetRef="r3" />
+    <bpmn:sequenceFlow id="f-r1-wybor" sourceRef="r1" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-r2-wybor" sourceRef="r2" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-r3-wybor" sourceRef="r3" targetRef="wybor" />
+    <bpmn:sequenceFlow id="f-wybor-decyzja" sourceRef="wybor" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-podzial" sourceRef="decyzja" targetRef="podzial" />
+    <bpmn:sequenceFlow id="f-podzial-korekta" name="korekta" sourceRef="podzial" targetRef="korekta">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">poprawki</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-podzial-sklad" name="skład" sourceRef="podzial" targetRef="sklad" />
+    <bpmn:sequenceFlow id="f-korekta-scalenie" sourceRef="korekta" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-sklad-scalenie" sourceRef="sklad" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-scalenie-e" sourceRef="scalenie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

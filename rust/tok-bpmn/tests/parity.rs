@@ -56,6 +56,10 @@ fn strip_di(xml: &str) -> String {
     format!("{head}{}", &xml[end..])
 }
 
+/// Fixture groups without a Python reference: the elements of language 0.5, which
+/// `bpmn.py` does not know (they are covered by `tests/golden.rs`).
+const NO_PYTHON: &[&str] = &["lang05"];
+
 fn fixtures() -> Vec<(String, PathBuf)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
@@ -79,6 +83,9 @@ fn fixtures() -> Vec<(String, PathBuf)> {
             .file_name()
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_default();
+        if NO_PYTHON.contains(&group.as_str()) {
+            continue;
+        }
         for f in files {
             out.push((group.clone(), f));
         }

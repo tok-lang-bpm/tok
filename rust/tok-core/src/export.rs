@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 
 use crate::model::*;
 use crate::pyutil::{ascii_fold, strip};
-use crate::xml::{BPMN_NS, MODELER_NS, XElem, XSI_NS, ZEEBE_NS};
+use crate::xml::{BPMN_NS, MODELER_NS, XElem, XSD_NS, XSI_NS, ZEEBE_NS};
 
 fn tag(kind: &str) -> &'static str {
     match kind {
@@ -24,9 +24,11 @@ fn tag(kind: &str) -> &'static str {
         "call" => "callActivity",
         "sub" | "eventsub" => "subProcess",
         "adhoc" => "adHocSubProcess",
+        "transaction" => "transaction",
         "xor" => "exclusiveGateway",
         "and" => "parallelGateway",
         "or" => "inclusiveGateway",
+        "complex" => "complexGateway",
         _ => "eventBasedGateway",
     }
 }
@@ -41,6 +43,7 @@ fn definition(key: &str) -> &'static str {
         "condition" => "conditionalEventDefinition",
         "link" => "linkEventDefinition",
         "terminate" => "terminateEventDefinition",
+        "cancel" => "cancelEventDefinition",
         _ => "compensateEventDefinition",
     }
 }
@@ -155,6 +158,10 @@ fn nonempty(s: Option<&str>) -> Option<&str> {
 /// Path of a container (process or sub-process) inside the root element.
 type Path = Vec<usize>;
 
+/// A data input or output made for `reads` or `writes`: (`input` or `output`, identifier,
+/// name).
+type MadeIo = (&'static str, String, Option<String>);
+
 struct Exporter<'a> {
     doc: &'a Document,
     camunda: bool,
@@ -163,6 +170,9 @@ struct Exporter<'a> {
     containers: IndexMap<String, Path>,
     root: XElem,
     collab: Option<Path>,
+    /// Data inputs and outputs of activities made for `reads` and `writes` (language 0.5):
+    /// activity -> (input or output, identifier, name).
+    implicit_io: IndexMap<String, Vec<MadeIo>>,
 }
 
 const DECL_KINDS: [&str; 4] = ["message", "signal", "error", "escalation"];
@@ -211,6 +221,7 @@ impl<'a> Exporter<'a> {
             containers: IndexMap::new(),
             root: XElem::new(BPMN_NS, "definitions"),
             collab: None,
+            implicit_io: IndexMap::new(),
         }
     }
 
@@ -423,8 +434,12 @@ impl<'a> Exporter<'a> {
         self.artifacts();
         self.compensation_links();
         self.order_adhoc();
+        self.process_data();
+        self.performers();
+        self.supported_interfaces();
+        let roots_05 = self.declarations_05();
 
-        let mut decl = Vec::new();
+        let mut decl: Vec<XElem> = roots_05.0;
         for (k, kind) in DECL_KINDS.iter().enumerate() {
             for (name, info) in &self.decls[k] {
                 let mut e = XElem::new(BPMN_NS, kind);
@@ -459,6 +474,7 @@ impl<'a> Exporter<'a> {
             e.set("name", name.clone());
             decl.push(e);
         }
+        decl.extend(roots_05.1);
         for (k, e) in decl.into_iter().enumerate() {
             self.root.insert(decl_slot + k, e);
         }
@@ -553,6 +569,31 @@ impl<'a> Exporter<'a> {
         {
             e.set("calledElement", p.clone());
         }
+        if kind == "call"
+            && let Some(t) = a.get("task")
+        {
+            e.set("calledElement", t.clone());
+        }
+        if kind == "transaction"
+            && let Some(m) = a.get("method")
+            && let Some((_, v)) = TRANSACTION_METHODS.iter().find(|(k, _)| k == m)
+        {
+            e.set("method", *v);
+        }
+        if (kind == "receive" || kind == "eventgw") && n.base.has("instantiate") {
+            e.set("instantiate", "true");
+        }
+        if kind == "eventgw" && n.base.has("parallel") {
+            e.set("eventGatewayType", "Parallel");
+        }
+        if matches!(kind, "start" | "catch" | "boundary") && n.base.has("parallel") {
+            e.set("parallelMultiple", "true");
+        }
+        if matches!(kind, "service" | "send" | "receive")
+            && let Some(o) = a.get("operation")
+        {
+            e.set("operationRef", o.clone());
+        }
         if kind == "adhoc" {
             if n.base.has("sequential") {
                 e.set("ordering", "Sequential");
@@ -585,9 +626,27 @@ impl<'a> Exporter<'a> {
         if is_event(kind) {
             self.event_definition(&mut e, n);
         }
+        if kind == "complex"
+            && let Some(c) = a.get("activation")
+        {
+            e.push(self.formal("activationCondition", c));
+        }
         if n.base.has("loop") {
-            e.push(XElem::new(BPMN_NS, "standardLoopCharacteristics"));
-        } else if kind != "adhoc" && (n.base.has("parallel") || n.base.has("sequential")) {
+            let mut lc = XElem::new(BPMN_NS, "standardLoopCharacteristics");
+            if n.base.has("test-before") {
+                lc.set("testBefore", "true");
+            }
+            if let Some(m) = a.get("loop-max") {
+                lc.set("loopMaximum", m.clone());
+            }
+            if let Some(w) = a.get("while") {
+                lc.push(self.formal("loopCondition", w));
+            }
+            e.push(lc);
+        } else if is_activity(kind)
+            && kind != "adhoc"
+            && (n.base.has("parallel") || n.base.has("sequential"))
+        {
             let mut mi = XElem::new(BPMN_NS, "multiInstanceLoopCharacteristics");
             mi.set(
                 "isSequential",
@@ -1015,12 +1074,29 @@ impl<'a> Exporter<'a> {
 
     fn event_definition(&mut self, e: &mut XElem, n: &Node) {
         let a = &n.base.attrs;
-        let def_id = format!("{}-def", n.base.id());
-        for key in TRIGGERS {
-            let Some(v) = a.get(*key) else { continue };
+        // a 0.1 or 0.3 document exports only the first trigger, as before
+        let multiple = self.doc.lang_05();
+        let mut count = 0;
+        let next_id = |count: &mut usize| {
+            *count += 1;
+            if *count == 1 {
+                format!("{}-def", n.base.id())
+            } else {
+                format!("{}-def-{count}", n.base.id())
+            }
+        };
+        let triggers: Vec<(&str, &str)> = TRIGGERS
+            .iter()
+            .flat_map(|k| n.base.values(k).into_iter().map(move |v| (*k, v)))
+            .collect();
+        for (key, v) in triggers {
+            if count > 0 && !multiple {
+                return;
+            }
+            let v = &v.to_string();
             let mut df = XElem::new(BPMN_NS, definition(key));
-            df.set("id", def_id.clone());
-            match *key {
+            df.set("id", next_id(&mut count));
+            match key {
                 "message" => {
                     let id = self.declare("message", v, None);
                     if let Some(c) = a.get("correlation") {
@@ -1058,19 +1134,20 @@ impl<'a> Exporter<'a> {
                 _ => df.set("name", v.clone()),
             }
             e.push(df);
-            return;
         }
         for flag in TRIGGER_FLAGS.iter().chain(CATCH_ALL_FLAGS) {
+            if count > 0 && !multiple {
+                return;
+            }
             if n.base.has(flag) {
                 let mut df = XElem::new(BPMN_NS, definition(flag));
-                df.set("id", def_id);
+                df.set("id", next_id(&mut count));
                 if *flag == "compensate"
                     && let Some(act) = a.get("activity")
                 {
                     df.set("activityRef", act.clone());
                 }
                 e.push(df);
-                return;
             }
         }
     }
@@ -1139,7 +1216,11 @@ impl<'a> Exporter<'a> {
 
     fn data(&mut self) {
         let d = self.doc;
-        for x in d.data.values() {
+        for x in d
+            .data
+            .values()
+            .filter(|x| !IO_KINDS.contains(&x.base.kind.as_str()))
+        {
             let scope = self.data_scope(x);
             let Some(path) = self.containers.get(&scope).cloned() else {
                 continue;
@@ -1150,6 +1231,9 @@ impl<'a> Exporter<'a> {
                 obj.set("id", format!("{id}-object"));
                 if let Some(l) = &x.base.label {
                     obj.set("name", l.clone());
+                }
+                if let Some(t) = x.base.attrs.get("type") {
+                    obj.set("itemSubjectRef", t.clone());
                 }
                 if x.base.has("collection") {
                     obj.set("isCollection", "true");
@@ -1182,6 +1266,9 @@ impl<'a> Exporter<'a> {
                     r.set("name", l.clone());
                 }
                 r.set("dataStoreRef", sid);
+                if let Some(t) = x.base.attrs.get("type") {
+                    r.set("itemSubjectRef", t.clone());
+                }
                 self.at(&path).push(r);
             }
         }
@@ -1206,6 +1293,42 @@ impl<'a> Exporter<'a> {
             } else {
                 0
             };
+            if d.lang_05() {
+                // the association connects the data element with a data input or output of
+                // the activity's ioSpecification (BPMN 2.0.2, 10.4.1)
+                let name = d.data[&a.data]
+                    .base
+                    .label
+                    .clone()
+                    .or_else(|| Some(a.data.clone()));
+                let reads = a.base.kind == "reads";
+                let io_id = format!("{}-{}-{n}", a.activity, if reads { "in" } else { "out" });
+                let mut assoc = XElem::new(
+                    BPMN_NS,
+                    if reads {
+                        "dataInputAssociation"
+                    } else {
+                        "dataOutputAssociation"
+                    },
+                );
+                assoc.set(
+                    "id",
+                    format!("{}-{}-{n}", a.activity, if reads { "dia" } else { "doa" }),
+                );
+                let (source, target) = if reads {
+                    (a.data.clone(), io_id.clone())
+                } else {
+                    (io_id.clone(), a.data.clone())
+                };
+                assoc.push(text_elem("sourceRef", &source));
+                assoc.push(text_elem("targetRef", &target));
+                insert_ranked(act, assoc);
+                self.implicit_io
+                    .entry(a.activity.clone())
+                    .or_default()
+                    .push((if reads { "input" } else { "output" }, io_id, name));
+                continue;
+            }
             if a.base.kind == "reads" {
                 let prop_id = format!("{}-in-{n}", a.activity);
                 let mut prop = XElem::new(BPMN_NS, "property");
@@ -1295,6 +1418,382 @@ impl<'a> Exporter<'a> {
             }
             self.root.insert(0, cat);
         }
+    }
+}
+
+/// Position of a child in the BPMN schema order of activities, events and processes
+/// (`tBaseElement`, `tCallableElement`, `tProcess`, `tActivity`, `tEvent`); elements of the
+/// subtypes (event definitions, inner flow elements, scripts) come last.
+fn schema_rank(name: &str) -> u8 {
+    match name {
+        "documentation" => 0,
+        "extensionElements" => 1,
+        "supportedInterfaceRef" => 2,
+        "ioSpecification" => 3,
+        "ioBinding" => 4,
+        "property" => 5,
+        "dataInputAssociation" => 6,
+        "dataOutputAssociation" => 7,
+        "laneSet" => 8,
+        "performer" | "humanPerformer" | "potentialOwner" | "resourceRole" => 9,
+        "standardLoopCharacteristics" | "multiInstanceLoopCharacteristics" => 10,
+        _ => 11,
+    }
+}
+
+/// Insert `child` before the first child that comes later in the schema order.
+fn insert_ranked(parent: &mut XElem, child: XElem) {
+    let r = schema_rank(&child.name);
+    let pos = parent
+        .children
+        .iter()
+        .position(|c| c.ns == BPMN_NS && schema_rank(&c.name) > r)
+        .unwrap_or(parent.children.len());
+    parent.insert(pos, child);
+}
+
+/// A `dataInput`, `dataOutput` or `property` (item-aware elements of language 0.5).
+fn item_aware(name: &str, x: &Data) -> XElem {
+    let mut e = XElem::new(BPMN_NS, name);
+    e.set("id", x.base.id().to_string());
+    if let Some(l) = &x.base.label {
+        e.set("name", l.clone());
+    }
+    if let Some(t) = x.base.attrs.get("type") {
+        e.set("itemSubjectRef", t.clone());
+    }
+    if name != "property" && x.base.has("collection") {
+        e.set("isCollection", "true");
+    }
+    e
+}
+
+fn text_elem(name: &str, text: &str) -> XElem {
+    let mut e = XElem::new(BPMN_NS, name);
+    e.text = Some(text.to_string());
+    e
+}
+
+/// Identifier of the `correlationProperty` exported for a `prop` name.
+pub fn correlation_property_id(name: &str) -> String {
+    format!("CorrelationProperty_{}", slug(name))
+}
+
+impl Exporter<'_> {
+    /// The element (process, sub-process or activity) that owns an input, output or property.
+    fn io_owner(&self, x: &Data) -> String {
+        let d = self.doc;
+        if let Some(on) = x.base.attrs.get("on") {
+            return on.clone();
+        }
+        if let Some(s) = nonempty(x.scope.as_deref()) {
+            return s.to_string();
+        }
+        d.pools
+            .iter()
+            .find(|p| !p.blackbox)
+            .map(Pool::process_id)
+            .unwrap_or_else(|| d.default_process_id())
+    }
+
+    /// `ioSpecification` with the data inputs and outputs, and `property` elements.
+    fn process_data(&mut self) {
+        let d = self.doc;
+        let mut owners: IndexMap<String, Vec<&Data>> = IndexMap::new();
+        for x in d
+            .data
+            .values()
+            .filter(|x| IO_KINDS.contains(&x.base.kind.as_str()))
+        {
+            owners.entry(self.io_owner(x)).or_default().push(x);
+        }
+        for act in self.implicit_io.keys() {
+            owners.entry(act.clone()).or_default();
+        }
+        for (owner, xs) in owners {
+            let implicit = self.implicit_io.get(&owner).cloned().unwrap_or_default();
+            let made = |k: &str| -> Vec<XElem> {
+                implicit
+                    .iter()
+                    .filter(|(kind, _, _)| *kind == k)
+                    .map(|(_, id, name)| {
+                        let mut e = XElem::new(
+                            BPMN_NS,
+                            if k == "input" {
+                                "dataInput"
+                            } else {
+                                "dataOutput"
+                            },
+                        );
+                        e.set("id", id.clone());
+                        if let Some(nm) = name {
+                            e.set("name", nm.clone());
+                        }
+                        e
+                    })
+                    .collect()
+            };
+            let (made_in, made_out) = (made("input"), made("output"));
+            let Some(path) = self.root.find_path(&owner) else {
+                continue;
+            };
+            let of = |k: &str| -> Vec<&Data> {
+                xs.iter().copied().filter(|x| x.base.kind == k).collect()
+            };
+            let (ins, outs, props) = (of("input"), of("output"), of("property"));
+            let Some(el) = self.root.at_mut(&path) else {
+                continue;
+            };
+            if !ins.is_empty() || !outs.is_empty() || !implicit.is_empty() {
+                let mut io = XElem::new(BPMN_NS, "ioSpecification");
+                io.set("id", format!("{owner}-io"));
+                let mut in_ids = Vec::new();
+                let mut out_ids = Vec::new();
+                for x in &ins {
+                    io.push(item_aware("dataInput", x));
+                    in_ids.push(x.base.id().to_string());
+                }
+                for e in made_in {
+                    in_ids.push(e.get("id").unwrap_or("").to_string());
+                    io.push(e);
+                }
+                for x in &outs {
+                    io.push(item_aware("dataOutput", x));
+                    out_ids.push(x.base.id().to_string());
+                }
+                for e in made_out {
+                    out_ids.push(e.get("id").unwrap_or("").to_string());
+                    io.push(e);
+                }
+                let mut is = XElem::new(BPMN_NS, "inputSet");
+                is.set("id", format!("{owner}-inputs"));
+                for i in &in_ids {
+                    is.push(text_elem("dataInputRefs", i));
+                }
+                io.push(is);
+                let mut os = XElem::new(BPMN_NS, "outputSet");
+                os.set("id", format!("{owner}-outputs"));
+                for i in &out_ids {
+                    os.push(text_elem("dataOutputRefs", i));
+                }
+                io.push(os);
+                insert_ranked(el, io);
+            }
+            for x in props {
+                insert_ranked(el, item_aware("property", x));
+            }
+        }
+    }
+
+    /// `performer` (`humanPerformer` on user and manual tasks) of activities with `by=`
+    /// (documents of language 0.5).
+    fn performers(&mut self) {
+        let d = self.doc;
+        if !d.lang_05() {
+            return;
+        }
+        for n in d.nodes.values() {
+            let Some(r) = n.base.attrs.get("by") else {
+                continue;
+            };
+            if !d.resources.contains_key(r) || !is_activity(&n.base.kind) {
+                continue;
+            }
+            let name = if n.base.kind == "user" || n.base.kind == "manual" {
+                "humanPerformer"
+            } else {
+                "performer"
+            };
+            let mut p = XElem::new(BPMN_NS, name);
+            p.set("id", format!("{}-performer", n.base.id()));
+            p.push(text_elem("resourceRef", r));
+            if let Some(path) = self.root.find_path(n.base.id())
+                && let Some(el) = self.root.at_mut(&path)
+            {
+                insert_ranked(el, p);
+            }
+        }
+    }
+
+    /// The process (not sub-process) that contains a node.
+    fn process_of(&self, n: &Node) -> Option<String> {
+        let mut scope = n.scope.clone()?;
+        while let Some(m) = self.doc.nodes.get(&scope) {
+            scope = m.scope.clone()?;
+        }
+        Some(scope)
+    }
+
+    /// `supportedInterfaceRef` of processes whose tasks use operations.
+    fn supported_interfaces(&mut self) {
+        let d = self.doc;
+        let mut refs: IndexMap<String, Vec<String>> = IndexMap::new();
+        for n in d.nodes.values() {
+            let Some(op) = n.base.attrs.get("operation") else {
+                continue;
+            };
+            let Some(ifc) = d
+                .interfaces
+                .values()
+                .find(|x| x.operations.iter().any(|o| o.id() == op))
+            else {
+                continue;
+            };
+            let Some(pid) = self.process_of(n) else {
+                continue;
+            };
+            let list = refs.entry(pid).or_default();
+            if !list.iter().any(|x| x == ifc.base.id()) {
+                list.push(ifc.base.id().to_string());
+            }
+        }
+        for (pid, list) in refs {
+            if let Some(path) = self.root.find_path(&pid)
+                && let Some(el) = self.root.at_mut(&path)
+            {
+                for i in list {
+                    insert_ranked(el, text_elem("supportedInterfaceRef", &i));
+                }
+            }
+        }
+    }
+
+    /// Root elements of language 0.5: item definitions (placed before the other
+    /// declarations), and resources, correlation properties, interfaces and global tasks
+    /// (placed after them). Correlation keys go into the collaboration.
+    fn declarations_05(&mut self) -> (Vec<XElem>, Vec<XElem>) {
+        let d = self.doc;
+        let mut first = Vec::new();
+        let mut last = Vec::new();
+        for it in d.items.values() {
+            let mut e = XElem::new(BPMN_NS, "itemDefinition");
+            e.set("id", it.id().to_string());
+            if let Some(l) = nonempty(it.label.as_deref()) {
+                e.push(text_elem("documentation", l));
+            }
+            if let Some(s) = it.attr("structure") {
+                e.set("structureRef", s);
+            }
+            if let Some(k) = it.attr("kind") {
+                e.set(
+                    "itemKind",
+                    if k == "physical" {
+                        "Physical"
+                    } else {
+                        "Information"
+                    },
+                );
+            }
+            if it.has("collection") {
+                e.set("isCollection", "true");
+            }
+            if it.attr("structure").is_some_and(|s| s.starts_with("xsd:"))
+                && !self.root.declare.contains(&XSD_NS)
+            {
+                self.root.declare.push(XSD_NS);
+            }
+            first.push(e);
+        }
+        if d.lang_05() {
+            for r in d.resources.values() {
+                let mut e = XElem::new(BPMN_NS, "resource");
+                e.set("id", r.id().to_string());
+                e.set("name", nonempty(r.label.as_deref()).unwrap_or(r.id()));
+                last.push(e);
+            }
+        }
+        let mut props: IndexMap<String, XElem> = IndexMap::new();
+        let mut keys = Vec::new();
+        for k in d.keys.values() {
+            let mut ke = XElem::new(BPMN_NS, "correlationKey");
+            ke.set("id", k.base.id().to_string());
+            if let Some(l) = &k.base.label {
+                ke.set("name", l.clone());
+            }
+            let mut seen: Vec<String> = Vec::new();
+            for p in &k.props {
+                let name = p.id().to_string();
+                let pid = correlation_property_id(&name);
+                if !props.contains_key(&name) {
+                    let mut e = XElem::new(BPMN_NS, "correlationProperty");
+                    e.set("id", pid.clone());
+                    e.set("name", name.clone());
+                    props.insert(name.clone(), e);
+                }
+                if let Some(m) = p.attr("message") {
+                    let mid = self.declare("message", m, None);
+                    let mut rx = XElem::new(BPMN_NS, "correlationPropertyRetrievalExpression");
+                    rx.set("messageRef", mid);
+                    let mut mp = text_elem("messagePath", p.attr("path").unwrap_or(""));
+                    mp.set_ns(XSI_NS, "type", "bpmn:tFormalExpression");
+                    rx.push(mp);
+                    if let Some(prop) = props.get_mut(&name) {
+                        prop.push(rx);
+                    }
+                }
+                if !seen.contains(&pid) {
+                    ke.push(text_elem("correlationPropertyRef", &pid));
+                    seen.push(pid);
+                }
+            }
+            keys.push(ke);
+        }
+        last.extend(props.into_values());
+        if !keys.is_empty() {
+            let cid = d
+                .attrs
+                .get("collaboration")
+                .cloned()
+                .unwrap_or_else(|| "collaboration".into());
+            if !d.pools.is_empty()
+                && let Some(path) = self.root.find_path(&cid)
+                && let Some(c) = self.root.at_mut(&path)
+            {
+                for k in keys {
+                    c.push(k);
+                }
+            }
+        }
+        for x in d.interfaces.values() {
+            let mut e = XElem::new(BPMN_NS, "interface");
+            e.set("id", x.base.id().to_string());
+            e.set(
+                "name",
+                nonempty(x.base.label.as_deref()).unwrap_or(x.base.id()),
+            );
+            for op in &x.operations {
+                let mut o = XElem::new(BPMN_NS, "operation");
+                o.set("id", op.id().to_string());
+                o.set("name", nonempty(op.label.as_deref()).unwrap_or(op.id()));
+                if let Some(m) = op.attr("in") {
+                    let id = self.declare("message", m, None);
+                    o.push(text_elem("inMessageRef", &id));
+                }
+                if let Some(m) = op.attr("out") {
+                    let id = self.declare("message", m, None);
+                    o.push(text_elem("outMessageRef", &id));
+                }
+                for err in op.values("error") {
+                    let id = self.declare("error", err, None);
+                    o.push(text_elem("errorRef", &id));
+                }
+                e.push(o);
+            }
+            last.push(e);
+        }
+        for g in d.globals.values() {
+            let tag = g
+                .attr("kind")
+                .and_then(|k| GLOBAL_KINDS.iter().find(|(x, _)| *x == k))
+                .map_or("globalTask", |(_, t)| *t);
+            let mut e = XElem::new(BPMN_NS, tag);
+            e.set("id", g.id().to_string());
+            if let Some(l) = &g.label {
+                e.set("name", l.clone());
+            }
+            last.push(e);
+        }
+        (first, last)
     }
 }
 

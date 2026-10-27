@@ -1,8 +1,8 @@
 //! Golden files of the automatic layout and of the drawing.
 //!
-//! For a representative set of fixtures (all `semantic` and `extra` models, the Camunda model
-//! and four course diagrams, which are laid out again from scratch) the laid-out XML and the
-//! SVG must equal the files in `tests/golden/`. The layout must also be deterministic: two
+//! For a representative set of fixtures (all `semantic`, `extra` and `lang05` models, the
+//! Camunda model and four course diagrams, which are laid out again from scratch) the laid-out
+//! XML and the SVG must equal the files in `tests/golden/`. The layout must also be deterministic: two
 //! runs give the same bytes.
 //!
 //! Regenerate after a deliberate change of the layout or the drawing:
@@ -24,7 +24,7 @@ const COURSE: &[&str] = &[
 fn models() -> Vec<(String, PathBuf)> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut out = Vec::new();
-    for group in ["semantic", "extra", "camunda"] {
+    for group in ["semantic", "extra", "camunda", "lang05"] {
         let mut files: Vec<PathBuf> = fs::read_dir(root.join("fixtures").join(group))
             .expect("fixtures")
             .flatten()

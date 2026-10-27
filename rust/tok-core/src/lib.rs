@@ -30,7 +30,7 @@ pub use parser::parse;
 pub use printer::fmt;
 
 /// Newest language version read by this implementation (0.1 documents stay valid).
-pub const LANGUAGE_VERSION: &str = "0.3";
+pub const LANGUAGE_VERSION: &str = "0.5";
 
 /// Parse and, when the parser found no errors, check a document (`tok check`).
 /// Diagnostics are sorted by line and code like the Python command line.

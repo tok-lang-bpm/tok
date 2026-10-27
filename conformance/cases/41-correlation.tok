@@ -1,0 +1,19 @@
+tok 0.5 "Correlation"
+
+pool sklep "Sklep"
+  start s "Zamówienie przyjęte" message="Zamówienie"
+  send prosba "Prośba o potwierdzenie" message="Prośba"
+  receive potwierdzenie "Potwierdzenie" message="Potwierdzenie"
+  end e "Zamówienie potwierdzone"
+pool klient "Klient"
+
+flow s -> prosba -> potwierdzenie -> e
+
+message klient -> s "Zamówienie"
+message prosba -> klient "Prośba"
+message klient -> potwierdzenie "Potwierdzenie"
+
+key zamowienie "Numer zamówienia"
+  prop numer message="Zamówienie" path="zamowienie.numer"
+  prop numer message="Potwierdzenie" path="potwierdzenie.nr"
+  prop klient message="Zamówienie" path="zamowienie.klient"

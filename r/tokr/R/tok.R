@@ -222,6 +222,43 @@ tok_import <- function(file, keep_ids = TRUE) {
   )
 }
 
+#' Evaluate a decision table
+#'
+#' Evaluates a decision table of the model for the given inputs, as `tok eval` does,
+#' with the hit policy of the table.
+#'
+#' @inheritParams tok_check
+#' @param decision Identifier of the decision table.
+#' @param inputs Named list of inputs: numbers, strings, logical values, `NA` for null;
+#'   a vector longer than one is a list, a named list is a context.
+#' @return For the hit policies `unique`, `first`, `any` and `priority` a named list
+#'   output name → value (`NULL` when no rule matches); for `collect` a data frame with
+#'   one row per matched rule.
+#' @examples
+#' f <- system.file("examples", "propozycja-zakupu.tok", package = "tokr")
+#' tok_eval(f, "tryb-akceptacji", list(rodzaj = "drukowana", cena = 120))
+#' @export
+tok_eval <- function(x, decision, inputs = list(), lang = getOption("tok.lang", "en")) {
+  inputs <- as.list(inputs)
+  if (length(inputs) && (is.null(names(inputs)) || any(!nzchar(names(inputs))))) {
+    stop("`inputs` must be a named list: list(name = value, ...)", call. = FALSE)
+  }
+  res <- engine_eval(as_model(x)$text, decision, inputs, check_lang(lang))
+  if (is.list(res) && is.null(names(res)) && length(res) &&
+      all(vapply(res, function(r) is.list(r) && !is.null(names(r)), logical(1)))) {
+    cols <- names(res[[1]])
+    if (all(vapply(res, function(r) identical(names(r), cols), logical(1)))) {
+      return(as.data.frame(
+        lapply(stats::setNames(cols, cols), function(k) {
+          unlist(lapply(res, function(r) if (is.null(r[[k]])) NA else r[[k]]))
+        }),
+        stringsAsFactors = FALSE
+      ))
+    }
+  }
+  res
+}
+
 #' Version of the tok engine
 #'
 #' @return The version of the Rust engine compiled into the package.

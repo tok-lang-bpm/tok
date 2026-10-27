@@ -17,3 +17,5 @@ engine_svg <- function(text, title, lang) .Call(wrap__engine_svg, text, title, l
 engine_export <- function(text, name, lang) .Call(wrap__engine_export, text, name, lang)
 
 engine_import <- function(xml, keep_ids) .Call(wrap__engine_import, xml, keep_ids)
+
+engine_eval <- function(text, decision, values, lang) .Call(wrap__engine_eval, text, decision, values, lang)

@@ -33,6 +33,8 @@ tok_plot(m)                     # diagram in the viewer
 tok_export(m, dir = "camunda")  # BPMN, SVG, DMN and forms for Camunda 8
 tok_fmt(m)                      # canonical text
 tok_import("model.bpmn")        # BPMN 2.0 drawn in Camunda Modeler -> tok
+tok_eval("propozycja-zakupu.tok", "tryb-akceptacji",
+         list(rodzaj = "drukowana", cena = 120))   # decision table, as tok eval
 ```
 
 Every function takes a model read with `tok_read()`, the path of a `.tok` file, or the text of a model. `options(tok.lang = "pl")` switches all messages to Polish.

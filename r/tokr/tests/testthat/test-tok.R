@@ -64,3 +64,30 @@ test_that("the knitr engine draws a diagram", {
   md <- readLines(out)
   expect_true(any(grepl(".svg", md, fixed = TRUE)))
 })
+
+test_that("decision tables are evaluated like tok eval", {
+  f <- example("propozycja-zakupu.tok")
+  expect_equal(tok_eval(f, "tryb-akceptacji", list(rodzaj = "drukowana", cena = 120)),
+               list(tryb = "automatyczny"))
+  expect_equal(tok_eval(f, "tryb-akceptacji", list(rodzaj = "drukowana", cena = 150.5)),
+               list(tryb = "kierownik"))
+  expect_equal(tok_eval(f, "tryb-akceptacji", list(rodzaj = "e-book", cena = 10L)),
+               list(tryb = "kierownik"))
+  expect_error(tok_eval(f, "nie-ma"), "unknown decision")
+  expect_error(tok_eval(f, "tryb-akceptacji", list("e-book")), "named")
+})
+
+test_that("collect returns one row per matched rule", {
+  text <- c(
+    'tok 0.3 "Collect"',
+    "decision d hit=collect",
+    "  | x: number || a: string | b: number ||",
+    "  | > 1       || \"big\"   | 1         ||",
+    "  | > 5       || \"huge\"  | 2         ||",
+    "  | < 0       || \"neg\"   | 3         ||"
+  )
+  r <- tok_eval(text, "d", list(x = 10))
+  expect_s3_class(r, "data.frame")
+  expect_equal(r$a, c("big", "huge"))
+  expect_equal(r$b, c(1, 2))
+})

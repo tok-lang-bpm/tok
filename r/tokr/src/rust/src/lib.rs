@@ -6,11 +6,13 @@
 
 use extendr_api::prelude::*;
 
-type Res<T> = std::result::Result<T, Error>;
-
 use tok_core::check::{BpmnIssue, BpmnRules};
 use tok_core::diagnostics::{Diag, format_diag};
+use tok_core::feel_eval::{Context, PyValue, Value};
+use tok_core::pydec::Decimal;
 use tok_core::{Document, dmn, export, forms, import, printer};
+
+type Res<T> = std::result::Result<T, Error>;
 
 /// BPMN rules from the `tok-bpmn` crate (as in the command line).
 struct Rules;
@@ -160,6 +162,124 @@ fn engine_import(xml: &str, keep_ids: bool) -> Res<List> {
     Ok(list!(text = printer::fmt(&doc), warnings = warnings))
 }
 
+/// One R value as a FEEL value: logical, integer, double and character vectors (a vector
+/// longer than one is a list), lists (named: a context), `NULL` and `NA` (null).
+fn value_from_r(x: &Robj) -> Res<Value> {
+    if x.is_null() {
+        return Ok(Value::Null);
+    }
+    if let Some(list) = x.as_list() {
+        return if list.names().is_some() {
+            let mut ctx = Context::new();
+            for (k, v) in list.iter() {
+                ctx.insert(k.to_string(), value_from_r(&v)?);
+            }
+            Ok(Value::Context(ctx))
+        } else {
+            list.values()
+                .map(|v| value_from_r(&v))
+                .collect::<Res<_>>()
+                .map(Value::List)
+        };
+    }
+    let items: Vec<Value> = if let Some(v) = x.as_logical_slice() {
+        v.iter()
+            .map(|b| {
+                if b.is_na() {
+                    Value::Null
+                } else {
+                    Value::Bool(b.is_true())
+                }
+            })
+            .collect()
+    } else if let Some(v) = x.as_integer_slice() {
+        v.iter()
+            .map(|i| {
+                if i.is_na() {
+                    Value::Null
+                } else {
+                    Value::Num(Decimal::from_i128(i128::from(*i)))
+                }
+            })
+            .collect()
+    } else if let Some(v) = x.as_real_slice() {
+        v.iter()
+            .map(|f| {
+                if f.is_na() {
+                    return Ok(Value::Null);
+                }
+                Decimal::parse(&format!("{f}"))
+                    .map(Value::Num)
+                    .map_err(|e| fail(e.to_string()))
+            })
+            .collect::<Res<_>>()?
+    } else if let Some(v) = x.as_str_iter() {
+        v.map(|s| {
+            if s.is_na() {
+                Value::Null
+            } else {
+                Value::Str(s.to_string())
+            }
+        })
+        .collect()
+    } else {
+        return Err(fail(format!(
+            "values must be logical, numeric, character or lists, not {:?}",
+            x.rtype()
+        )));
+    };
+    Ok(if items.len() == 1 {
+        items.into_iter().next().unwrap_or(Value::Null)
+    } else {
+        Value::List(items)
+    })
+}
+
+/// A result of a decision as an R value: numbers as doubles, durations as seconds,
+/// lists as lists and contexts as named lists.
+fn value_to_r(v: &PyValue) -> Robj {
+    match v {
+        PyValue::None => ().into(),
+        PyValue::Bool(b) => (*b).into(),
+        PyValue::Int(digits) => digits.parse::<f64>().unwrap_or(f64::NAN).into(),
+        PyValue::Float(f) => (*f).into(),
+        PyValue::Str(s) => s.as_str().into(),
+        PyValue::Duration(d) => {
+            ((d.days * 86_400 + d.seconds) as f64 + d.microseconds as f64 / 1e6).into()
+        }
+        PyValue::List(items) => List::from_values(items.iter().map(value_to_r)).into(),
+        PyValue::Dict(pairs) => List::from_names_and_values(
+            pairs.iter().map(|(k, _)| k.as_str()),
+            pairs.iter().map(|(_, v)| value_to_r(v)),
+        )
+        .map(Robj::from)
+        .unwrap_or_else(|_| ().into()),
+    }
+}
+
+/// Evaluate a decision table (`tok eval`) with the inputs in a named list.
+#[extendr]
+fn engine_eval(text: &str, decision: &str, values: List, lang: &str) -> Res<Robj> {
+    let (doc, diags) = tok_core::load(&normalize(text), "full", None);
+    if diags.iter().any(Diag::is_error) {
+        return Err(errors(&diags, lang));
+    }
+    let Some(dec) = doc.decisions.get(decision) else {
+        let known: Vec<&str> = doc.decisions.keys().map(String::as_str).collect();
+        return Err(fail(format!(
+            "unknown decision '{decision}'; the model has: {}",
+            known.join(", ")
+        )));
+    };
+    let mut ctx = Context::new();
+    for (k, v) in values.iter() {
+        ctx.insert(k.to_string(), value_from_r(&v)?);
+    }
+    dmn::evaluate_decision(dec, &ctx)
+        .map(|r| value_to_r(&r))
+        .map_err(|e| fail(e.message))
+}
+
 extendr_module! {
     mod tokr;
     fn engine_version;
@@ -169,4 +289,5 @@ extendr_module! {
     fn engine_svg;
     fn engine_export;
     fn engine_import;
+    fn engine_eval;
 }

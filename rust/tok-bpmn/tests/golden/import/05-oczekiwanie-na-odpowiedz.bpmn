@@ -184,7 +184,7 @@
         <di:waypoint x="920" y="456" />
         <di:waypoint x="920" y="670" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="926" y="551" width="56" height="11" />
+          <dc:Bounds x="926" y="654" width="56" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Przesylka_di" bpmnElement="MF_Przesylka">

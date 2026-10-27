@@ -297,7 +297,7 @@
         <di:waypoint x="106" y="78" />
         <di:waypoint x="122" y="78" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="111" y="672" width="40" height="11" />
+          <dc:Bounds x="111" y="1274" width="40" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF2_di" bpmnElement="MF2">

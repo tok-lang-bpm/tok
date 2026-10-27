@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:feel="http://example.org/feel-1" exporter="tok" exporterVersion="0.5" id="definitions" name="Błędy dodatków 0.5" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:itemDefinition id="zly-prefiks" structureRef="bpmn:string" />
+  <bpmn:itemDefinition id="bez-prefiksu" structureRef="Wniosek" />
+  <bpmn:itemDefinition id="feel-1" structureRef="feel:string" />
+  <bpmn:itemDefinition id="feel-2" structureRef="feel:number" />
+  <bpmn:dataStore id="st-store" name="Rejestr" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="p" name="Dział" processRef="p-process" />
+    <bpmn:participant id="zewn" name="Klient" />
+  </bpmn:collaboration>
+  <bpmn:process id="p-process" isExecutable="false" name="Błędy dodatków 0.5">
+    <bpmn:startEvent id="s">
+      <bpmn:messageEventDefinition id="s-def" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="ocena" name="Ocena">
+      <bpmn:dataInputAssociation id="ocena-dia-1">
+        <bpmn:sourceRef>d</bpmn:sourceRef>
+        <bpmn:targetRef>wej</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-2">
+        <bpmn:sourceRef>brak</bpmn:sourceRef>
+        <bpmn:targetRef>d</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:task id="inna" name="Inne zadanie">
+      <bpmn:ioSpecification id="inna-io">
+        <bpmn:dataInput id="wej" name="Wejście" />
+        <bpmn:inputSet id="inna-inputs">
+          <bpmn:dataInputRefs>wej</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="inna-outputs" />
+      </bpmn:ioSpecification>
+    </bpmn:task>
+    <bpmn:endEvent id="e">
+      <bpmn:dataOutputAssociation id="e-doa-3">
+        <bpmn:sourceRef>e-out-3</bpmn:sourceRef>
+        <bpmn:targetRef>d</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-inna" sourceRef="ocena" targetRef="inna" />
+    <bpmn:sequenceFlow id="f-inna-e" sourceRef="inna" targetRef="e" />
+    <bpmn:dataObject id="d-object" name="Dokument" />
+    <bpmn:dataObjectReference dataObjectRef="d-object" id="d" name="Dokument" />
+    <bpmn:dataStoreReference dataStoreRef="st-store" id="st" name="Rejestr" />
+  </bpmn:process>
+</bpmn:definitions>

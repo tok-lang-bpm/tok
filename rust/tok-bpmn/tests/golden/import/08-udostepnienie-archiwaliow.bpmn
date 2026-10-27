@@ -218,7 +218,7 @@
       <bpmndi:BPMNShape id="End_Odmowa_di" bpmnElement="End_Odmowa">
         <dc:Bounds x="1218" y="502" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1152" y="541" width="80" height="11" />
+          <dc:Bounds x="1241" y="541" width="80" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Annotation_Podstawa_di" bpmnElement="Annotation_Podstawa">
@@ -231,7 +231,7 @@
         <di:waypoint x="108" y="1030" />
         <di:waypoint x="108" y="408" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="113" y="707" width="40" height="11" />
+          <dc:Bounds x="113" y="1014" width="40" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Powiadomienie_di" bpmnElement="MF_Powiadomienie">
@@ -245,7 +245,7 @@
         <di:waypoint x="1236" y="538" />
         <di:waypoint x="1236" y="1030" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1242" y="772" width="34" height="11" />
+          <dc:Bounds x="1197" y="544" width="34" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="DIA_Weryfikacja_di" bpmnElement="DIA_Weryfikacja">

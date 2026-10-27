@@ -24,6 +24,7 @@ The simulator runs **one process**: the process of the first pool that has one, 
 | `xor` join | passes every token through |
 | `eventgw` | races the events after it: a timer fires after its duration, a message or signal after its `delay=`, a receive task after its `delay=` (or `duration=`); the earliest wins |
 | `catch` event | waits for its timer or its `delay=`; without either it passes immediately |
+| trigger without a value (language 0.5: the flags `message`, `timer`, `signal`, `condition`) | behaves like a message: waits for the event's `delay=` (a `timer` flag has no duration) |
 | boundary timer | starts when the activity is reached (including time spent waiting for a performer); if the activity is still running when it fires, an interrupting timer cancels the activity and frees its performer, a non-interrupting one starts an extra token |
 | `sub` | the token enters at the sub-process start event; the sub-process completes when all its tokens have finished |
 | `end` | the token finishes; `terminate` finishes the whole case (inside a sub-process: the sub-process) |

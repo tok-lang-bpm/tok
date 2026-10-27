@@ -12,7 +12,7 @@ for w in warnings:
     print(w)                                   # "element-id: explanation"
 ```
 
-Import is the inverse of BPMN export. A document written by tok survives the round trip tok → XML → tok → XML unchanged, apart from diagram coordinates. A model from another tool keeps its structure, names and identifiers. Everything tok cannot express is reported as a warning.
+Import is the inverse of BPMN export. A document written by tok survives the round trip tok → XML → tok → XML unchanged, apart from diagram coordinates. A model from another tool keeps its structure, names, identifiers and documentation. Everything tok cannot express is reported as a warning: every element, attribute, extension and documentation the import does not keep is named (an extension element or attribute of another tool once per document). The BPMN MIWG reference models are the gate of this promise (`miwg.md`).
 
 Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The exporter generates a new layout.
 
@@ -21,10 +21,12 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | BPMN 2.0 XML | tok |
 |---|---|
 | `definitions/@name` | document title |
+| `documentation` (the first one) of any element tok exports | `doc="…"` of its statement; of the process of a document without pools on the header, of the definitions of a document with pools on the header |
 | `definitions/@id`, `@targetNamespace` | header `id=`, `namespace=` (only when they differ from `definitions` and `http://bpmn.io/schema/bpmn`) |
 | `collaboration/@id` | header `collaboration=` (only when it differs from `collaboration`) |
-| a single `process` without a collaboration | top-level flow nodes; header `process=` when its id is not `process` |
-| `participant` with `processRef` | `pool` with a block; `process=` when the process id is not `POOL-process` |
+| a single `process` without a collaboration | top-level flow nodes; header `process=` when its id is not `process`; `process-name=` when its name differs from the title |
+| `participant` with `processRef` | `pool` with a block; `process=` when the process id is not `POOL-process`; `process-name=` when the process name differs from the one tok derives (the title for one pool with a process, otherwise the pool label) |
+| several collaborations | their participants and message flows are merged into the first one (reported) |
 | `participant` without `processRef` | black-box `pool` |
 | `process` not referenced by any participant (next to a collaboration) | a new pool `PROCESS-pool`, with a warning |
 | `process/@isExecutable="true"` | header flag `executable` if all processes are executable, else the pool flag `executable` |
@@ -36,10 +38,10 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | `transaction` (`method`) | `transaction` (`method=`) |
 | `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | `xor`, `and`, `or`, `eventgw`, `complex` (`activationCondition` → `activation=`) |
 | `instantiate="true"` of a receive task or event-based gateway, `eventGatewayType="Parallel"` | flags `instantiate`, `parallel` |
-| `messageEventDefinition` | `message="NAME"` (the name of the referenced `message`) |
-| `timerEventDefinition` | `timer=VALUE` (from `timeDuration`, `timeCycle` or `timeDate`) |
-| `signal…`, `error…`, `escalationEventDefinition` | `signal=`, `error=`, `escalation=` with the declaration's name; `code=` from `errorCode` / `escalationCode` |
-| `conditionalEventDefinition` | `condition="…"` (a leading `=` is removed) |
+| `messageEventDefinition` | `message="NAME"` (the name of the referenced `message`); without `messageRef` the flag `message` |
+| `timerEventDefinition` | `timer=VALUE` (from `timeDuration`, `timeCycle` or `timeDate`); without a time the flag `timer` |
+| `signal…`, `error…`, `escalationEventDefinition` | `signal=`, `error=`, `escalation=` with the declaration's name; `code=` from `errorCode` / `escalationCode`; without a reference the flags `signal`, `error`, `escalation` |
+| `conditionalEventDefinition` | `condition="…"` (a leading `=` is removed); with an empty condition the flag `condition` |
 | `linkEventDefinition/@name` | `link=` |
 | `terminateEventDefinition`, `compensateEventDefinition`, `cancelEventDefinition` | flags `terminate`, `compensate`, `cancel` |
 | several event definitions on one event, `parallelMultiple="true"` | several trigger attributes (a multiple event), flag `parallel` |
@@ -49,21 +51,23 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | `isForCompensation="true"` | flag `compensation` |
 | `sendTask/@messageRef`, `receiveTask/@messageRef` | `message=` |
 | `scriptTask/script` | `expr=` |
-| `sequenceFlow` | `flow A -> B`; `name` → label; `conditionExpression` → `when=` (leading `=` removed); the source's `default` → flag `default` |
+| `sequenceFlow` | `flow A -> B`; `name` → label; `conditionExpression` → `when=` (leading `=` removed; an empty condition gives `when=""`); the source's `default` → flag `default` |
 | `messageFlow` | `message A -> B "label"`; `message=` only when the referenced message's name differs from the label |
-| `dataObjectReference` (+ `dataState`, `dataObject/@isCollection`) | `data ID "label" state=… collection` |
+| `dataObjectReference` (+ `dataState`, `dataObject/@isCollection`) | `data ID "label" state=… collection`; `object="NAME"` when its data object is shared by several references or named differently |
+| `dataObject` without a reference, or named directly by a data association | `data` with the identifier of the data object (reported) |
 | `dataStoreReference` | `store ID "label"` |
 | `itemSubjectRef` of a data object, data store reference, data input or output, property | `type=` |
-| `itemDefinition` (`structureRef`, `itemKind`, `isCollection`, `documentation`) | `item ID "documentation" structure= kind= collection`; a `structureRef` with a namespace prefix other than XML Schema loses the prefix, with a warning |
+| `itemDefinition` (`structureRef`, `itemKind`, `isCollection`, `documentation`) | `item ID "documentation" structure= kind= collection`; a `structureRef` with a namespace prefix other than XML Schema keeps it, with `namespace="URI"` |
 | `ioSpecification/dataInput`, `dataOutput` of a process or sub-process | `input`, `output` in its block |
-| `dataInput`, `dataOutput`, `property` of an activity (other than those its data associations use) | `input`, `output`, `property … on=ACTIVITY` |
+| `dataInput`, `dataOutput`, `property` of an activity or an event | `input`, `output`, `property … on=ID`, except a data input or output that only serves one data association and carries nothing tok would not generate (no type, collection flag or documentation, named after the data element, and with identifiers kept the identifier `ID-in-N` or `ID-out-N`) |
 | `property` of a process | `property` |
 | `resource`, `performer` / `humanPerformer` / `potentialOwner` with `resourceRef` | `resource`, `by=` |
 | `globalTask`, `globalUserTask`, `globalManualTask`, `globalScriptTask`, `globalBusinessRuleTask` | `global ID "name" kind=…` |
 | `interface`, `operation` (`inMessageRef`, `outMessageRef`, `errorRef`), `operationRef` | `interface` with `operation … in= out= error=`, `operation=` |
 | `correlationKey` of the collaboration with `correlationProperty` and its retrieval expressions | `key` with `prop NAME message= path=` |
-| `dataInputAssociation/sourceRef` | `reads ACTIVITY DATA` |
-| `dataOutputAssociation/targetRef` | `writes ACTIVITY DATA` |
+| `dataInputAssociation/sourceRef` | `reads ACTIVITY DATA`; `input=ID` when the association ends in a declared `input` |
+| `dataOutputAssociation/targetRef` | `writes ACTIVITY DATA`; `output=ID` when the association starts at a declared `output` |
+| data associations of events | `reads EVENT DATA` (throwing events), `writes EVENT DATA` (catching events) |
 | `textAnnotation` + `association` | `note ID "text" on=TARGET` |
 | `group` + `categoryValue/@value` | `group ID "label"` (members must be added by hand, see below) |
 
@@ -85,14 +89,14 @@ Camunda 8 extensions (namespace `http://camunda.org/schema/zeebe/1.0`):
 | `zeebe:assignmentDefinition`, `zeebe:taskSchedule`, `zeebe:priorityDefinition` | `assignee=`, `candidate-users=`, `candidate-groups=`, `due=`, `follow-up=`, `priority=` |
 | `zeebe:taskDefinition/@retries`, `zeebe:taskHeaders`; `zeebe:taskDefinition` on message throw and end events | `retries=`, `headers=`; `type=` |
 | a service task with job type `io.camunda:http-json:1` | `connector=rest` with `method=`, `url=`, `body=`, `query=`, `headers-in=`, `result=` |
-| a compensation boundary event associated with a handler (`isForCompensation`) | `compensate=HANDLER` on the activity |
+| a compensation boundary event associated with a handler (`isForCompensation`) | `compensate=HANDLER` on the activity; the boundary event itself is kept (`boundary … compensate`) when it has a name, documentation or, with identifiers kept, an identifier other than `ACTIVITY-compensate` |
 | `compensateEventDefinition/@activityRef` | `activity=` |
 | `errorEventDefinition` / `escalationEventDefinition` without a reference on a boundary or start event | the flags `error` / `escalation` |
 | `zeebe:conditionalFilter/@variableEvents` | `events=` |
 | `zeebe:executionListeners`, `zeebe:taskListeners` | `listeners=` |
 | `zeebe:versionTag` of a process | `version-tag=` on the header or the pool |
 
-A file that uses any of these constructs is printed with the header `tok 0.3`; a file that uses an element of language 0.5 (transaction, cancel, complex gateway, loop attributes, multiple events, instantiation, process data, resources and performers, global tasks, interfaces, correlation keys) is printed with `tok 0.5`; other files keep `tok 0.1`.
+A file that uses any of these constructs is printed with the header `tok 0.3`; a file that uses an element of language 0.5 (transaction, cancel, complex gateway, loop attributes, multiple events, instantiation, process data, resources and performers, global tasks, interfaces, correlation keys, documentation, triggers without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events, shared data objects, empty conditions) is printed with `tok 0.5`; other files keep `tok 0.1`.
 
 ## Identifiers
 
@@ -107,15 +111,19 @@ These elements are reported and skipped, or simplified:
 | Element | Behaviour |
 |---|---|
 | choreographies, conversations, participant associations | skipped; sequence flows to a skipped node are dropped |
-| input and output sets of an `ioSpecification`, data input and output associations of events | the sets are not stored (tok writes one set of all inputs and one of all outputs) |
+| input and output sets of an `ioSpecification` other than one set of all inputs and one of all outputs | reported; tok writes one set of all inputs and one of all outputs |
 | `eventDefinitionRef` (reusable event definitions) | skipped |
 | lanes inside a sub-process | ignored; the sub-process nodes stay in the sub-process |
 | a node in a pool with lanes but in no lane | kept directly in the pool; `tok check` then reports `R030` |
 | group membership | BPMN stores no member list; add `members="…"` by hand |
 | correlation key of a message awaited by a receive task | not expressible; model the wait as a message catch event |
 | process names | a single process is named after the document title; with several pools each process takes its pool's label |
-| other extension elements (Camunda 7, Signavio, …) and `documentation` | skipped |
-| line breaks in names | replaced by spaces |
+| other extension elements and attributes (Camunda 7, Signavio, Trisotech, …) | reported once per element or attribute name and skipped |
+| documentation of an element without `doc=` (the process of a pool, messages, data objects behind references, …), further documentation elements, text formats other than plain text | reported and skipped |
+| attributes without a tok equivalent: `isImmediate`, `implementation`, `startQuantity`, `completionQuantity`, `processType`, `isClosed`, expression and type languages, data store capacity, the item of a message | reported and skipped (`isImmediate` once per document) |
+| messages, signals, errors, escalations and data stores no element uses, imports, transformations of data associations, BPMN elements tok does not know | reported and skipped |
+| `potentialOwner`, `performer` of a user task | `by=` (reported: the export writes `humanPerformer` on user and manual tasks, `performer` elsewhere) |
+| line breaks in names and annotation texts | replaced by spaces |
 
 ## Round trip
 
@@ -125,3 +133,5 @@ The test suite (`python/tests/test_import.py`) checks:
 2. every BPMN model of the companion course imports, prints, parses again without diagnostics, formats stably and re-exports without BPMN errors.
 
 For language 0.5 the Rust test `rust/tok-core/tests/import_05.rs` checks that every conformance case of 0.5 without errors survives export → import → print → parse → export with the same semantic XML, without warnings, and is printed as `tok 0.5`.
+
+The Rust test `rust/tok-core/tests/miwg.rs` compares the semantic content of the BPMN MIWG reference models and of the models in `conformance/import` with that of their export after import and printing; `miwg.md` describes it and lists what is kept.

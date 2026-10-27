@@ -31,7 +31,7 @@
       <bpmndi:BPMNShape id="g_di" bpmnElement="g">
         <dc:Bounds x="116" y="45" width="50" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="146" y="98" width="68" height="35" />
+          <dc:Bounds x="85" y="31" width="112" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="m_di" bpmnElement="m">

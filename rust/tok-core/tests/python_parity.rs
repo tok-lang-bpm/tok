@@ -6,6 +6,10 @@
 //! `check --json` diagnostics in English and Polish, BPMN XML (without the diagram, since the
 //! layout engine of tok 0.4 differs from Python; drawing succeeds exactly when Python draws),
 //! DMN, forms, and `import` with and without flow identifiers.
+//!
+//! The Python implementation stays at language 0.3: a BPMN file whose import uses an element
+//! of language 0.5 (the Rust import prints it as `tok 0.5`) is not compared with Python; the
+//! semantic round trip of `tests/miwg.rs` checks the whole import corpus instead.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -207,10 +211,16 @@ fn import_matches_python() {
     let files = inputs(&src, "bpmn", "");
     assert!(!files.is_empty(), "import corpus missing");
     let mut failures = Vec::new();
+    let mut compared = 0;
     for path in &files {
         let name = stem(path);
         let xml = String::from_utf8_lossy(&fs::read(path).expect("read bpmn")).to_string();
         let (doc, warnings) = import::import_bpmn(&xml, true).expect("import");
+        if doc.lang_05() {
+            println!("{name}: imported as language 0.5, not compared with Python");
+            continue;
+        }
+        compared += 3;
         compare(
             &mut failures,
             format!("{name}.tok"),
@@ -233,7 +243,8 @@ fn import_matches_python() {
             &printer::fmt(&doc),
         );
     }
-    println!("compared {} import outputs", files.len() * 3);
+    println!("compared {compared} import outputs");
+    assert!(compared > 0, "no import output compared with Python");
     assert!(
         failures.is_empty(),
         "{} difference(s):\n{}",

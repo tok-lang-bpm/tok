@@ -58,6 +58,13 @@ const S_OUTSIDE: f64 = 300.0;
 const S_NEAR: f64 = 60.0;
 /// Distance kept by routes from shapes they do not connect.
 const CLEARANCE: f64 = 5.0;
+/// Distance within which a message flow label reads as belonging to its neighbours.
+const LABEL_NEAR: f64 = 6.0;
+/// Preference cost of a label width that breaks a word inside.
+const SPLIT_WORD: f64 = 6.0;
+/// Preference cost of a message flow label inside a pool or lane holding neither end; it
+/// outweighs any distance along the flow (the distance costs 1 per 10 units).
+const S_FOREIGN: f64 = 60.0;
 /// Distance kept from the borders of pools by sequence flows.
 const POOL_INSET: f64 = 8.0;
 
@@ -1379,7 +1386,10 @@ impl Scene {
         let cur_di = self.labels[l].di;
         let mut cur = [0; N];
         self.label_terms(l, self.label_box(l), None, &mut cur);
-        let cur_pref = self.label_pref(l, cur_di) + self.label_border(self.label_box(l));
+        let cur_box = self.label_box(l);
+        let cur_pref = self.label_pref(l, cur_di)
+            + self.label_border(cur_box)
+            + self.label_foreign(l, cur_box);
         if cur[LBL] + cur[LBL_EDGE] == 0 && cur_pref <= 0.0 {
             return false;
         }
@@ -1407,7 +1417,7 @@ impl Scene {
                 if !free {
                     continue;
                 }
-                let pref = pref + self.label_border(tb);
+                let pref = pref + self.label_border(tb) + self.label_foreign(l, tb);
                 let mut v = [0; N];
                 self.label_terms(l, tb, None, &mut v);
                 let mut ok = true;
@@ -1449,6 +1459,52 @@ impl Scene {
         true
     }
 
+    /// A label of a message flow among elements it does not belong to, where it would read
+    /// as theirs: inside a pool or lane that holds neither end of the flow, or close to a
+    /// shape other than the ends, to another flow, or to another label.
+    fn label_foreign(&self, l: usize, tb: R) -> f64 {
+        let Some(e) = self.labels[l].edge else {
+            return 0.0;
+        };
+        let ed = &self.edges[e];
+        if ed.kind != Kind::Msg {
+            return 0.0;
+        }
+        let (cx, cy) = (tb[0] + tb[2] / 2.0, tb[1] + tb[3] / 2.0);
+        let mut c = 0.0;
+        if ed
+            .foreign
+            .iter()
+            .any(|r| cx > r[0] && cx < r[0] + r[2] && cy > r[1] && cy < r[1] + r[3])
+        {
+            c += S_FOREIGN;
+        }
+        let near = [
+            tb[0] - LABEL_NEAR,
+            tb[1] - LABEL_NEAR,
+            tb[2] + 2.0 * LABEL_NEAR,
+            tb[3] + 2.0 * LABEL_NEAR,
+        ];
+        let ends = [ed.s_node, ed.t_node];
+        for (k, n) in self.nodes.iter().enumerate() {
+            if !n.big_sub && !ends.contains(&Some(k)) && rects_overlap(near, n.r) {
+                c += 2.0;
+            }
+        }
+        for (f, other) in self.edges.iter().enumerate() {
+            if f != e && poly_in_rect(&other.pts, near) {
+                c += 2.0;
+            }
+        }
+        for (m, lb) in self.labels.iter().enumerate() {
+            let own = lb.node.is_some_and(|k| ends.contains(&Some(k)));
+            if m != l && !own && rects_overlap(near, self.label_box(m)) {
+                c += 2.0;
+            }
+        }
+        c
+    }
+
     /// A label lying across the border of a lane.
     fn label_border(&self, tb: R) -> f64 {
         let crossed = self.borders_h.iter().any(|(y, x0, x1)| {
@@ -1478,6 +1534,21 @@ impl Scene {
         };
         let d = (to_f(di[0] + di[2] / 2) - to_f(classic[0] + classic[2] / 2)).abs()
             + (to_f(di[1]) - to_f(classic[1])).abs();
+        // A message flow label between the pools, outside all of them, reads as the
+        // flow's wherever it is along the flow.
+        if lb.edge.is_some_and(|e| self.edges[e].kind == Kind::Msg) {
+            let (cx, cy) = (
+                to_f(di[0]) + to_f(di[2]) / 2.0,
+                to_f(di[1]) + to_f(di[3]) / 2.0,
+            );
+            let in_pool = self
+                .pools
+                .iter()
+                .any(|(_, r)| cx > r[0] && cx < r[0] + r[2] && cy > r[1] && cy < r[1] + r[3]);
+            if !in_pool {
+                return (d / 10.0).min(1.0);
+            }
+        }
         d / 10.0
     }
 
@@ -1490,13 +1561,19 @@ impl Scene {
         } else {
             &[60.0]
         };
-        {
-            for &w in others {
-                if wrap(&lb.text, w, FONT) != wrap(&lb.text, lb.wrap_w, FONT) {
-                    widths.push(w);
-                }
+        for &w in others {
+            if wrap(&lb.text, w, FONT) != wrap(&lb.text, lb.wrap_w, FONT) {
+                widths.push(w);
             }
         }
+        let splits = |w: f64| {
+            let words: usize = wrap(&lb.text, w, FONT)
+                .iter()
+                .map(|x| x.split_whitespace().count())
+                .sum();
+            words > lb.text.split_whitespace().count()
+        };
+        let cur_splits = splits(lb.wrap_w);
         let mut out = Vec::new();
         for ww in widths {
             let lines = wrap(&lb.text, ww, FONT);
@@ -1505,6 +1582,9 @@ impl Scene {
             let h = (fl(lines.len().max(1)) - 1.0) * 12.0 + 10.0;
             let extra = if (ww - lb.wrap_w).abs() < 0.5 {
                 0.0
+            } else if splits(ww) && !cur_splits {
+                // Breaking a word that fits now is a last resort against overlaps.
+                SPLIT_WORD
             } else {
                 2.0
             };

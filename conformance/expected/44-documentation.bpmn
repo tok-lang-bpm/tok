@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:feel="https://www.omg.org/spec/DMN/20191111/FEEL/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Obsługa zgłoszeń" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:itemDefinition id="tekst" structureRef="feel:string">
+    <bpmn:documentation>Tekst</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="lista" isCollection="true" structureRef="feel:list" />
+  <bpmn:process id="process" isExecutable="false">
+    <bpmn:documentation>Proces obsługi zgłoszeń serwisowych.
+Model opisowy.</bpmn:documentation>
+    <bpmn:startEvent id="s" name="Zgłoszenie przyszło">
+      <bpmn:documentation>Wiadomość od klienta</bpmn:documentation>
+      <bpmn:dataOutput id="s-out-1" name="Zgłoszenie [nowe]" />
+      <bpmn:dataOutputAssociation id="s-doa-1">
+        <bpmn:sourceRef>s-out-1</bpmn:sourceRef>
+        <bpmn:targetRef>zg</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:outputSet id="s-outputs">
+        <bpmn:dataOutputRefs>s-out-1</bpmn:dataOutputRefs>
+      </bpmn:outputSet>
+      <bpmn:messageEventDefinition id="s-def" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="ocena" name="Ocena zgłoszenia">
+      <bpmn:documentation>Ocena pilności i zakresu</bpmn:documentation>
+      <bpmn:ioSpecification id="ocena-io">
+        <bpmn:dataInput id="dane" isCollection="true" itemSubjectRef="tekst" name="Dane zgłoszenia" />
+        <bpmn:dataOutput id="wynik" name="Wynik oceny">
+          <bpmn:documentation>Wynik zapisany w zgłoszeniu</bpmn:documentation>
+        </bpmn:dataOutput>
+        <bpmn:dataOutput id="ocena-out-4" name="Notatka" />
+        <bpmn:inputSet id="ocena-inputs">
+          <bpmn:dataInputRefs>dane</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="ocena-outputs">
+          <bpmn:dataOutputRefs>wynik</bpmn:dataOutputRefs>
+          <bpmn:dataOutputRefs>ocena-out-4</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="ocena-dia-2">
+        <bpmn:sourceRef>zg</bpmn:sourceRef>
+        <bpmn:targetRef>dane</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-3">
+        <bpmn:sourceRef>wynik</bpmn:sourceRef>
+        <bpmn:targetRef>zg2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-4">
+        <bpmn:sourceRef>ocena-out-4</bpmn:sourceRef>
+        <bpmn:targetRef>notatka</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway default="f-pilne-warunek" id="pilne" name="Czy pilne?">
+      <bpmn:documentation>Rozdział według pilności</bpmn:documentation>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateCatchEvent id="czekaj" name="Odpowiedź albo upływ czasu">
+      <bpmn:messageEventDefinition id="czekaj-def" />
+      <bpmn:timerEventDefinition id="czekaj-def-2" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="warunek" name="Części dostępne">
+      <bpmn:conditionalEventDefinition id="warunek-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression" />
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="zespol" name="Powiadomienie zespołu">
+      <bpmn:signalEventDefinition id="zespol-def" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:subProcess id="naprawa" name="Naprawa">
+      <bpmn:startEvent id="ns" />
+      <bpmn:task id="wymiana" name="Wymiana części" />
+      <bpmn:exclusiveGateway default="f-udana-nblad" id="udana" name="Czy naprawa udana?" />
+      <bpmn:endEvent id="nok" name="Naprawa udana" />
+      <bpmn:endEvent id="nblad" name="Naprawa nieudana">
+        <bpmn:errorEventDefinition id="nblad-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ns-wymiana" sourceRef="ns" targetRef="wymiana" />
+      <bpmn:sequenceFlow id="f-wymiana-udana" sourceRef="wymiana" targetRef="udana" />
+      <bpmn:sequenceFlow id="f-udana-nok" name="tak" sourceRef="udana" targetRef="nok">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">udana</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="f-udana-nblad" name="nie" sourceRef="udana" targetRef="nblad" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent attachedToRef="naprawa" id="blad" name="Błąd naprawy">
+      <bpmn:errorEventDefinition id="blad-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="koniec" name="Załatwione" />
+    <bpmn:endEvent id="eskalacja" name="Do kierownika">
+      <bpmn:escalationEventDefinition id="eskalacja-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-pilne" sourceRef="ocena" targetRef="pilne" />
+    <bpmn:sequenceFlow id="f-pilne-czekaj" name="tak" sourceRef="pilne" targetRef="czekaj">
+      <bpmn:documentation>Warunek opisany słownie</bpmn:documentation>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" />
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-pilne-warunek" name="nie" sourceRef="pilne" targetRef="warunek" />
+    <bpmn:sequenceFlow id="f-czekaj-zespol" sourceRef="czekaj" targetRef="zespol" />
+    <bpmn:sequenceFlow id="f-zespol-naprawa" sourceRef="zespol" targetRef="naprawa" />
+    <bpmn:sequenceFlow id="f-naprawa-koniec" sourceRef="naprawa" targetRef="koniec" />
+    <bpmn:sequenceFlow id="f-warunek-naprawa" sourceRef="warunek" targetRef="naprawa" />
+    <bpmn:sequenceFlow id="f-blad-eskalacja" sourceRef="blad" targetRef="eskalacja" />
+    <bpmn:dataObject id="zg-object" itemSubjectRef="tekst" name="Zgłoszenie" />
+    <bpmn:dataObjectReference dataObjectRef="zg-object" id="zg" name="Zgłoszenie [nowe]">
+      <bpmn:documentation>Formularz zgłoszenia</bpmn:documentation>
+      <bpmn:dataState id="zg-state" name="nowe" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObjectReference dataObjectRef="zg-object" id="zg2" name="Zgłoszenie [ocenione]">
+      <bpmn:dataState id="zg2-state" name="oceniony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="notatka-object" />
+    <bpmn:dataObjectReference dataObjectRef="notatka-object" id="notatka" name="Notatka" />
+    <bpmn:textAnnotation id="uwaga">
+      <bpmn:documentation>Z regulaminu serwisu</bpmn:documentation>
+      <bpmn:text>Pilne zgłoszenia mają termin 24 godzin.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="uwaga-assoc" sourceRef="uwaga" targetRef="pilne" />
+  </bpmn:process>
+</bpmn:definitions>

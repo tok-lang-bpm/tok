@@ -73,7 +73,7 @@
       <bpmndi:BPMNShape id="skan_di" bpmnElement="skan">
         <dc:Bounds x="160" y="340" width="36" height="36" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="149" y="379" width="24" height="11" />
+          <dc:Bounds x="183" y="379" width="24" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="rejestracja_di" bpmnElement="rejestracja">
@@ -95,7 +95,7 @@
         <di:waypoint x="110" y="450" />
         <di:waypoint x="110" y="110" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="116" y="268" width="56" height="11" />
+          <dc:Bounds x="49" y="116" width="56" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="m-klient-wniosek_di" bpmnElement="m-klient-wniosek">
@@ -103,14 +103,14 @@
         <di:waypoint x="210" y="258" />
         <di:waypoint x="194" y="258" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="215" y="342" width="40" height="11" />
+          <dc:Bounds x="215" y="434" width="40" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="m-klient-skan_di" bpmnElement="m-klient-skan">
         <di:waypoint x="178" y="450" />
         <di:waypoint x="178" y="376" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="183" y="434" width="24" height="11" />
+          <dc:Bounds x="149" y="382" width="24" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="f-zamowienie-wysylka_di" bpmnElement="f-zamowienie-wysylka">

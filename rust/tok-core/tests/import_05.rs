@@ -1,6 +1,7 @@
 //! Round trip of language 0.5 through BPMN: every conformance case of language 0.5 without
 //! errors is exported, imported again and exported once more; the semantic BPMN must not
-//! change, the import must not warn, and the imported document declares `tok 0.5`.
+//! change, the import must not warn (except that group members are not stored in BPMN), and
+//! the imported document declares `tok 0.5`.
 
 use std::fs;
 use std::path::PathBuf;
@@ -47,6 +48,11 @@ fn language_05_survives_import() {
             let (imported, warnings) =
                 tok_core::import::import_bpmn(&tok_core::export::export_xml(&doc, None), keep_ids)
                     .expect("import");
+            // BPMN keeps no member list of a group: that warning is expected
+            let warnings: Vec<&String> = warnings
+                .iter()
+                .filter(|w| !w.contains("group membership"))
+                .collect();
             if !warnings.is_empty() {
                 failures.push(format!(
                     "{name} (keep ids {keep_ids}): warnings {warnings:?}"

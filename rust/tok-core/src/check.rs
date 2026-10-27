@@ -147,6 +147,15 @@ fn kind_name(what: &str) -> (&'static str, &'static str) {
     match what {
         "node" => ("flow node", "element przepływu"),
         "activity" => ("activity", "czynność"),
+        "reader" => (
+            "activity, end or intermediate throw event",
+            "czynność, zdarzenie końcowe lub pośrednie rzucające",
+        ),
+        "writer" => (
+            "activity, start, intermediate catch or boundary event",
+            "czynność, zdarzenie początkowe, pośrednie przechwytujące lub graniczne",
+        ),
+        "io owner" => ("activity or event", "czynność lub zdarzenie"),
         "data" => ("data object or store", "obiekt lub magazyn danych"),
         "form" => ("form", "formularz"),
         "decision" => ("decision", "decyzja"),
@@ -276,6 +285,7 @@ impl Checker<'_> {
                     TRIGGER_FLAGS
                         .iter()
                         .chain(CATCH_ALL_FLAGS)
+                        .chain(NAMELESS_TRIGGERS)
                         .copied()
                         .filter(|f| b.has(f)),
                 );
@@ -329,7 +339,11 @@ impl Checker<'_> {
             ),
             (d.items.values().collect(), ITEM_KEYS, ITEM_FLAGS),
             (d.globals.values().collect(), GLOBAL_KEYS, &[]),
-            (d.interfaces.values().map(|x| &x.base).collect(), &[], &[]),
+            (
+                d.interfaces.values().map(|x| &x.base).collect(),
+                INTERFACE_KEYS,
+                &[],
+            ),
             (
                 d.interfaces
                     .values()
@@ -351,7 +365,25 @@ impl Checker<'_> {
                 POOL_KEYS,
                 POOL_FLAGS,
             ),
-            (d.lanes.values().map(|l| &l.base).collect(), &[], &[]),
+            (d.lanes.values().map(|l| &l.base).collect(), LANE_KEYS, &[]),
+            (
+                d.assocs
+                    .iter()
+                    .map(|a| &a.base)
+                    .filter(|b| b.kind == "reads")
+                    .collect(),
+                READS_KEYS,
+                &[],
+            ),
+            (
+                d.assocs
+                    .iter()
+                    .map(|a| &a.base)
+                    .filter(|b| b.kind == "writes")
+                    .collect(),
+                WRITES_KEYS,
+                &[],
+            ),
             (
                 d.decisions.values().map(|x| &x.base).collect(),
                 DECISION_KEYS,
@@ -566,17 +598,136 @@ impl Checker<'_> {
                 }
             }
         }
-        let assocs: Vec<(String, String, usize)> = self
+        let assocs: Vec<(String, String, usize, bool)> = self
             .doc
             .assocs
             .iter()
-            .map(|x| (x.activity.clone(), x.data.clone(), x.base.line))
+            .map(|x| {
+                (
+                    x.activity.clone(),
+                    x.data.clone(),
+                    x.base.line,
+                    x.base.kind == "reads",
+                )
+            })
             .collect();
-        for (act, data, line) in assocs {
-            self.reference(&act, line, "activity", &is_act);
+        let lang_05 = self.doc.lang_05();
+        for (act, data, line, reads) in assocs {
+            // a document of language 0.5: a throwing event reads data, a catching event
+            // writes it (in 0.1 and 0.3 only activities do, as before)
+            let owner = |k: &str| {
+                is_activity(k)
+                    || lang_05
+                        && if reads {
+                            THROWING_EVENTS.contains(&k)
+                        } else {
+                            CATCHING_EVENTS.contains(&k)
+                        }
+            };
+            let what = match (lang_05, reads) {
+                (false, _) => "activity",
+                (true, true) => "reader",
+                (true, false) => "writer",
+            };
+            self.reference(&act, line, what, &owner);
             self.reference(&data, line, "data", &|k| {
                 k == "data" || k == "store" || IO_KINDS.contains(&k)
             });
+        }
+        // language 0.5: `reads … input=ID`, `writes … output=ID` name a data input or output
+        // declared for the activity (`input ID on=ACTIVITY`)
+        let ends: Vec<(String, &'static str, String, usize)> = self
+            .doc
+            .assocs
+            .iter()
+            .filter_map(|a| {
+                let key = if a.base.kind == "reads" {
+                    "input"
+                } else {
+                    "output"
+                };
+                a.base
+                    .attr(key)
+                    .map(|v| (a.activity.clone(), key, v.to_string(), a.base.line))
+            })
+            .collect();
+        for (act, key, io, line) in ends {
+            let what = if key == "input" {
+                ("data input", "wejście danych")
+            } else {
+                ("data output", "wyjście danych")
+            };
+            if self.declared(&io, line, Some(&act), &[key], key, what) {
+                // an input of the activity (`on=`), or of the sub-process in whose block it stands
+                let owner = self.doc.data.get(&io).and_then(|x| {
+                    x.base
+                        .attr("on")
+                        .map(str::to_string)
+                        .or_else(|| x.scope.clone())
+                });
+                if owner.as_deref() != Some(act.as_str()) {
+                    self.add(
+                        "R013",
+                        line,
+                        Some(&act),
+                        &[
+                            ("key", s(key)),
+                            ("requirement", format!("{} declared with on={act}", what.0)),
+                        ],
+                    );
+                }
+            }
+        }
+        let objects: Vec<(String, usize)> = self
+            .doc
+            .data
+            .values()
+            .filter(|x| x.base.kind != "data" && x.base.attrs.contains_key("object"))
+            .map(|x| (x.base.id().to_string(), x.base.line))
+            .collect();
+        for (id, line) in objects {
+            self.add(
+                "R013",
+                line,
+                Some(&id),
+                &[
+                    ("key", s("object")),
+                    ("requirement", s("a data object (data)")),
+                ],
+            );
+        }
+        if self.doc.attrs.contains_key("process-name") && !self.doc.pools.is_empty() {
+            let line = self.doc.header_line;
+            self.add(
+                "R013",
+                line,
+                None,
+                &[
+                    ("key", s("process-name")),
+                    (
+                        "requirement",
+                        s("a document without pools (a pool names its own process)"),
+                    ),
+                ],
+            );
+        }
+        let blackbox: Vec<(String, usize)> = self
+            .doc
+            .pools
+            .iter()
+            .filter(|p| p.blackbox && p.base.attrs.contains_key("process-name"))
+            .map(|p| (p.base.id().to_string(), p.base.line))
+            .collect();
+        for (id, line) in blackbox {
+            self.add(
+                "R013",
+                line,
+                Some(&id),
+                &[
+                    ("key", s("process-name")),
+                    ("requirement", s("a pool with a process (a block)")),
+                ],
+            );
         }
         let notes: Vec<(Option<String>, usize)> = self
             .doc
@@ -1070,7 +1221,7 @@ impl Checker<'_> {
         let line = n.base.line;
         let nid = n.base.id().to_string();
         if (kind == "throw" || kind == "end")
-            && a.contains_key("message")
+            && (a.contains_key("message") || n.base.has("message"))
             && !a.contains_key("type")
         {
             let kind_pl = if kind == "throw" {
@@ -1284,7 +1435,11 @@ impl Checker<'_> {
                         trig.push((k, false));
                     }
                 }
-                for f in TRIGGER_FLAGS.iter().chain(CATCH_ALL_FLAGS) {
+                for f in TRIGGER_FLAGS
+                    .iter()
+                    .chain(CATCH_ALL_FLAGS)
+                    .chain(NAMELESS_TRIGGERS)
+                {
                     if b.has(f) {
                         trig.push((f, true));
                     }
@@ -1473,6 +1628,7 @@ impl Checker<'_> {
                 + TRIGGER_FLAGS
                     .iter()
                     .chain(CATCH_ALL_FLAGS)
+                    .chain(NAMELESS_TRIGGERS)
                     .filter(|f| b.has(f))
                     .count();
             if count > 1 {
@@ -1536,11 +1692,14 @@ impl Checker<'_> {
                 if !IO_KINDS.contains(&kind.as_str()) {
                     continue;
                 }
-                if kind == "property" {
-                    self.reference(&on, line, "activity", &|k| is_activity(k) || is_event(k));
-                } else {
-                    self.reference(&on, line, "activity", &|k| is_activity(k));
-                }
+                // inputs of activities and throwing events, outputs of activities and
+                // catching events, properties of activities and events
+                let ok = |k: &str| match kind.as_str() {
+                    "input" => is_activity(k) || THROWING_EVENTS.contains(&k),
+                    "output" => is_activity(k) || CATCHING_EVENTS.contains(&k),
+                    _ => is_activity(k) || is_event(k),
+                };
+                self.reference(&on, line, "io owner", &ok);
             }
         }
         // a state transition reads a data object in one state and writes it in another
@@ -1600,9 +1759,39 @@ impl Checker<'_> {
                     ],
                 ));
             }
-            // structureRef is a QName: a name without a prefix or an XML Schema type
+            // structureRef is a QName: a name without a prefix, an XML Schema type, or a
+            // prefixed name whose namespace `namespace=` gives
+            let ns = it.attr("namespace");
+            let qname_ok = |v: &str| match v.split_once(':') {
+                None => is_xml_name(v),
+                Some((p, l)) => {
+                    is_xml_name(p)
+                        && is_xml_name(l)
+                        && ((p == "xsd" && ns.is_none())
+                            || (ns.is_some() && !RESERVED_PREFIXES.contains(&p)))
+                }
+            };
+            if let Some(n) = ns
+                && (n.is_empty()
+                    || !it
+                        .attr("structure")
+                        .is_some_and(|v| v.contains(':') && !v.starts_with("xsd:")))
+            {
+                found.push(Diag::new(
+                    "R013",
+                    it.line,
+                    it.id.as_deref(),
+                    &[
+                        ("key", s("namespace")),
+                        (
+                            "requirement",
+                            s("a structure name with a namespace prefix (structure=\"feel:string\")"),
+                        ),
+                    ],
+                ));
+            }
             if let Some(v) = it.attr("structure")
-                && !is_xml_name(v.strip_prefix("xsd:").unwrap_or(v))
+                && !qname_ok(v)
             {
                 found.push(Diag::new(
                     "R013",
@@ -1612,10 +1801,36 @@ impl Checker<'_> {
                         ("key", s("structure")),
                         (
                             "requirement",
-                            s("a type name (Wniosek) or an XML Schema type (xsd:string)"),
+                            s("a type name (Wniosek), an XML Schema type (xsd:string) or a prefixed name with namespace="),
                         ),
                     ],
                 ));
+            }
+        }
+        // one namespace per prefix in the document
+        let mut prefixes: Vec<(&str, &str)> = Vec::new();
+        for it in d.items.values() {
+            let (Some(v), Some(n)) = (it.attr("structure"), it.attr("namespace")) else {
+                continue;
+            };
+            let Some((p, _)) = v.split_once(':') else {
+                continue;
+            };
+            match prefixes.iter().find(|(q, _)| *q == p) {
+                Some((_, m)) if *m != n => found.push(Diag::new(
+                    "R013",
+                    it.line,
+                    it.id.as_deref(),
+                    &[
+                        ("key", s("namespace")),
+                        (
+                            "requirement",
+                            format!("the namespace of prefix '{p}' given elsewhere ({m})"),
+                        ),
+                    ],
+                )),
+                Some(_) => {}
+                None => prefixes.push((p, n)),
             }
         }
         for g in d.globals.values() {
@@ -1801,8 +2016,12 @@ impl Checker<'_> {
                 }
             }
         }
+        // in a document of language 0.5, `when=""` is a condition without an expression
+        let lang_05 = self.doc.lang_05();
         for f in &self.doc.flows {
-            if let Some(t) = f.base.attrs.get("when") {
+            if let Some(t) = f.base.attrs.get("when")
+                && !(lang_05 && t.trim().is_empty())
+            {
                 exprs.push((t.clone(), f.base.line, f.base.id.clone()));
             }
         }
@@ -1874,6 +2093,7 @@ impl Checker<'_> {
                         || TRIGGER_FLAGS
                             .iter()
                             .chain(CATCH_ALL_FLAGS)
+                            .chain(NAMELESS_TRIGGERS)
                             .chain(TASK_FLAGS.iter())
                             .any(|f| b.has(f))
                         || b.attrs.contains_key("compensate")

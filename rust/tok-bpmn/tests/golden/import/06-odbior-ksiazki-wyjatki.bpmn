@@ -164,14 +164,14 @@
         <di:waypoint x="626" y="380" />
         <di:waypoint x="626" y="560" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="631" y="458" width="74" height="11" />
+          <dc:Bounds x="547" y="386" width="74" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Przypomnienie_di" bpmnElement="MF_Przypomnienie">
         <di:waypoint x="926" y="380" />
         <di:waypoint x="926" y="560" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="931" y="458" width="74" height="11" />
+          <dc:Bounds x="931" y="544" width="74" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Zwrot_di" bpmnElement="MF_Zwrot">
@@ -179,7 +179,7 @@
         <di:waypoint x="990" y="208" />
         <di:waypoint x="990" y="450" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="995" y="422" width="46" height="23" />
+          <dc:Bounds x="995" y="434" width="90" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">

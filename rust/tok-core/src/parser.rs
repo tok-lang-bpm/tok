@@ -822,7 +822,7 @@ impl Parser {
 
     fn st_assoc(&mut self, line: &Line, kind: &str) -> Prev {
         let toks = &line.tokens;
-        if toks.len() != 3 || toks[1].kind != Kind::Word || toks[2].kind != Kind::Word {
+        if toks.len() < 3 || toks[1].kind != Kind::Word || toks[2].kind != Kind::Word {
             self.err(
                 "P008",
                 line.number,
@@ -835,12 +835,14 @@ impl Parser {
             return Prev::plain(kind);
         }
         let (act, data) = (toks[1].value.clone(), toks[2].value.clone());
+        // language 0.5: `input=` / `output=` name the data input or output of the activity
+        let tail = self.parse_tail(toks, 3, line.number, false);
         let mut base = Base::new(
             kind,
             Some(format!("{kind}-{act}-{data}")),
             None,
-            Attrs::new(),
-            Vec::new(),
+            tail.attrs,
+            tail.flags,
             line.number,
         );
         self.take_comments(&mut base, line);

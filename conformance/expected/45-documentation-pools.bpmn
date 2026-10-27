@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Rezerwacja podróży" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:documentation>Współpraca biura podróży z klientem</bpmn:documentation>
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:dataStore id="rezerwacje-store" name="Rezerwacje" />
+  <bpmn:category id="categories">
+    <bpmn:categoryValue id="etap-value" value="Etap rezerwacji" />
+  </bpmn:category>
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biuro" name="Biuro podróży" processRef="biuro-process">
+      <bpmn:documentation>Uczestnik: biuro</bpmn:documentation>
+    </bpmn:participant>
+    <bpmn:participant id="klient" name="Klient" processRef="klient-process">
+      <bpmn:documentation>Uczestnik zewnętrzny</bpmn:documentation>
+    </bpmn:participant>
+    <bpmn:messageFlow id="m-zamow-s" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="zamow" targetRef="s">
+      <bpmn:documentation>Formularz zamówienia</bpmn:documentation>
+    </bpmn:messageFlow>
+    <bpmn:group categoryValueRef="etap-value" id="etap">
+      <bpmn:documentation>Część rozliczana z hotelem</bpmn:documentation>
+    </bpmn:group>
+  </bpmn:collaboration>
+  <bpmn:process id="biuro-process" isExecutable="false" name="Obsługa rezerwacji">
+    <bpmn:laneSet id="biuro-lanes">
+      <bpmn:lane id="obsluga" name="Obsługa klienta">
+        <bpmn:documentation>Pracownicy działu obsługi</bpmn:documentation>
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>hotel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>hotel-zwrot</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>anuluj-hotel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gotowe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cofnij</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>anulowano</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Zamówienie przyszło">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_Zamowienie" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="hotel" name="Rezerwacja hotelu">
+      <bpmn:ioSpecification id="hotel-io">
+        <bpmn:dataOutput id="hotel-out-1" name="Rezerwacje" />
+        <bpmn:inputSet id="hotel-inputs" />
+        <bpmn:outputSet id="hotel-outputs">
+          <bpmn:dataOutputRefs>hotel-out-1</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="hotel-doa-1">
+        <bpmn:sourceRef>hotel-out-1</bpmn:sourceRef>
+        <bpmn:targetRef>rezerwacje</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent attachedToRef="hotel" id="hotel-zwrot" name="Zwrot za hotel">
+      <bpmn:documentation>Kompensacja rezerwacji hotelu</bpmn:documentation>
+      <bpmn:compensateEventDefinition id="hotel-zwrot-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="anuluj-hotel" isForCompensation="true" name="Anulowanie hotelu" />
+    <bpmn:exclusiveGateway default="f-ok-gotowe" id="ok" name="Czy klient potwierdził?" />
+    <bpmn:endEvent id="gotowe" name="Rezerwacja potwierdzona" />
+    <bpmn:intermediateThrowEvent id="cofnij" name="Cofnięcie rezerwacji">
+      <bpmn:compensateEventDefinition id="cofnij-def" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="anulowano" name="Rezerwacja anulowana" />
+    <bpmn:sequenceFlow id="f-s-hotel" sourceRef="s" targetRef="hotel" />
+    <bpmn:sequenceFlow id="f-hotel-ok" sourceRef="hotel" targetRef="ok" />
+    <bpmn:sequenceFlow id="f-ok-gotowe" name="tak" sourceRef="ok" targetRef="gotowe" />
+    <bpmn:sequenceFlow id="f-ok-cofnij" name="nie" sourceRef="ok" targetRef="cofnij">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">potwierdzenie = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-cofnij-anulowano" sourceRef="cofnij" targetRef="anulowano" />
+    <bpmn:dataStoreReference dataStoreRef="rezerwacje-store" id="rezerwacje" name="Rezerwacje">
+      <bpmn:documentation>System rezerwacyjny</bpmn:documentation>
+    </bpmn:dataStoreReference>
+    <bpmn:association associationDirection="One" id="hotel-zwrot-assoc" sourceRef="hotel-zwrot" targetRef="anuluj-hotel" />
+  </bpmn:process>
+  <bpmn:process id="klient-process" isExecutable="false">
+    <bpmn:startEvent id="ks" name="Potrzeba wyjazdu" />
+    <bpmn:sendTask id="zamow" messageRef="Message_Zamowienie" name="Wysłanie zamówienia" />
+    <bpmn:endEvent id="ke" name="Zamówienie wysłane" />
+    <bpmn:sequenceFlow id="f-ks-zamow" sourceRef="ks" targetRef="zamow" />
+    <bpmn:sequenceFlow id="f-zamow-ke" sourceRef="zamow" targetRef="ke" />
+  </bpmn:process>
+</bpmn:definitions>

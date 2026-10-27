@@ -35,6 +35,11 @@ pub const REPEATABLE_KEYS: &[&str] = &[
 ];
 /// Catch-all flags (no name): catch every error or escalation (language 0.3).
 pub const CATCH_ALL_FLAGS: &[&str] = &["error", "escalation"];
+/// Triggers written as flags without a value (language 0.5): an event definition without
+/// a message, signal, time or condition (`error` and `escalation` are `CATCH_ALL_FLAGS`).
+pub const NAMELESS_TRIGGERS: &[&str] = &["message", "timer", "signal", "condition"];
+/// Documentation text of the element a statement exports (language 0.5).
+pub const DOC_KEY: &str = "doc";
 
 pub const EVENT_KEYS: &[&str] = &[
     "on",
@@ -59,6 +64,7 @@ pub const EVENT_KEYS: &[&str] = &[
     "listeners",
     "delay",
     "assign",
+    "doc",
 ];
 pub const EVENT_FLAGS: &[&str] = &[
     "noninterrupting",
@@ -67,6 +73,10 @@ pub const EVENT_FLAGS: &[&str] = &[
     "cancel",
     "error",
     "escalation",
+    "message",
+    "timer",
+    "signal",
+    "condition",
     "parallel",
 ];
 pub const TASK_KEYS: &[&str] = &[
@@ -113,6 +123,7 @@ pub const TASK_KEYS: &[&str] = &[
     "by",
     "duration",
     "assign",
+    "doc",
 ];
 pub const TASK_FLAGS: &[&str] = &[
     "loop",
@@ -124,7 +135,9 @@ pub const TASK_FLAGS: &[&str] = &[
     "instantiate",
 ];
 /// Attributes of a complex gateway (language 0.5).
-pub const COMPLEX_KEYS: &[&str] = &["activation"];
+pub const COMPLEX_KEYS: &[&str] = &["activation", "doc"];
+/// Attributes of the other gateways.
+pub const GATEWAY_KEYS: &[&str] = &["doc"];
 /// Flags of an event-based gateway (language 0.5).
 pub const EVENTGW_FLAGS: &[&str] = &["instantiate", "parallel"];
 /// Values of `method=` on a transaction and their BPMN form.
@@ -209,17 +222,23 @@ pub const HEADER_KEYS: &[&str] = &[
     "namespace",
     "collaboration",
     "version-tag",
+    "process-name",
+    "doc",
 ];
 pub const HEADER_FLAGS: &[&str] = &["executable"];
-pub const POOL_KEYS: &[&str] = &["process", "version-tag"];
+pub const POOL_KEYS: &[&str] = &["process", "version-tag", "process-name", "doc"];
 pub const POOL_FLAGS: &[&str] = &["executable"];
-pub const FLOW_KEYS: &[&str] = &["id", "when", "p"];
+pub const LANE_KEYS: &[&str] = &["doc"];
+pub const FLOW_KEYS: &[&str] = &["id", "when", "p", "doc"];
 pub const FLOW_FLAGS: &[&str] = &["default"];
-pub const MESSAGE_KEYS: &[&str] = &["id", "message", "delay"];
-pub const DATA_KEYS: &[&str] = &["state", "type"];
+pub const MESSAGE_KEYS: &[&str] = &["id", "message", "delay", "doc"];
+pub const DATA_KEYS: &[&str] = &["state", "type", "object", "doc"];
 pub const DATA_FLAGS: &[&str] = &["collection"];
-pub const NOTE_KEYS: &[&str] = &["on"];
-pub const GROUP_KEYS: &[&str] = &["members"];
+/// `reads ACTIVITY DATA input=ID` and `writes ACTIVITY DATA output=ID` (language 0.5).
+pub const READS_KEYS: &[&str] = &["input"];
+pub const WRITES_KEYS: &[&str] = &["output"];
+pub const NOTE_KEYS: &[&str] = &["on", "doc"];
+pub const GROUP_KEYS: &[&str] = &["members", "doc"];
 pub const DECISION_KEYS: &[&str] = &["hit"];
 pub const FIELD_KEYS: &[&str] = &["type", "options", "min", "max", "default"];
 pub const FIELD_FLAGS: &[&str] = &["required"];
@@ -227,13 +246,19 @@ pub const SIMULATE_KEYS: &[&str] = &["cases", "seed", "arrival", "start"];
 pub const RESOURCE_KEYS: &[&str] = &["count"];
 /// Process data of language 0.5: `input`, `output`, `property`.
 pub const IO_KINDS: &[&str] = &["input", "output", "property"];
-pub const IO_KEYS: &[&str] = &["type", "on"];
+pub const IO_KEYS: &[&str] = &["type", "on", "doc"];
 pub const IO_FLAGS: &[&str] = &["collection"];
-pub const ITEM_KEYS: &[&str] = &["structure", "kind"];
+pub const ITEM_KEYS: &[&str] = &["structure", "namespace", "kind"];
 pub const ITEM_FLAGS: &[&str] = &["collection"];
 pub const ITEM_KINDS: &[&str] = &["information", "physical"];
-pub const GLOBAL_KEYS: &[&str] = &["kind"];
-pub const OPERATION_KEYS: &[&str] = &["in", "out", "error"];
+/// Namespace prefixes the exporter uses itself; `structure=` with `namespace=` cannot
+/// declare them (`xsd` always means XML Schema).
+pub const RESERVED_PREFIXES: &[&str] = &[
+    "bpmn", "bpmndi", "dc", "di", "xsi", "xsd", "zeebe", "modeler", "xml",
+];
+pub const GLOBAL_KEYS: &[&str] = &["kind", "doc"];
+pub const INTERFACE_KEYS: &[&str] = &["doc"];
+pub const OPERATION_KEYS: &[&str] = &["in", "out", "error", "doc"];
 pub const PROP_KEYS: &[&str] = &["message", "path"];
 
 pub const HIT_POLICIES: &[&str] = &["unique", "first", "any", "priority", "collect"];
@@ -246,6 +271,10 @@ pub const FIELD_TYPES: &[&str] = &[
     "radio",
     "datetime",
 ];
+
+/// Events that throw (data inputs, `reads`) and events that catch (data outputs, `writes`).
+pub const THROWING_EVENTS: &[&str] = &["end", "throw"];
+pub const CATCHING_EVENTS: &[&str] = &["start", "catch", "boundary"];
 
 pub fn is_event(kind: &str) -> bool {
     EVENT_KINDS.contains(&kind)
@@ -271,6 +300,8 @@ pub fn node_keys(kind: &str) -> &'static [&'static str] {
         TASK_KEYS
     } else if kind == "complex" {
         COMPLEX_KEYS
+    } else if GATEWAY_KINDS.contains(&kind) {
+        GATEWAY_KEYS
     } else {
         &[]
     }

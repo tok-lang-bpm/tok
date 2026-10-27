@@ -112,21 +112,21 @@
         <di:waypoint x="138" y="70" />
         <di:waypoint x="138" y="162" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="143" y="76" width="40" height="11" />
+          <dc:Bounds x="93" y="76" width="40" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="m-o-wn_di" bpmnElement="m-o-wn">
         <di:waypoint x="706" y="420" />
         <di:waypoint x="706" y="70" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="711" y="233" width="52" height="11" />
+          <dc:Bounds x="649" y="76" width="52" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="mf-przelew_di" bpmnElement="mf-przelew">
         <di:waypoint x="188" y="70" />
         <di:waypoint x="188" y="600" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="143" y="584" width="40" height="11" />
+          <dc:Bounds x="143" y="76" width="40" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="m-wn-bp_di" bpmnElement="m-wn-bp">

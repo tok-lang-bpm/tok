@@ -2,7 +2,7 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version may change the language; a patch version never does.
 
-## [Unreleased]
+## [0.5.0] — 2026-10-27
 
 Language 0.5 (`tok 0.5` in the header; documents written for 0.1 and 0.3 stay valid and mean the same): the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute. Reference: `docs/spec.md` §4, §5.1.1, §5.2.1, §5.3, §5.4, §5.6, §6.3, §7.1, §7.2, §10.4, §13–§15; design notes and the decisions taken during implementation in `docs/design-0.5.md`; the BPMN rules the checker enforces, with their clauses, in `docs/bpmn-rules.md`.
 
@@ -20,12 +20,17 @@ Language 0.5 (`tok 0.5` in the header; documents written for 0.1 and 0.3 stay va
 - Checker codes `R060`–`R066`; `C100`–`C110` for elements Camunda 8.10 does not execute in executable documents; the levels `basic` and `analytic` reject every element of 0.5 (`R040`).
 - BPMN import reads all of the above back (an imported file that uses them is printed as `tok 0.5`); import of `transaction`, `complexGateway`, multiple event definitions, `ioSpecification`, properties, global tasks and correlation keys no longer drops or simplifies them.
 - Drawing: data input and output shapes, the parallel multiple marker, instantiating event-based gateways and receive tasks, call activities of global tasks.
-- Conformance cases 33–43, with expected outputs produced by the Rust engine (`TOK_BLESS=1 cargo test -p tok-core --test conformance`); the Julia core passes them at the core level.
+- MIWG conformance gate (`rust/tok-core/tests/miwg.rs`): the 22 reference models of the BPMN Model Interchange Working Group test suite are imported, printed and exported, and their semantic content (flow elements and artifacts by identifier and kind, names, event definitions, gateways, flows, pools, lanes, data, declarations, loops, documentation, Camunda extensions) is compared with the reference; the test fails when something that survived before is lost or when a difference is not reported by the import. Coverage per model in `docs/miwg.md` (3533 of 3770 facts kept). The import corpus of the course survives the same round trip without losses.
+- Additions for the MIWG round trip (`docs/design-0.5.md` §13): `doc=` (documentation) on every statement that exports an element; the trigger flags `message`, `timer`, `signal`, `condition` (and `error`, `escalation` on every event that allows them) for an event definition without a value; `process-name=` on the header and on pools; `namespace=` on `item` for a prefixed `structure=`; `reads … input=`, `writes … output=`; data of events (`reads` on throwing, `writes` on catching events, `input`/`output … on=EVENT`); `data … object=` for data objects shared by several references; `when=""`; an explicit compensation boundary event of an activity with `compensate=`. Conformance cases 44–46.
+- BPMN import: documentation, data objects without references, the participants and message flows of every collaboration, named compensation boundary events and the data inputs and outputs of activities and events are kept; messages, signals, errors, escalations and times that a model does not give are no longer invented; every element, attribute, extension element and documentation that is not kept is reported.
+- Conformance cases 33–43, with expected outputs produced by the Rust engine (`TOK_BLESS=1 cargo test -p tok-core --test conformance`); the Julia core passes cases 33–46 at the core level.
 
 ### Changed
 
 - The BPMN validator counts an instantiating receive task or event-based gateway as the start of a process (`W040`, `W041`) and accepts a complex gateway as the join of any split (`W051`).
 - The cheat sheet printed by `tok cheatsheet` describes language 0.5.
+- Layout: a label of a message flow that would stand inside a pool or lane holding neither end of the flow, or next to another flow, shape or label, moves to a free place along its flow (between the pools, or next to its own ends); no quality measure of the corpus gets worse.
+- The BPMN parity tests with the pure-Python implementation (frozen at language 0.3) skip the BPMN files that the import reads as language 0.5.
 
 ## [0.4.0] — 2026-10-27
 

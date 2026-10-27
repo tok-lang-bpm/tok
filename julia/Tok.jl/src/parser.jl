@@ -419,11 +419,13 @@ end
 
 function st_assoc!(p::Parser, line::Line, ctx::Ctx, kind::String)::StResult
     toks = line.tokens
-    if length(toks) != 3 || toks[2].kind != WORD || toks[3].kind != WORD
+    if length(toks) < 3 || toks[2].kind != WORD || toks[3].kind != WORD
         err!(p, "P008", line.number; keyword=kind, detail="expected '$(kind) ACTIVITY DATA'")
         return noresult(kind)
     end
-    a = Elem(kind, "$(kind)-$(toks[2].value)-$(toks[3].value)"; line=line.number)
+    # language 0.5: `input=` / `output=` name the data input or output of the activity
+    _, attrs, flags, _ = parse_tail(p, toks, 4, line.number; allow_label=false)
+    a = Elem(kind, "$(kind)-$(toks[2].value)-$(toks[3].value)"; attrs=attrs, flags=flags, line=line.number)
     a.source, a.target = toks[2].value, toks[3].value     # activity, data
     take_comments!(p, a, line)
     push!(p.doc.assocs, a)

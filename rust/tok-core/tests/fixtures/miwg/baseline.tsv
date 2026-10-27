@@ -1,0 +1,291 @@
+# Facts of the MIWG reference models that the round trip import → tok → BPMN does not
+# keep (lost) or adds (added); written by TOK_BLESS=1 cargo test -p tok-core --test miwg
+A.2.1	lost	flows	Bpmn_SequenceFlow_edepQQbbEealeL5I4Yl3Dw isImmediate=true
+A.2.1	lost	flows	Bpmn_SequenceFlow_f9nmUQbbEealeL5I4Yl3Dw isImmediate=true
+A.2.1	lost	flows	_To9Z-TOCEeSknpIVFCxNIQ condition language=http://www.w3.org/1999/XPath
+A.2.1	lost	flows	_To9Z7TOCEeSknpIVFCxNIQ condition language=http://www.w3.org/1999/XPath
+A.2.1	lost	flows	_To9Z8zOCEeSknpIVFCxNIQ condition language=http://www.w3.org/1999/XPath
+A.2.1	lost	flows	_To9Z9jOCEeSknpIVFCxNIQ condition language=http://www.w3.org/1999/XPath
+A.2.1	lost	flows	_To9Z_DOCEeSknpIVFCxNIQ condition language=http://www.w3.org/1999/XPath
+A.2.1	lost	structure	definitions expressionLanguage=http://groovy.codehaus.org/
+A.4.0	added	structure	participant WFP-6-2-pool
+A.4.0	added	structure	participant WFP-6-2-pool name="WFP-6-2"
+A.4.0	added	structure	participant WFP-6-2-pool process=WFP-6-2
+A.4.1	lost	flows	sid-0C093502-276D-4B83-A271-2ABE22F335A6 isImmediate=true
+A.4.1	lost	flows	sid-1DE02844-4989-4A6A-88E7-B75261042119 isImmediate=true
+A.4.1	lost	flows	sid-4052C63C-CB50-4E0C-8901-80D86A1F9759 isImmediate=true
+A.4.1	lost	flows	sid-4B747910-16CA-4FFD-B92A-8894BB3D7AB6 isImmediate=true
+A.4.1	lost	flows	sid-576A3375-50D2-4E0B-90AD-CD756E199FB7 isImmediate=true
+A.4.1	lost	flows	sid-70CA8C5F-FF45-4403-93C5-44DE37ED60E3 isImmediate=true
+A.4.1	lost	flows	sid-72E93035-EAF2-4445-AFFE-39C8C0143066 isImmediate=true
+A.4.1	lost	flows	sid-77013C0C-99FE-4BCB-AA8E-1ADDB67DCB6B isImmediate=true
+A.4.1	lost	flows	sid-AD419767-6626-42E7-ADD5-E0EDB9C7975F isImmediate=true
+A.4.1	lost	flows	sid-B57FC7E5-7709-4E81-A829-2AB8CF5AB3BB isImmediate=true
+A.4.1	lost	flows	sid-D1E9B201-87A2-47B9-82A0-1BA208440CAE isImmediate=true
+A.4.1	lost	flows	sid-DE3E0ED7-7F9B-4917-AD34-9C43A6F58918 isImmediate=true
+A.4.1	lost	flows	sid-F9B17890-98C4-44FA-B7A8-CA940866741B isImmediate=true
+A.4.1	added	declarations	message "Message Flow 1"
+A.4.1	added	declarations	message "Message Flow 2"
+A.4.1	added	flows	sid-96EF2D8F-C322-42B1-8C08-0DA05524C904 message="Message Flow 2"
+A.4.1	added	flows	sid-D0B859BF-CBFB-4B35-BBC8-BCA308F6455C message="Message Flow 1"
+B.1.0	lost	activities	_7706e700-2aed-4b94-8070-961f118aab8f implementation=##WebService
+B.1.0	lost	activities	_f7eade87-bb98-47d3-85c7-66033a62b124 implementation=##WebService
+B.1.0	lost	data	dataStore "Data Store Reference" capacity=0
+B.1.0	lost	data	dataStore "Data Store Reference" limited
+B.1.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool
+B.1.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool name="Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450"
+B.1.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool process=Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450
+B.1.0	added	structure	participant WFP-0--pool
+B.1.0	added	structure	participant WFP-0--pool name="WFP-0-"
+B.1.0	added	structure	participant WFP-0--pool process=WFP-0-
+B.2.0	lost	activities	_0e87da16-736e-45b2-95e5-8f45940f3adf implementation=##WebService
+B.2.0	lost	activities	_7f4fe4ea-901f-4c74-bcd4-e933495712fd implementation=##WebService
+B.2.0	lost	activities	_b9343536-6490-4559-8365-71d5c4cbb7cb implementation=##WebService
+B.2.0	lost	activities	_c57a5344-213f-4834-a6c3-94ce878b413c implementation=##WebService
+B.2.0	lost	activities	_c9870992-6643-4094-acfd-d76e5e37941b implementation=##WebService
+B.2.0	lost	data	dataStore "Data Store Reference" capacity=0
+B.2.0	lost	data	dataStore "Data Store Reference" limited
+B.2.0	lost	declarations	globalUserTask _d4afdad7-65a5-40c6-9fee-e13ba4c0bed4 implementation=##WebService
+B.2.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool
+B.2.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool name="Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450"
+B.2.0	added	structure	participant Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450-pool process=Process_ba16239e-181e-4b9f-bc5b-0bb2ee973450
+B.2.0	added	structure	participant WFP-0--pool
+B.2.0	added	structure	participant WFP-0--pool name="WFP-0-"
+B.2.0	added	structure	participant WFP-0--pool process=WFP-0-
+C.1.0	lost	activities	approveInvoice implementation=webService
+C.1.0	lost	activities	approveInvoice potentialOwner resource=Bpmn_Resource_U0nLMJ1_EeS1-pEyeWEPig
+C.1.0	lost	activities	archiveInvoice implementation=webService
+C.1.0	lost	activities	assignApprover implementation=webService
+C.1.0	lost	activities	assignApprover potentialOwner resource=Bpmn_Resource_SVLUUJ1_EeS1-pEyeWEPig
+C.1.0	lost	activities	prepareBankTransfer implementation=webService
+C.1.0	lost	activities	prepareBankTransfer potentialOwner resource=Bpmn_Resource_XNpfIJ1_EeS1-pEyeWEPig
+C.1.0	lost	activities	reviewInvoice implementation=webService
+C.1.0	lost	activities	reviewInvoice potentialOwner resource=Bpmn_Resource_SVLUUJ1_EeS1-pEyeWEPig
+C.1.0	lost	flows	SequenceFlow_1 isImmediate=true
+C.1.0	lost	flows	SequenceFlow_2 isImmediate=true
+C.1.0	lost	flows	SequenceFlow_3 isImmediate=true
+C.1.0	lost	flows	invoiceApproved isImmediate=true
+C.1.0	lost	flows	invoiceNotApproved isImmediate=true
+C.1.0	lost	flows	reviewNotSuccessful isImmediate=true
+C.1.0	lost	flows	reviewSuccessful isImmediate=true
+C.1.0	lost	flows	sequenceFlow_178 isImmediate=true
+C.1.0	lost	flows	sequenceFlow_180 isImmediate=true
+C.1.0	lost	flows	sequenceFlow_183 isImmediate=true
+C.1.0	lost	flows	sid-26030150-7369-4B7F-8264-B3ABC62BA735 isImmediate=true
+C.1.0	lost	flows	sid-3019478F-48D5-4B85-95B1-E192B9BE4183 isImmediate=true
+C.1.0	lost	flows	sid-3E8B2FCF-E408-4A5D-9455-8FDE7BB3EF96 isImmediate=true
+C.1.0	lost	flows	sid-4686AFBC-E33A-4657-95A0-B2E27E704152 isImmediate=true
+C.1.0	lost	flows	sid-4AD2006C-9290-42B0-A904-DD8076B791C4 isImmediate=true
+C.1.0	lost	flows	sid-6CB8539C-E02A-4496-94E7-17FAECB0D4B1 isImmediate=true
+C.1.0	lost	flows	sid-71EF9530-A32A-49BC-A783-9B98A5801362 isImmediate=true
+C.1.0	lost	flows	sid-7971C38C-2EF5-41F2-A24E-3FFCA069EDBF isImmediate=true
+C.1.0	lost	flows	sid-C0540F47-C3C0-4FA8-B000-6D87640A6178 isImmediate=true
+C.1.0	lost	flows	sid-D03CC374-8575-4F38-98B4-4DFF014C43CB isImmediate=true
+C.1.0	lost	structure	process bpmn-miwg-test-case-c_1_0 closed
+C.1.0	lost	structure	process sid-5FBB6CB3-8A7C-42B5-9024-15BB2684EC57 closed
+C.1.0	added	activities	approveInvoice humanPerformer resource=Bpmn_Resource_U0nLMJ1_EeS1-pEyeWEPig
+C.1.0	added	activities	assignApprover humanPerformer resource=Bpmn_Resource_SVLUUJ1_EeS1-pEyeWEPig
+C.1.0	added	activities	prepareBankTransfer humanPerformer resource=Bpmn_Resource_XNpfIJ1_EeS1-pEyeWEPig
+C.1.0	added	activities	reviewInvoice humanPerformer resource=Bpmn_Resource_SVLUUJ1_EeS1-pEyeWEPig
+C.1.1	lost	activities	approveInvoice potentialOwner resource=Bpmn_Resource_8nPrkLHzEeS1nbPdxxCzlg
+C.1.1	lost	activities	archiveInvoice implementation=##unspecified
+C.1.1	lost	activities	assignApprover potentialOwner resource=Bpmn_Resource_6vVHsLHzEeS1nbPdxxCzlg
+C.1.1	lost	activities	prepareBankTransfer potentialOwner resource=Bpmn_Resource_-IajYLHzEeS1nbPdxxCzlg
+C.1.1	lost	activities	reviewInvoice potentialOwner resource=Bpmn_Resource_6vVHsLHzEeS1nbPdxxCzlg
+C.1.1	lost	data	approveInvoice inputSet [] outputSetRefs=Bpmn_OutputSet_Y6GAsbH1EeSuDf0W70XLGw
+C.1.1	lost	data	approveInvoice outputSet [approved] inputSetRefs=Bpmn_InputSet_Y6GAsrH1EeSuDf0W70XLGw
+C.1.1	lost	data	assignApprover inputSet [] outputSetRefs=Bpmn_OutputSet_assignApprover
+C.1.1	lost	data	assignApprover outputSet [approver] inputSetRefs=Bpmn_InputSet_assignApprover
+C.1.1	lost	data	dataStore "Financial Accounting System"
+C.1.1	lost	data	dataStore "Financial Accounting System" limited
+C.1.1	lost	data	reviewInvoice inputSet [] outputSetRefs=Bpmn_OutputSet_dB6xtLH1EeSuDf0W70XLGw
+C.1.1	lost	data	reviewInvoice outputSet [clarified] inputSetRefs=Bpmn_InputSet_dB6xtbH1EeSuDf0W70XLGw
+C.1.1	lost	declarations	import namespace=http://xsdTypes.org/ location="xsdTypes.xsd" type=http://www.w3.org/2001/XMLSchema
+C.1.1	lost	declarations	message "invoice-received-C.1.0"
+C.1.1	lost	flows	SequenceFlow_1 isImmediate=true
+C.1.1	lost	flows	SequenceFlow_2 isImmediate=true
+C.1.1	lost	flows	SequenceFlow_3 isImmediate=true
+C.1.1	lost	flows	invoiceApproved isImmediate=true
+C.1.1	lost	flows	invoiceNotApproved isImmediate=true
+C.1.1	lost	flows	reviewNotSuccessful isImmediate=true
+C.1.1	lost	flows	reviewSuccessful isImmediate=true
+C.1.1	lost	flows	sequenceFlow_178 isImmediate=true
+C.1.1	lost	flows	sequenceFlow_180 isImmediate=true
+C.1.1	lost	flows	sequenceFlow_183 isImmediate=true
+C.1.1	lost	structure	process handle-invoice closed
+C.1.1	added	activities	approveInvoice humanPerformer resource=Bpmn_Resource_8nPrkLHzEeS1nbPdxxCzlg
+C.1.1	added	activities	assignApprover humanPerformer resource=Bpmn_Resource_6vVHsLHzEeS1nbPdxxCzlg
+C.1.1	added	activities	prepareBankTransfer humanPerformer resource=Bpmn_Resource_-IajYLHzEeS1nbPdxxCzlg
+C.1.1	added	activities	reviewInvoice humanPerformer resource=Bpmn_Resource_6vVHsLHzEeS1nbPdxxCzlg
+C.3.0	lost	activities	_6a34496f-8cf7-42e5-88a9-d1af98cc3cba implementation=WebService
+C.3.0	lost	activities	_a92069f7-377b-4dbd-a1fd-1da071aabf6d implementation=WebService
+C.3.0	lost	activities	_c73a5f4a-72f1-4e11-bb40-2f98da75fb9a completionQuantity=2
+C.3.0	lost	activities	_c73a5f4a-72f1-4e11-bb40-2f98da75fb9a implementation=##WebService
+C.3.0	lost	activities	_c73a5f4a-72f1-4e11-bb40-2f98da75fb9a potentialOwner resource=Bpmn_Resource__7wrkBqGEeWDuOtG0oS24A
+C.3.0	lost	activities	_c73a5f4a-72f1-4e11-bb40-2f98da75fb9a startQuantity=2
+C.3.0	lost	activities	_d034722f-751d-4f37-a3d7-47993822e979 implementation=WebService
+C.3.0	lost	flows	Bpmn_SequenceFlow_-dQQwBqHEeWDuOtG0oS24A isImmediate=true
+C.3.0	lost	flows	Bpmn_SequenceFlow_tcbpgBqGEeWDuOtG0oS24A isImmediate=true
+C.3.0	lost	structure	process _8170787a-3207-434d-9bea-4787059f444f processType=Private
+C.3.0	added	activities	_c73a5f4a-72f1-4e11-bb40-2f98da75fb9a humanPerformer resource=Bpmn_Resource__7wrkBqGEeWDuOtG0oS24A
+C.4.0	lost	data	dataStore "Employee Details" limited
+C.4.0	lost	data	dataStore "Employee Details" type=_triso-default-bpmnItemDefinition-string_id
+C.4.0	lost	data	dataStore "Payroll system" limited
+C.4.0	lost	data	dataStore "User Management" limited
+C.4.0	lost	structure	collaboration _674b5898-d454-4114-a8eb-66c790366e94
+C.4.0	lost	structure	collaboration _8d4bb408-4175-4fbb-8131-18c32b7aa022
+C.4.0	lost	structure	collaboration _bbdf487b-c3a3-4bfa-8ba3-79be59f08203
+C.5.0	added	structure	participant _774bc005-0917-43d5-ab70-0f9fe123fbd1-pool
+C.5.0	added	structure	participant _774bc005-0917-43d5-ab70-0f9fe123fbd1-pool name="Check for connected clients"
+C.5.0	added	structure	participant _774bc005-0917-43d5-ab70-0f9fe123fbd1-pool process=_774bc005-0917-43d5-ab70-0f9fe123fbd1
+C.7.0	lost	activities	_15b00027-5049-4081-8952-fd398e8b722a performer resource=_b5b6808a-be81-426c-98ae-f33f44a2f871
+C.7.0	lost	activities	_392c86ba-38b5-4dc9-b98d-f97ad4c2add5 performer resource=_b5b6808a-be81-426c-98ae-f33f44a2f871
+C.7.0	lost	activities	_d3435084-f2c7-43cc-abcc-c679bc4232ac performer resource=_dc7df8e9-cc60-4953-9ae5-a9ea25fd9c5b
+C.7.0	lost	declarations	relationship 
+C.7.0	lost	documentation	_15b00027-5049-4081-8952-fd398e8b722a documentation format=text/html
+C.7.0	lost	documentation	_392c86ba-38b5-4dc9-b98d-f97ad4c2add5 documentation format=text/html
+C.7.0	lost	documentation	_64eabfe9-6947-43eb-ac45-8d331745f86c documentation format=text/html
+C.7.0	lost	documentation	_d3435084-f2c7-43cc-abcc-c679bc4232ac documentation format=text/html
+C.7.0	lost	documentation	_eae674ce-4d6e-48ac-819c-c79e0868e40d documentation format=text/html
+C.7.0	lost	structure	definitions expressionLanguage=http://www.omg.org/spec/DMN/20180521/FEEL/
+C.7.0	lost	structure	definitions typeLanguage=http://www.trisotech.com/2015/triso/modeling/ItemDefinitionType
+C.7.0	added	activities	_15b00027-5049-4081-8952-fd398e8b722a humanPerformer resource=_b5b6808a-be81-426c-98ae-f33f44a2f871
+C.7.0	added	activities	_392c86ba-38b5-4dc9-b98d-f97ad4c2add5 humanPerformer resource=_b5b6808a-be81-426c-98ae-f33f44a2f871
+C.7.0	added	activities	_d3435084-f2c7-43cc-abcc-c679bc4232ac humanPerformer resource=_dc7df8e9-cc60-4953-9ae5-a9ea25fd9c5b
+C.8.0	lost	camunda	VacationRequestProcess zeebe:userTaskForm id="userTaskForm_1m306cp"
+C.8.0	lost	camunda	_02232e32-c3d2-473c-a15d-9c5dca00eadc zeebe:input source="Current Vacation Status.email" target="mailAddress"
+C.8.0	lost	camunda	_02232e32-c3d2-473c-a15d-9c5dca00eadc zeebe:input source="\"<html><p>Hi  \" + Current Vacation Status.name + \",</p> <p> </p> <p>Your vacation request from \" + From + \" to \" + To + \" was declined for the following reason: \" + Reason + \"</p> <p> </p> <p>Best regards</p> <p> </p> <p>This is an automated message generated by the vacation system.</p></html>\"" target="mailBody"
+C.8.0	lost	camunda	_02232e32-c3d2-473c-a15d-9c5dca00eadc zeebe:input source="source" target="mailSubject"
+C.8.0	lost	camunda	_02232e32-c3d2-473c-a15d-9c5dca00eadc zeebe:ioMapping 
+C.8.0	lost	camunda	_02232e32-c3d2-473c-a15d-9c5dca00eadc zeebe:taskDefinition type="emailService"
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:header key="decisionRef" value="_9ba1b7b0-c84d-484f-9203-3792edc6dcbd"
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:ioMapping 
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:output source="Vacation Approval Status.Approval" target="Vacation Approval"
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:output source="Vacation Approval Status.Reason" target="Reason"
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:taskDefinition type="DMN"
+C.8.0	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:taskHeaders 
+C.8.0	lost	camunda	_2b960d84-feb1-46a9-a1a1-c300dd996b99 zeebe:header key="url" value="\"https://odata.triso.tech/simon/simon/vacation\" + \"?$filter=employeeId eq \" + string(Employee Badge Number)"
+C.8.0	lost	camunda	_2b960d84-feb1-46a9-a1a1-c300dd996b99 zeebe:taskDefinition type="http"
+C.8.0	lost	camunda	_2b960d84-feb1-46a9-a1a1-c300dd996b99 zeebe:taskHeaders 
+C.8.0	lost	camunda	_4b72053b-8ebb-4ae6-99c6-7c93cf1c1d1b zeebe:taskDefinition type="update"
+C.8.0	lost	camunda	_5e16a4e0-0f23-482a-be47-d3edbc5741ba zeebe:taskDefinition type="update"
+C.8.0	lost	camunda	_79523269-7444-4b01-90e9-e23957a9d020 zeebe:formDefinition formKey="camunda-forms:bpmn:userTaskForm_1m306cp"
+C.8.0	lost	camunda	_93ec9873-edf1-4549-b052-961994ec8234 zeebe:input source="Current Vacation Status.email" target="mailAddress"
+C.8.0	lost	camunda	_93ec9873-edf1-4549-b052-961994ec8234 zeebe:input source="\"<html><p>Hi  \" + Current Vacation Status.name + \",</p> <p> </p> <p>Your vacation request from \" + From + \" to \" + To + \" was approved.</p> <p> </p> <p>Best regards</p> <p> </p> <p>This is an automated message generated by the vacation system.</p></html>\"" target="mailBody"
+C.8.0	lost	camunda	_93ec9873-edf1-4549-b052-961994ec8234 zeebe:input source="\"Vacation Approved\"" target="mailSubject"
+C.8.0	lost	camunda	_93ec9873-edf1-4549-b052-961994ec8234 zeebe:ioMapping 
+C.8.0	lost	camunda	_93ec9873-edf1-4549-b052-961994ec8234 zeebe:taskDefinition type="emailService"
+C.8.0	lost	camunda	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 zeebe:input source="Current Vacation Status.email" target="mailAddress"
+C.8.0	lost	camunda	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 zeebe:input source="\"<html><p>Hi  \" + Current Vacation Status.name + \",</p> <p> </p> <p>Your vacation request from \" + From + \" to \" + To + \" was declined for the following reason: \" + Reason + \"</p> <p> </p> <p>Best regards</p> <p> </p> <p>This is an automated message generated by the vacation system.</p></html>\"" target="mailBody"
+C.8.0	lost	camunda	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 zeebe:input source="source" target="mailSubject"
+C.8.0	lost	camunda	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 zeebe:ioMapping 
+C.8.0	lost	camunda	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 zeebe:taskDefinition type="emailService"
+C.8.0	lost	camunda	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 zeebe:input source="Current Vacation Status.email" target="mailAddress"
+C.8.0	lost	camunda	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 zeebe:input source="\"<html><p>Hi  \" + Current Vacation Status.name + \",</p> <p> </p> <p>Your vacation request from \" + From + \" to \" + To + \" was approved.</p> <p> </p> <p>Best regards</p> <p> </p> <p>This is an automated message generated by the vacation system.</p></html>\"" target="mailBody"
+C.8.0	lost	camunda	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 zeebe:input source="\"Vacation Approved\"" target="mailSubject"
+C.8.0	lost	camunda	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 zeebe:ioMapping 
+C.8.0	lost	camunda	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 zeebe:taskDefinition type="emailService"
+C.8.0	lost	declarations	import namespace=http://www.trisotech.com/definitions/_195db244-42dd-4beb-ac9e-cc8a9b2b8643 location="Vacation Approval.dmn" type=https://www.omg.org/spec/DMN/20191111/MODEL/
+C.8.0	lost	flows	_0a1c4f20-509f-4aeb-baf9-acc762f4fdf9 isImmediate=false
+C.8.0	lost	flows	_130d903a-f211-4b3e-9711-9061f5978d94 isImmediate=false
+C.8.0	lost	flows	_188d38f6-b73d-4c62-964b-affc6fe040c1 isImmediate=false
+C.8.0	lost	flows	_2a5ee73c-c495-48a0-945b-3dabab28ca91 isImmediate=false
+C.8.0	lost	flows	_325973e7-0bc8-4136-b6df-be1e681d8608 isImmediate=false
+C.8.0	lost	flows	_3c50d7bb-5ecc-4d34-82a9-a5fa41d9c018 isImmediate=false
+C.8.0	lost	flows	_68ef27a7-011e-4ec0-ad45-41f52093de68 isImmediate=false
+C.8.0	lost	flows	_81ed1b89-5a4d-4028-a245-4fd38b866b6d isImmediate=false
+C.8.0	lost	flows	_93ac178c-3efc-48ae-8a99-8d29a0c4aaf6 isImmediate=false
+C.8.0	lost	flows	_a5441c65-06f8-4972-8158-e6f61f904841 isImmediate=false
+C.8.0	lost	flows	_ac1d82df-9bf6-404b-be70-b052e311f8b7 isImmediate=false
+C.8.0	lost	flows	_b02b5bfa-5629-4af5-b1bc-ac2a86d88adb isImmediate=false
+C.8.0	lost	flows	_d3a575d8-cd41-4246-ad7a-7a068de6679f isImmediate=false
+C.8.0	lost	flows	_d79c991e-446c-47d1-ac9d-9d0113e35b93 isImmediate=false
+C.8.0	lost	flows	_f250e125-23eb-45cd-9c61-191d172df093 isImmediate=false
+C.8.0	lost	flows	_f2b0da63-d841-4457-ad85-7d86c8b5c1d2 isImmediate=false
+C.8.1	lost	activities	_02232e32-c3d2-473c-a15d-9c5dca00eadc implementation=kp:mail
+C.8.1	lost	activities	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 implementation=kp:dmn
+C.8.1	lost	activities	_2b960d84-feb1-46a9-a1a1-c300dd996b99 implementation=kp:http
+C.8.1	lost	activities	_4b72053b-8ebb-4ae6-99c6-7c93cf1c1d1b implementation=kp:http
+C.8.1	lost	activities	_5e16a4e0-0f23-482a-be47-d3edbc5741ba implementation=kp:http
+C.8.1	lost	activities	_79523269-7444-4b01-90e9-e23957a9d020 potentialOwner
+C.8.1	lost	activities	_79523269-7444-4b01-90e9-e23957a9d020 potentialOwner assignment="manager"
+C.8.1	lost	activities	_93ec9873-edf1-4549-b052-961994ec8234 implementation=kp:mail
+C.8.1	lost	activities	_9ed61a6a-7cc1-4ed1-86d8-03482b0983c9 implementation=kp:mail
+C.8.1	lost	activities	_a97c1a48-faba-447b-bfa6-7aa81a6fe0a0 implementation=kp:mail
+C.8.1	lost	camunda	VacationRequestProcess zeebe:userTaskForm id="userTaskForm_1m306cp"
+C.8.1	lost	camunda	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 zeebe:taskDefinition type="DMN"
+C.8.1	lost	camunda	_79523269-7444-4b01-90e9-e23957a9d020 zeebe:formDefinition formKey="camunda-forms:bpmn:userTaskForm_1m306cp"
+C.8.1	lost	data	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 association transformation="<ns1:literalExpression xmlns:ns1=\"https://www.omg.org/spec/DMN/20191111/MODEL/\" id=\"_06eb6996-5a49-4de7-a6f5-ac4f72dc253e\" expressionLanguage=\"https://www.omg.org/spec/DMN/20191111/FEEL/\"><ns1:text>Vacation Approval Status.Approval</ns1:text></ns1:literalExpression>"
+C.8.1	lost	data	_1a818a94-ba6f-413b-a7e8-6f8fd2a11e32 association transformation="<ns1:literalExpression xmlns:ns1=\"https://www.omg.org/spec/DMN/20191111/MODEL/\" id=\"_1ccc4a25-aca7-475b-bc42-f710be757403\" expressionLanguage=\"https://www.omg.org/spec/DMN/20191111/FEEL/\"><ns1:text>Vacation Approval Status.Reason</ns1:text></ns1:literalExpression>"
+C.8.1	lost	data	_2b960d84-feb1-46a9-a1a1-c300dd996b99 association transformation="<ns1:literalExpression xmlns:ns1=\"https://www.omg.org/spec/DMN/20191111/MODEL/\" id=\"_086343dd-32b0-4cd3-9730-9964c61de8d5\" expressionLanguage=\"https://www.omg.org/spec/DMN/20191111/FEEL/\"><ns1:text>vacation.value[1]</ns1:text></ns1:literalExpression>"
+C.8.1	lost	declarations	import namespace=http://www.trisotech.com/definitions/_195db244-42dd-4beb-ac9e-cc8a9b2b8643 location="Vacation Approval.dmn" type=https://www.omg.org/spec/DMN/20191111/MODEL/
+C.8.1	lost	declarations	message "OData-EntityId" item=_triso-default-bpmnItemDefinition-string_id
+C.8.1	lost	declarations	message "vacation" item=_55a74c87-4810-4c82-a5c1-83cbfaf0d016
+C.8.1	lost	declarations	message "vacation" item=_68f999b9-915a-40d9-b3b0-78fd2b0d6b39
+C.8.1	lost	declarations	relationship 
+C.8.1	lost	documentation	VacationRequestProcess documentation "Vacation Request - BPMN MIWG demo for 2022"
+C.8.1	lost	flows	_0a1c4f20-509f-4aeb-baf9-acc762f4fdf9 condition language=https://www.omg.org/spec/DMN/20191111/FEEL/
+C.8.1	lost	flows	_0a1c4f20-509f-4aeb-baf9-acc762f4fdf9 isImmediate=false
+C.8.1	lost	flows	_130d903a-f211-4b3e-9711-9061f5978d94 isImmediate=false
+C.8.1	lost	flows	_188d38f6-b73d-4c62-964b-affc6fe040c1 isImmediate=false
+C.8.1	lost	flows	_2a5ee73c-c495-48a0-945b-3dabab28ca91 isImmediate=false
+C.8.1	lost	flows	_325973e7-0bc8-4136-b6df-be1e681d8608 condition language=https://www.omg.org/spec/DMN/20191111/FEEL/
+C.8.1	lost	flows	_325973e7-0bc8-4136-b6df-be1e681d8608 isImmediate=false
+C.8.1	lost	flows	_3c50d7bb-5ecc-4d34-82a9-a5fa41d9c018 isImmediate=false
+C.8.1	lost	flows	_68ef27a7-011e-4ec0-ad45-41f52093de68 isImmediate=false
+C.8.1	lost	flows	_81ed1b89-5a4d-4028-a245-4fd38b866b6d isImmediate=false
+C.8.1	lost	flows	_93ac178c-3efc-48ae-8a99-8d29a0c4aaf6 isImmediate=false
+C.8.1	lost	flows	_a5441c65-06f8-4972-8158-e6f61f904841 isImmediate=false
+C.8.1	lost	flows	_ac1d82df-9bf6-404b-be70-b052e311f8b7 isImmediate=false
+C.8.1	lost	flows	_b02b5bfa-5629-4af5-b1bc-ac2a86d88adb isImmediate=false
+C.8.1	lost	flows	_d3a575d8-cd41-4246-ad7a-7a068de6679f isImmediate=false
+C.8.1	lost	flows	_d79c991e-446c-47d1-ac9d-9d0113e35b93 isImmediate=false
+C.8.1	lost	flows	_f250e125-23eb-45cd-9c61-191d172df093 isImmediate=false
+C.8.1	lost	flows	_f2b0da63-d841-4457-ad85-7d86c8b5c1d2 condition language=https://www.omg.org/spec/DMN/20191111/FEEL/
+C.8.1	lost	flows	_f2b0da63-d841-4457-ad85-7d86c8b5c1d2 isImmediate=false
+C.8.1	lost	structure	definitions expressionLanguage=https://www.omg.org/spec/DMN/20191111/FEEL/
+C.8.1	lost	structure	definitions typeLanguage=http://www.trisotech.com/2015/triso/modeling/ItemDefinitionType
+C.8.1	added	data	_4234afd4-3ab0-4e09-8a7c-b475458db18a dataObjectReference in=VacationRequestProcess
+C.8.1	added	data	_4234afd4-3ab0-4e09-8a7c-b475458db18a name="Reason"
+C.8.1	added	data	_4234afd4-3ab0-4e09-8a7c-b475458db18a object="Reason"
+C.8.1	added	data	_775c93ab-82e5-4a62-97f0-d305eda76c92 dataObjectReference in=VacationRequestProcess
+C.8.1	added	data	_775c93ab-82e5-4a62-97f0-d305eda76c92 name="Current Vacation Status"
+C.8.1	added	data	_775c93ab-82e5-4a62-97f0-d305eda76c92 object="Current Vacation Status"
+C.8.1	added	data	vacationApproved dataObjectReference in=VacationRequestProcess
+C.8.1	added	data	vacationApproved name="vacationApproved"
+C.8.1	added	data	vacationApproved object="vacationApproved"
+C.8.1	added	data	vacationRefused dataObjectReference in=VacationRequestProcess
+C.8.1	added	data	vacationRefused name="vacationRefused"
+C.8.1	added	data	vacationRefused object="vacationRefused"
+C.8.1	added	declarations	message "triso:unspecified"
+C.8.1	added	structure	process VacationRequestProcess interface=_54b7cd6d-1e34-450f-8b7a-10567bdda33e
+C.8.1	added	structure	process VacationRequestProcess interface=_7df3e21f-23aa-455b-9851-de1fa89499c4
+C.9.0	lost	camunda	customer_onboarding_en zeebe:userTaskForm id="userTaskForm_0khiqpl"
+C.9.0	lost	camunda	message "Message_DocumentRequested" zeebe:subscription correlationKey="documentReferenceId"
+C.9.0	lost	declarations	import namespace=http://bpmn.io/schema/bpmn/Definitions_1 location="C.9.1.bpmn" type=http://www.omg.org/spec/BPMN/20100524/MODEL
+C.9.0	lost	declarations	message "Message_DocumentRequested"
+C.9.1	lost	camunda	message "MESSAGE_documentReceived" zeebe:subscription correlationKey="documentReferenceId"
+C.9.2	lost	camunda	ManualCheck zeebe:userTaskForm id="userTaskForm_2s8lq02"
+C.9.2	lost	camunda	UserTask_DecideOnApplication zeebe:formDefinition formKey="camunda-forms:bpmn:userTaskForm_2s8lq02"
+C.9.2	lost	declarations	import namespace=http://bpmn.io/schema/bpmn/Definitions_1 location="C.9.1.bpmn" type=http://www.omg.org/spec/BPMN/20100524/MODEL
+C.10.0	lost	declarations	import namespace=http://www.trisotech.com/definitions/_1a8e6ac5-c038-4a51-a69c-fcfa48532d33 location="Travel Planning.sdmn" type=https://www.omg.org/spec/SDMN/
+C.10.0	lost	flows	ID-ee745c84-43de-11f1-744d-b02628b36240 isImmediate=false
+C.10.0	lost	flows	_17 isImmediate=false
+C.10.0	lost	flows	_20 isImmediate=false
+C.10.0	lost	flows	_23 isImmediate=false
+C.10.0	lost	flows	_26 isImmediate=false
+C.10.0	lost	flows	_28 isImmediate=false
+C.10.0	lost	flows	_30 isImmediate=false
+C.10.0	lost	flows	_32 isImmediate=false
+C.10.0	lost	flows	_35 isImmediate=false
+C.10.0	lost	flows	_37 isImmediate=false
+C.10.0	lost	flows	_40 isImmediate=false
+C.10.0	lost	flows	_42 isImmediate=false
+C.10.0	lost	flows	_43 isImmediate=false
+C.10.0	lost	flows	_44 isImmediate=false
+C.10.0	lost	flows	_46 isImmediate=false
+C.10.0	lost	flows	_47 isImmediate=false
+C.10.0	lost	structure	collaboration _4 name="04 Travel Planning - ADONIS"
+C.10.0	added	structure	participant Process_ID-73a31a41-43d5-11f1-744d-b02628b36240-pool
+C.10.0	added	structure	participant Process_ID-73a31a41-43d5-11f1-744d-b02628b36240-pool name="Plan Trip"
+C.10.0	added	structure	participant Process_ID-73a31a41-43d5-11f1-744d-b02628b36240-pool process=Process_ID-73a31a41-43d5-11f1-744d-b02628b36240

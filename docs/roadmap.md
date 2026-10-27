@@ -20,6 +20,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.2.0** — Rust engine at parity with Python: `tok-core`, `tok-bpmn`, native `tok`, Python bindings for parity testing.
 - **0.3.0** — language 0.3: complete Camunda 8 coverage as an optional executable layer (multi-instance, ad-hoc sub-processes, call activities, variable mappings, user task assignment and scheduling, jobs and REST connector, compensation, catch-all errors and escalations, conditional filters, listeners, version tags); Python, Rust and the Julia core at parity; executable conformance on Camunda 8 Run.
 - **0.4.0** — the Rust engine is the only engine: `eval` and `sim` in Rust, XES event logs, improved layout; `tok-lang` wheels on the engine with the module `tok.api`; R package `tokr`; release gates in `tools/check.sh`.
+- **0.5.0** — language 0.5: the BPMN 2.0.2 process elements Camunda 8 does not execute (transaction and cancel, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks, interfaces, correlation keys), documentation, MIWG round-trip gate with coverage per model (`docs/miwg.md`).
 
 ## State at 0.1
 
@@ -87,7 +88,7 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 - process data: data inputs and outputs, input and output sets, properties, item definitions, data state transitions;
 - resources and performers (`by=` mapped to resource roles), global tasks, interfaces and operations, correlation keys and properties;
 - full checker coverage of the semantic constraints of BPMN 2.0.2 with codes traceable to specification clauses;
-- conformance gate: the BPMN Model Interchange Working Group (MIWG) reference models import, export and round-trip without semantic loss; results published as a coverage table.
+- conformance gate: the BPMN Model Interchange Working Group (MIWG) reference models import, export and round-trip without semantic loss; results published as a coverage table. Done: `rust/tok-core/tests/miwg.rs`, coverage in `miwg.md`; what tok cannot express is listed there and reported by the import.
 
 ## 0.6 — collaboration, choreography and diagram interchange
 

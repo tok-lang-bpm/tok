@@ -15,6 +15,10 @@ drawings by their structure (the same drawn elements, ``svg_structure``): the se
 must stay identical. Decision tables and forms are compared exactly. The layout itself is
 tested in Rust (``rust/tok-bpmn/tests/golden.rs`` and ``layout_quality.rs``).
 
+The pure-Python implementation stays at language 0.3: a BPMN model that the engine imports
+as language 0.5 (its text starts with ``tok 0.5``) is not compared; the Rust test
+``rust/tok-core/tests/miwg.rs`` checks the semantic round trip of the whole import corpus.
+
 The tests are skipped when the engine is not installed (a wheel of ``tok-lang``); see
 ``rust/tok-py/README.md``.
 The pure-Python reference runs in a fresh interpreter for every input, so that the global
@@ -413,6 +417,8 @@ class EngineParity(unittest.TestCase):
             for keep in (True, False):
                 with self.subTest(model=os.path.basename(path), keep_ids=keep):
                     text, warnings = tok_engine.import_bpmn(xml, keep)
+                    if text.startswith("tok 0.5"):
+                        continue
                     self.assertEqual([text, list(warnings)], ref[str(keep)])
         self.assertGreater(len(BPMN_FILES), 0)
 

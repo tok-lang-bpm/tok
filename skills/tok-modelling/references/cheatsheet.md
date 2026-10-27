@@ -6,6 +6,7 @@ Attributes: `key=value` (value: word, number or "text") and bare flags.
 
 ```
 tok 0.5 "Title" [executable]                       # header, first line (0.1 and 0.3 documents stay valid)
+    [process-name="Name"] (process of a document without pools)   doc="Text" on any statement: documentation
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
 end ID "Label" [message="M" | error="E" | escalation="X" | signal="S" | terminate]
@@ -13,6 +14,7 @@ catch ID "Label" message="M" | timer=PT2H | signal="S" | condition="feel" | link
 throw ID "Label" [message="M" | escalation="X" | signal="S" | link="L" | compensate]
 boundary ID "Label" on=ACTIVITY timer=P7D [noninterrupting]   # also message/error/escalation/signal
     several triggers = multiple event: message="A" message="B" signal="C"; + parallel = all of them (catching)
+    trigger not given yet: flags message timer signal condition error escalation (start ID "Label" message)
 
 task | user | manual | service | script | rule | send | receive | call   ID "Label"
     flags: loop parallel sequential compensation
@@ -29,20 +31,21 @@ boundary ID on=TRANSACTION cancel                        # leaves the transactio
 xor | and | or | eventgw | complex   ID ["Question?"]
 complex ID "?" activation="_activationCount >= 2"        eventgw ID instantiate [parallel]
 
-pool ID "Label" [process=P] [executable]    # with a block: participant + process
+pool ID "Label" [process=P] [process-name="Name"] [executable]    # with a block: participant + process
   lane ID "Label"                           # lanes nest; nodes go inside lanes
 pool ID "Label"                             # no block: black-box pool
 
 flow A -> B -> C                            # chain of sequence flows
 flow G -> D "tak" when="amount > 100"       # one flow: label, FEEL condition
-flow G -> E "nie" default                   # default flow
+flow G -> E "nie" default                   # default flow; when="" = condition not written yet
 message A -> B "Label"                      # message flow between pools (nodes or pools)
 
-data ID "Label" [state="złożony"] [type=ITEM] [collection]
+data ID "Label" [state="złożony"] [type=ITEM] [object="Data object"] [collection]
 store ID "Label" [type=ITEM]
-reads ACTIVITY DATA          writes ACTIVITY DATA     # DATA: data, store, input, output, property
-item ID "Label" [structure=Name|xsd:string] [kind=information|physical] [collection]
-input ID "Label" [type=ITEM] [collection] [on=ACTIVITY]    output ID … (same)
+reads ACTIVITY DATA [input=ID]   writes ACTIVITY DATA [output=ID]   # DATA: data, store, input, output, property
+    reads END|THROW DATA   writes START|CATCH|BOUNDARY DATA          # data of events
+item ID "Label" [structure=Name|xsd:string|p:Name namespace="URI"] [kind=information|physical] [collection]
+input ID "Label" [type=ITEM] [collection] [on=ACTIVITY|EVENT]    output ID … (same)
 property ID "Label" [type=ITEM] [on=ACTIVITY|EVENT]
 
 global ID "Label" [kind=task|user|manual|script|rule]       # called by call … task=ID

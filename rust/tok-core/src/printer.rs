@@ -49,6 +49,9 @@ const QUOTED_KEYS: &[&str] = &[
     "in",
     "out",
     "path",
+    "doc",
+    "process-name",
+    "object",
 ];
 
 const EXECUTION_LISTENER_EVENTS: &[&str] = &["start", "end"];
@@ -316,7 +319,10 @@ impl Printer<'_> {
             self.blank();
             self.emit_base(
                 0,
-                &join(&["interface", x.base.id()], tail(&x.base, &[], &[], false)),
+                &join(
+                    &["interface", x.base.id()],
+                    tail(&x.base, INTERFACE_KEYS, &[], false),
+                ),
                 &x.base,
             );
             for op in &x.operations {
@@ -385,11 +391,16 @@ impl Printer<'_> {
         if !d.assocs.is_empty() {
             self.blank();
             for a in &d.assocs {
-                self.emit_base(
-                    0,
-                    &format!("{} {} {}", a.base.kind, a.activity, a.data),
-                    &a.base,
+                let keys = if a.base.kind == "reads" {
+                    READS_KEYS
+                } else {
+                    WRITES_KEYS
+                };
+                let text = join(
+                    &[a.base.kind.as_str(), a.activity.as_str(), a.data.as_str()],
+                    tail(&a.base, keys, &[], false),
                 );
+                self.emit_base(0, &text, &a.base);
             }
         }
         if !d.notes.is_empty() || !d.groups.is_empty() {
@@ -491,7 +502,7 @@ impl Printer<'_> {
             } else if let Some(l) = d.lanes.get(i) {
                 self.emit_base(
                     indent,
-                    &join(&["lane", l.base.id()], tail(&l.base, &[], &[], false)),
+                    &join(&["lane", l.base.id()], tail(&l.base, LANE_KEYS, &[], false)),
                     &l.base,
                 );
                 self.children(&l.children, indent + 1);

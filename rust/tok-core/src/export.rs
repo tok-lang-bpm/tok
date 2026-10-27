@@ -195,8 +195,26 @@ fn ext_index(e: &mut XElem) -> usize {
     {
         return k;
     }
-    e.insert(0, XElem::new(BPMN_NS, "extensionElements"));
-    0
+    let k = docs_len(e);
+    e.insert(k, XElem::new(BPMN_NS, "extensionElements"));
+    k
+}
+
+/// Number of leading `documentation` children (they come first in every BPMN element).
+fn docs_len(e: &XElem) -> usize {
+    e.children
+        .iter()
+        .take_while(|c| c.ns == BPMN_NS && c.name == "documentation")
+        .count()
+}
+
+/// `documentation` of the element from `doc=` (language 0.5), as its first child.
+fn documentation(e: &mut XElem, text: Option<&str>) {
+    if let Some(t) = text.filter(|t| !t.is_empty()) {
+        let mut d = XElem::new(BPMN_NS, "documentation");
+        d.text = Some(t.to_string());
+        e.insert(0, d);
+    }
 }
 
 fn zsub(parent: &mut XElem, name: &str, attrs: &[(&str, &str)]) {
@@ -318,10 +336,16 @@ impl<'a> Exporter<'a> {
                         ],
                     )
                 };
+                documentation(
+                    &mut self.root.children[ci].children[part],
+                    p.base.attr(DOC_KEY),
+                );
                 if !p.blackbox {
                     let pid = p.process_id();
                     self.root.children[ci].children[part].set("processRef", pid.clone());
-                    let pname = if inner == 1 && nonempty(d.title.as_deref()).is_some() {
+                    let pname = if let Some(n) = p.base.attr("process-name") {
+                        nonempty(Some(n)).map(str::to_string)
+                    } else if inner == 1 && nonempty(d.title.as_deref()).is_some() {
                         d.title.clone()
                     } else {
                         p.base.label.clone()
@@ -355,15 +379,18 @@ impl<'a> Exporter<'a> {
                     let id = self.declare("message", &name, None);
                     self.root.children[ci].children[mf].set("messageRef", id);
                 }
+                documentation(
+                    &mut self.root.children[ci].children[mf],
+                    m.base.attr(DOC_KEY),
+                );
             }
             self.collab = Some(vec![ci]);
         } else {
-            processes.push((
-                d.default_process_id(),
-                d.title.clone(),
-                d.executable(),
-                None,
-            ));
+            let name = match d.attrs.get("process-name") {
+                Some(n) => nonempty(Some(n)).map(str::to_string),
+                None => d.title.clone(),
+            };
+            processes.push((d.default_process_id(), name, d.executable(), None));
         }
 
         let n_processes = processes.len();
@@ -381,6 +408,13 @@ impl<'a> Exporter<'a> {
                 ],
             );
             self.containers.insert(pid.clone(), vec![pi]);
+            if pool.is_none() {
+                // the header documents the process of a document without pools
+                documentation(
+                    &mut self.root.children[pi],
+                    d.attrs.get(DOC_KEY).map(String::as_str),
+                );
+            }
             let tag = pool
                 .and_then(|px| d.pools[px].base.attrs.get("version-tag").cloned())
                 .filter(|t| !t.is_empty())
@@ -478,6 +512,10 @@ impl<'a> Exporter<'a> {
         for (k, e) in decl.into_iter().enumerate() {
             self.root.insert(decl_slot + k, e);
         }
+        if !d.pools.is_empty() {
+            // the header documents the definitions of a document with pools
+            documentation(&mut self.root, d.attrs.get(DOC_KEY).map(String::as_str));
+        }
         self.root
     }
 
@@ -505,12 +543,15 @@ impl<'a> Exporter<'a> {
         if let Some(l) = &lane.base.label {
             e.set("name", l.clone());
         }
+        documentation(&mut e, lane.base.attr(DOC_KEY));
         for c in &lane.children {
             if let Some(node) = d.nodes.get(c) {
                 let mut r = XElem::new(BPMN_NS, "flowNodeRef");
                 r.text = Some(c.clone());
                 e.push(r);
-                if node.base.attrs.contains_key("compensate") {
+                if node.base.attrs.contains_key("compensate")
+                    && compensation_boundary(d, c).is_none()
+                {
                     let mut r = XElem::new(BPMN_NS, "flowNodeRef");
                     r.text = Some(compensation_id(c));
                     e.push(r);
@@ -550,6 +591,7 @@ impl<'a> Exporter<'a> {
         if let Some(l) = &n.base.label {
             e.set("name", l.clone());
         }
+        documentation(&mut e, n.base.attr(DOC_KEY));
         let kind = n.base.kind.as_str();
         if kind == "boundary" {
             e.set("attachedToRef", a.get("on").cloned().unwrap_or_default());
@@ -696,7 +738,7 @@ impl<'a> Exporter<'a> {
                 self.at(&path).push(cc);
             }
         }
-        if a.contains_key("compensate") {
+        if a.contains_key("compensate") && compensation_boundary(self.doc, n.base.id()).is_none() {
             let bid = compensation_id(n.base.id());
             let mut b = XElem::new(BPMN_NS, "boundaryEvent");
             b.set("id", bid.clone());
@@ -736,15 +778,12 @@ impl<'a> Exporter<'a> {
             if !d.nodes.contains_key(h) {
                 continue;
             }
-            let Some(path) = n
-                .scope
-                .as_ref()
-                .and_then(|s| self.containers.get(s))
-                .cloned()
-            else {
+            // looked up again: the category of groups is inserted before the processes
+            let Some(path) = n.scope.as_ref().and_then(|s| self.root.find_path(s)) else {
                 continue;
             };
-            let bid = compensation_id(n.base.id());
+            let bid = compensation_boundary(d, n.base.id())
+                .map_or_else(|| compensation_id(n.base.id()), str::to_string);
             let mut a = XElem::new(BPMN_NS, "association");
             a.set("id", format!("{bid}-assoc"));
             a.set("associationDirection", "One");
@@ -882,7 +921,8 @@ impl<'a> Exporter<'a> {
         }
         let job_kind = kind == "service"
             || kind == "send"
-            || ((kind == "throw" || kind == "end") && a.contains_key("message"));
+            || ((kind == "throw" || kind == "end")
+                && (a.contains_key("message") || n.base.has("message")));
         let inputs = split_pairs(a.get("inputs").map(String::as_str).unwrap_or(""), '=');
         let mut headers = split_pairs(a.get("headers").map(String::as_str).unwrap_or(""), ':');
         if kind == "service" && a.get("connector").map(String::as_str) == Some("rest") {
@@ -1135,6 +1175,23 @@ impl<'a> Exporter<'a> {
             }
             e.push(df);
         }
+        // triggers without a value (language 0.5): an event definition without a reference
+        for flag in NAMELESS_TRIGGERS {
+            if count > 0 && !multiple {
+                return;
+            }
+            if n.base.has(flag) {
+                let mut df = XElem::new(BPMN_NS, definition(flag));
+                df.set("id", next_id(&mut count));
+                if *flag == "condition" {
+                    // a conditional event definition always has a condition
+                    let mut c = XElem::new(BPMN_NS, "condition");
+                    c.set_ns(XSI_NS, "type", "bpmn:tFormalExpression");
+                    df.push(c);
+                }
+                e.push(df);
+            }
+        }
         for flag in TRIGGER_FLAGS.iter().chain(CATCH_ALL_FLAGS) {
             if count > 0 && !multiple {
                 return;
@@ -1178,6 +1235,7 @@ impl<'a> Exporter<'a> {
             }
             e.set("sourceRef", f.source.clone());
             e.set("targetRef", f.target.clone());
+            documentation(&mut e, f.base.attr(DOC_KEY));
             if let Some(w) = f.base.attrs.get("when") {
                 let mut c = XElem::new(BPMN_NS, "conditionExpression");
                 c.set_ns(XSI_NS, "type", "bpmn:tFormalExpression");
@@ -1216,6 +1274,9 @@ impl<'a> Exporter<'a> {
 
     fn data(&mut self) {
         let d = self.doc;
+        // data objects named by `object=` (language 0.5), shared by the references with the
+        // same object name in one process or sub-process: (scope, name) -> identifier
+        let mut shared: IndexMap<(String, String), String> = IndexMap::new();
         for x in d
             .data
             .values()
@@ -1227,23 +1288,42 @@ impl<'a> Exporter<'a> {
             };
             let id = x.base.id().to_string();
             if x.base.kind == "data" {
-                let mut obj = XElem::new(BPMN_NS, "dataObject");
-                obj.set("id", format!("{id}-object"));
-                if let Some(l) = &x.base.label {
-                    obj.set("name", l.clone());
-                }
-                if let Some(t) = x.base.attrs.get("type") {
-                    obj.set("itemSubjectRef", t.clone());
-                }
-                if x.base.has("collection") {
-                    obj.set("isCollection", "true");
-                }
+                let object = x.base.attr("object");
+                let known = object.and_then(|o| shared.get(&(scope.clone(), o.to_string())));
+                let oid = known.cloned().unwrap_or_else(|| format!("{id}-object"));
+                let obj = if known.is_some() {
+                    None
+                } else {
+                    let mut obj = XElem::new(BPMN_NS, "dataObject");
+                    obj.set("id", oid.clone());
+                    match object {
+                        Some(o) => {
+                            if !o.is_empty() {
+                                obj.set("name", o);
+                            }
+                            shared.insert((scope.clone(), o.to_string()), oid.clone());
+                        }
+                        None => {
+                            if let Some(l) = &x.base.label {
+                                obj.set("name", l.clone());
+                            }
+                        }
+                    }
+                    if let Some(t) = x.base.attrs.get("type") {
+                        obj.set("itemSubjectRef", t.clone());
+                    }
+                    if x.base.has("collection") {
+                        obj.set("isCollection", "true");
+                    }
+                    Some(obj)
+                };
                 let mut r = XElem::new(BPMN_NS, "dataObjectReference");
                 r.set("id", id.clone());
                 if let Some(l) = &x.base.label {
                     r.set("name", l.clone());
                 }
-                r.set("dataObjectRef", format!("{id}-object"));
+                r.set("dataObjectRef", oid);
+                documentation(&mut r, x.base.attr(DOC_KEY));
                 if let Some(st) = x.base.attrs.get("state") {
                     let mut s = XElem::new(BPMN_NS, "dataState");
                     s.set("id", format!("{id}-state"));
@@ -1251,7 +1331,9 @@ impl<'a> Exporter<'a> {
                     r.push(s);
                 }
                 let c = self.at(&path);
-                c.push(obj);
+                if let Some(obj) = obj {
+                    c.push(obj);
+                }
                 c.push(r);
             } else {
                 let name = nonempty(x.base.label.as_deref()).unwrap_or(&id).to_string();
@@ -1269,6 +1351,7 @@ impl<'a> Exporter<'a> {
                 if let Some(t) = x.base.attrs.get("type") {
                     r.set("itemSubjectRef", t.clone());
                 }
+                documentation(&mut r, x.base.attr(DOC_KEY));
                 self.at(&path).push(r);
             }
         }
@@ -1284,15 +1367,12 @@ impl<'a> Exporter<'a> {
             let Some(act) = self.root.at_mut(&path) else {
                 continue;
             };
-            let pos = if act
-                .children
-                .iter()
-                .any(|c| c.ns == BPMN_NS && c.name == "extensionElements")
-            {
-                1
-            } else {
-                0
-            };
+            let pos = docs_len(act)
+                + usize::from(
+                    act.children
+                        .iter()
+                        .any(|c| c.ns == BPMN_NS && c.name == "extensionElements"),
+                );
             if d.lang_05() {
                 // the association connects the data element with a data input or output of
                 // the activity's ioSpecification (BPMN 2.0.2, 10.4.1)
@@ -1302,7 +1382,12 @@ impl<'a> Exporter<'a> {
                     .clone()
                     .or_else(|| Some(a.data.clone()));
                 let reads = a.base.kind == "reads";
-                let io_id = format!("{}-{}-{n}", a.activity, if reads { "in" } else { "out" });
+                // `input=` / `output=` name a declared data input or output of the activity
+                let declared = a.base.attr(if reads { "input" } else { "output" });
+                let io_id = match declared {
+                    Some(io) => io.to_string(),
+                    None => format!("{}-{}-{n}", a.activity, if reads { "in" } else { "out" }),
+                };
                 let mut assoc = XElem::new(
                     BPMN_NS,
                     if reads {
@@ -1323,10 +1408,12 @@ impl<'a> Exporter<'a> {
                 assoc.push(text_elem("sourceRef", &source));
                 assoc.push(text_elem("targetRef", &target));
                 insert_ranked(act, assoc);
-                self.implicit_io
-                    .entry(a.activity.clone())
-                    .or_default()
-                    .push((if reads { "input" } else { "output" }, io_id, name));
+                if declared.is_none() {
+                    self.implicit_io
+                        .entry(a.activity.clone())
+                        .or_default()
+                        .push((if reads { "input" } else { "output" }, io_id, name));
+                }
                 continue;
             }
             if a.base.kind == "reads" {
@@ -1381,6 +1468,7 @@ impl<'a> Exporter<'a> {
             let Some(path) = cont else { continue };
             let mut t = XElem::new(BPMN_NS, "textAnnotation");
             t.set("id", note.id().to_string());
+            documentation(&mut t, note.attr(DOC_KEY));
             let mut tx = XElem::new(BPMN_NS, "text");
             tx.text = Some(note.label.clone().unwrap_or_default());
             t.push(tx);
@@ -1414,6 +1502,7 @@ impl<'a> Exporter<'a> {
                 let mut ge = XElem::new(BPMN_NS, "group");
                 ge.set("id", g.id().to_string());
                 ge.set("categoryValueRef", cvid);
+                documentation(&mut ge, g.attr(DOC_KEY));
                 self.at(&path).push(ge);
             }
             self.root.insert(0, cat);
@@ -1432,12 +1521,15 @@ fn schema_rank(name: &str) -> u8 {
         "ioSpecification" => 3,
         "ioBinding" => 4,
         "property" => 5,
-        "dataInputAssociation" => 6,
-        "dataOutputAssociation" => 7,
-        "laneSet" => 8,
-        "performer" | "humanPerformer" | "potentialOwner" | "resourceRole" => 9,
-        "standardLoopCharacteristics" | "multiInstanceLoopCharacteristics" => 10,
-        _ => 11,
+        // data inputs and outputs of events (activities have them in the ioSpecification)
+        "dataInput" | "dataOutput" => 6,
+        "dataInputAssociation" => 7,
+        "dataOutputAssociation" => 8,
+        "inputSet" | "outputSet" => 9,
+        "laneSet" => 10,
+        "performer" | "humanPerformer" | "potentialOwner" | "resourceRole" => 11,
+        "standardLoopCharacteristics" | "multiInstanceLoopCharacteristics" => 12,
+        _ => 13,
     }
 }
 
@@ -1465,6 +1557,7 @@ fn item_aware(name: &str, x: &Data) -> XElem {
     if name != "property" && x.base.has("collection") {
         e.set("isCollection", "true");
     }
+    documentation(&mut e, x.base.attr(DOC_KEY));
     e
 }
 
@@ -1544,6 +1637,47 @@ impl Exporter<'_> {
             let Some(el) = self.root.at_mut(&path) else {
                 continue;
             };
+            if el.name.ends_with("Event") {
+                // an event has its data inputs (throwing) or outputs (catching) and their
+                // set directly, without an ioSpecification
+                let (item, set, refs, xs, made) =
+                    if el.name.contains("Throw") || el.name == "endEvent" {
+                        ("dataInput", "inputSet", "dataInputRefs", &ins, made_in)
+                    } else {
+                        ("dataOutput", "outputSet", "dataOutputRefs", &outs, made_out)
+                    };
+                let mut ids = Vec::new();
+                for x in xs {
+                    ids.push(x.base.id().to_string());
+                    insert_ranked(el, item_aware(item, x));
+                }
+                for e in made {
+                    ids.push(e.get("id").unwrap_or("").to_string());
+                    insert_ranked(el, e);
+                }
+                if !ids.is_empty() {
+                    let mut st = XElem::new(BPMN_NS, set);
+                    st.set(
+                        "id",
+                        format!(
+                            "{owner}-{}",
+                            if item == "dataInput" {
+                                "inputs"
+                            } else {
+                                "outputs"
+                            }
+                        ),
+                    );
+                    for i in &ids {
+                        st.push(text_elem(refs, i));
+                    }
+                    insert_ranked(el, st);
+                }
+                for x in props {
+                    insert_ranked(el, item_aware("property", x));
+                }
+                continue;
+            }
             if !ins.is_empty() || !outs.is_empty() || !implicit.is_empty() {
                 let mut io = XElem::new(BPMN_NS, "ioSpecification");
                 io.set("id", format!("{owner}-io"));
@@ -1692,6 +1826,13 @@ impl Exporter<'_> {
             {
                 self.root.declare.push(XSD_NS);
             }
+            if let (Some((p, _)), Some(ns)) = (
+                it.attr("structure").and_then(|s| s.split_once(':')),
+                it.attr("namespace"),
+            ) && !self.root.prefixed.iter().any(|(q, _)| q == p)
+            {
+                self.root.prefixed.push((p.to_string(), ns.to_string()));
+            }
             first.push(e);
         }
         if d.lang_05() {
@@ -1761,10 +1902,12 @@ impl Exporter<'_> {
                 "name",
                 nonempty(x.base.label.as_deref()).unwrap_or(x.base.id()),
             );
+            documentation(&mut e, x.base.attr(DOC_KEY));
             for op in &x.operations {
                 let mut o = XElem::new(BPMN_NS, "operation");
                 o.set("id", op.id().to_string());
                 o.set("name", nonempty(op.label.as_deref()).unwrap_or(op.id()));
+                documentation(&mut o, op.attr(DOC_KEY));
                 if let Some(m) = op.attr("in") {
                     let id = self.declare("message", m, None);
                     o.push(text_elem("inMessageRef", &id));
@@ -1791,6 +1934,7 @@ impl Exporter<'_> {
             if let Some(l) = &g.label {
                 e.set("name", l.clone());
             }
+            documentation(&mut e, g.attr(DOC_KEY));
             last.push(e);
         }
         (first, last)
@@ -1801,8 +1945,21 @@ fn compensation_id(activity_id: &str) -> String {
     format!("{activity_id}-compensate")
 }
 
+/// A boundary event with the flag `compensate` attached to the activity: it is associated
+/// with the activity's handler (`compensate=`) instead of a generated one.
+fn compensation_boundary<'d>(d: &'d Document, activity_id: &str) -> Option<&'d str> {
+    d.nodes
+        .values()
+        .find(|b| {
+            b.base.kind == "boundary"
+                && b.base.attr("on") == Some(activity_id)
+                && b.base.has("compensate")
+        })
+        .map(|b| b.base.id())
+}
+
 fn after_props(act: &XElem) -> usize {
-    let mut pos = 0;
+    let mut pos = docs_len(act);
     for (k, c) in act.children.iter().enumerate() {
         if c.ns == BPMN_NS
             && matches!(

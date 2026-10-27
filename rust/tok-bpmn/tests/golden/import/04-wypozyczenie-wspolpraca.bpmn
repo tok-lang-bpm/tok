@@ -165,7 +165,7 @@
         <di:waypoint x="641" y="350" />
         <di:waypoint x="641" y="760" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="647" y="543" width="56" height="11" />
+          <dc:Bounds x="647" y="744" width="56" height="11" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Przesylka_di" bpmnElement="MF_Przesylka">

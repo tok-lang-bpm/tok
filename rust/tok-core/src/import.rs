@@ -160,6 +160,19 @@ fn clean_label(text: Option<&str>) -> Option<String> {
     if t.is_empty() { None } else { Some(t) }
 }
 
+/// Documentation text: line ends normalized, trailing spaces of lines and surrounding
+/// blank lines removed.
+fn doc_text(e: X) -> String {
+    let t: String = e
+        .descendants()
+        .filter(|n| n.is_text())
+        .filter_map(|n| n.text())
+        .collect();
+    let t = t.replace("\r\n", "\n").replace('\r', "\n");
+    let lines: Vec<&str> = t.lines().map(str::trim_end).collect();
+    lines.join("\n").trim().to_string()
+}
+
 fn strip_feel(text: Option<&str>) -> String {
     let t = strip(text.unwrap_or(""));
     match t.strip_prefix('=') {
@@ -183,6 +196,17 @@ struct Importer<'a, 'i> {
     skip_ids: HashSet<String>,
     /// an association without id was skipped (Python: `None in skip_ids`)
     skip_none: bool,
+    /// `documentation` elements read into `doc=` (the others are reported)
+    docs_read: HashSet<roxmltree::NodeId>,
+    /// pools with a process: (pool index, process element), for `process-name=`
+    pool_processes: Vec<(usize, X<'a, 'i>)>,
+    /// data inputs and outputs of activities that only serve one data association and
+    /// carry nothing tok would not generate (tok writes them for `reads` and `writes`)
+    implicit: HashSet<String>,
+    /// data object -> number of its references
+    object_refs: IndexMap<String, usize>,
+    /// data objects that a data association names directly (not through a reference)
+    direct_objects: HashSet<String>,
 }
 
 /// Read BPMN 2.0 XML text. Returns the document and warning strings `"id: explanation"`.
@@ -213,6 +237,11 @@ pub fn import_bpmn(xml: &str, keep_ids: bool) -> Result<(Document, Vec<String>),
         compensation: IndexMap::new(),
         skip_ids: HashSet::new(),
         skip_none: false,
+        docs_read: HashSet::new(),
+        pool_processes: Vec::new(),
+        implicit: HashSet::new(),
+        object_refs: IndexMap::new(),
+        direct_objects: HashSet::new(),
     };
     imp.run()
 }
@@ -252,6 +281,36 @@ impl<'a, 'i> Importer<'a, 'i> {
 
     fn tid_s(&mut self, xml_id: Option<&str>) -> String {
         self.tid(xml_id).unwrap_or_default()
+    }
+
+    /// `doc=` from the first `documentation` of an element (language 0.5). Further
+    /// documentation elements and text formats other than plain text are reported.
+    fn doc(&mut self, e: X<'a, 'i>, attrs: &mut Attrs) {
+        let docs: Vec<X> = findall(e, "documentation").collect();
+        let Some(first) = docs.first().copied() else {
+            return;
+        };
+        let id = e.attribute("id").map(str::to_string);
+        let t = doc_text(first);
+        if !t.is_empty() {
+            attrs.insert(DOC_KEY.into(), t);
+            self.uses_05();
+        }
+        self.docs_read.insert(first.id());
+        if let Some(f) = first
+            .attribute("textFormat")
+            .filter(|f| !f.is_empty() && *f != "text/plain")
+        {
+            let msg = format!("documentation format {f} is not kept (doc= is plain text)");
+            self.warn(id.as_deref(), &msg, None);
+        }
+        if docs.len() > 1 {
+            self.warn(
+                id.as_deref(),
+                "only the first documentation element is kept",
+                None,
+            );
+        }
     }
 
     fn reserve_ids(&mut self) {
@@ -322,8 +381,17 @@ impl<'a, 'i> Importer<'a, 'i> {
                 );
             }
         }
-        for (bid, (_, _, assoc)) in &self.compensation {
-            self.skip_ids.insert(bid.clone());
+        for (bid, (act, _, assoc)) in &self.compensation {
+            // a boundary event with a name, documentation or its own identifier is kept
+            // (`boundary … on=ACTIVITY compensate`); the exporter associates it with the handler
+            let kept = self.by_id.get(bid.as_str()).is_some_and(|b| {
+                clean_label(b.attribute("name")).is_some()
+                    || find(*b, "documentation").is_some()
+                    || (self.keep_ids && *bid != format!("{act}-compensate"))
+            });
+            if !kept {
+                self.skip_ids.insert(bid.clone());
+            }
             match assoc {
                 Some(i) => {
                     self.skip_ids.insert(i.clone());
@@ -344,9 +412,94 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
     }
 
+    /// Data inputs, outputs and properties of activities that tok writes itself for `reads`
+    /// and `writes`: a property (Camunda Modeler's `__targetRef_placeholder`), or a data
+    /// input or output used by one association with one data element, named after it and
+    /// with nothing else (and, when identifiers are kept, with the identifier tok gives it).
+    fn find_implicit(&mut self) {
+        let owners: Vec<X> = self
+            .root
+            .descendants()
+            .filter(|e| {
+                is_bpmn(*e)
+                    && children(*e).any(|c| {
+                        is_b(c, "dataInputAssociation") || is_b(c, "dataOutputAssociation")
+                    })
+            })
+            .collect();
+        for e in owners {
+            let ends = inner_ends(e);
+            let owner = e.attribute("id").unwrap_or("");
+            for (id, a) in &ends {
+                let Some(x) = self.by_id.get(id.as_str()).copied() else {
+                    continue;
+                };
+                if local(x) == "property" {
+                    self.implicit.insert(id.clone());
+                    continue;
+                }
+                let uses = ends.iter().filter(|(i, _)| i == id).count();
+                let outer = outer_ends(*a);
+                let plain = x.attribute("itemSubjectRef").is_none_or(str::is_empty)
+                    && x.attribute("isCollection") != Some("true")
+                    && find(x, "documentation").is_none()
+                    && find(x, "extensionElements").is_none();
+                let named = match outer.as_slice() {
+                    [d] => {
+                        let label = self.by_id.get(*d).and_then(|de| {
+                            clean_label(de.attribute("name")).or_else(|| {
+                                de.attribute("dataObjectRef")
+                                    .and_then(|r| self.by_id.get(r))
+                                    .and_then(|o| clean_label(o.attribute("name")))
+                            })
+                        });
+                        clean_label(x.attribute("name")) == Some(label.unwrap_or(d.to_string()))
+                    }
+                    _ => false,
+                };
+                let id_ok = !self.keep_ids || generated_io_id(owner, id);
+                if uses == 1 && plain && named && id_ok {
+                    self.implicit.insert(id.clone());
+                }
+            }
+        }
+    }
+
+    /// References of data objects, and data objects named directly by data associations.
+    fn find_objects(&mut self) {
+        for e in self.root.descendants().filter(|e| is_bpmn(*e)) {
+            match local(e) {
+                "dataObject" => {
+                    if let Some(i) = e.attribute("id") {
+                        self.object_refs.entry(i.to_string()).or_insert(0);
+                    }
+                }
+                "dataObjectReference" => {
+                    if let Some(r) = e.attribute("dataObjectRef") {
+                        *self.object_refs.entry(r.to_string()).or_insert(0) += 1;
+                    }
+                }
+                "sourceRef" | "targetRef"
+                    if e.parent_element().is_some_and(|a| {
+                        is_b(a, "dataInputAssociation") || is_b(a, "dataOutputAssociation")
+                    }) =>
+                {
+                    if let Some(t) = text(e).map(strip)
+                        && self.by_id.get(t).is_some_and(|x| local(*x) == "dataObject")
+                    {
+                        self.direct_objects.insert(t.to_string());
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
     fn run(mut self) -> Result<(Document, Vec<String>), ImportError> {
         let root = self.root;
         self.compensation_boundaries();
+        self.find_implicit();
+        self.find_objects();
         if !is_b(root, "definitions") {
             return Err(ImportError(format!(
                 "not a BPMN 2.0 document: root element is {}",
@@ -387,14 +540,42 @@ impl<'a, 'i> Importer<'a, 'i> {
                 );
             }
         }
-        if collabs.len() > 1 {
+        for c in collabs.iter().skip(1) {
             self.warn(
-                collabs[1].attribute("id"),
-                "only the first collaboration is imported",
+                c.attribute("id"),
+                "collaboration was merged into the first one (tok has one collaboration)",
                 None,
             );
         }
         let collab = collabs.first().copied();
+        if let Some(c) = collab
+            && c.attribute("name").is_some_and(|n| !n.trim().is_empty())
+        {
+            self.warn(
+                c.attribute("id"),
+                "the name of the collaboration is not kept",
+                None,
+            );
+        }
+        for (a, default) in [
+            ("expressionLanguage", "http://www.w3.org/1999/XPath"),
+            ("typeLanguage", XSD_NS),
+        ] {
+            if let Some(v) = root.attribute(a).filter(|v| !v.is_empty() && *v != default) {
+                let msg = format!(
+                    "{a} {v} is not kept (tok writes FEEL expressions and XML Schema types)"
+                );
+                self.warn(root.attribute("id"), &msg, None);
+            }
+        }
+        for imp in findall(root, "import") {
+            let msg = format!(
+                "import of {} ({}) is not kept",
+                imp.attribute("location").unwrap_or(""),
+                imp.attribute("namespace").unwrap_or("")
+            );
+            self.warn(None, &msg, None);
+        }
         if let Some(c) = collab
             && c.attribute("id") != Some("collaboration")
         {
@@ -413,6 +594,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         for p in &processes {
             proc_by_id.insert(p.attribute("id"), *p);
         }
+        let single = (collab.is_none() && processes.len() == 1).then(|| processes[0]);
         if collab.is_none() && processes.len() == 1 {
             let p = processes[0];
             if p.attribute("id") != Some("process") {
@@ -425,16 +607,26 @@ impl<'a, 'i> Importer<'a, 'i> {
             self.process(p, None);
         } else {
             let mut referenced: HashSet<&str> = HashSet::new();
-            let participants: Vec<X> = collab
-                .map(|c| findall(c, "participant").collect())
-                .unwrap_or_default();
+            let participants: Vec<X> = collabs
+                .iter()
+                .flat_map(|c| findall(*c, "participant"))
+                .collect();
             for part in participants {
                 let pid = self.tid_s(part.attribute("id"));
+                let mut attrs = Attrs::new();
+                self.doc(part, &mut attrs);
+                if find(part, "participantMultiplicity").is_some() {
+                    self.warn(
+                        part.attribute("id"),
+                        "participant multiplicity is not kept",
+                        None,
+                    );
+                }
                 let base = Base::new(
                     "pool",
                     Some(pid.clone()),
                     clean_label(part.attribute("name")),
-                    Attrs::new(),
+                    attrs,
                     Vec::new(),
                     0,
                 );
@@ -527,12 +719,12 @@ impl<'a, 'i> Importer<'a, 'i> {
                 self.doc.title = Some(l);
             }
         }
-        if let Some(c) = collab {
-            let mfs: Vec<X> = findall(c, "messageFlow").collect();
+        for (k, c) in collabs.iter().enumerate() {
+            let mfs: Vec<X> = findall(*c, "messageFlow").collect();
             for mf in mfs {
                 self.message_flow(mf);
             }
-            for e in children(c) {
+            for e in children(*c) {
                 let t = local(e);
                 if [
                     "conversation",
@@ -540,8 +732,12 @@ impl<'a, 'i> Importer<'a, 'i> {
                     "callConversation",
                     "conversationLink",
                     "participantAssociation",
+                    "conversationAssociation",
+                    "messageFlowAssociation",
+                    "choreography",
                 ]
                 .contains(&t)
+                    || (t == "correlationKey" && k > 0)
                 {
                     self.warn(
                         e.attribute("id"),
@@ -551,8 +747,17 @@ impl<'a, 'i> Importer<'a, 'i> {
                 }
             }
         }
+        self.process_names(single);
+        if !self.doc.pools.is_empty() {
+            // the header documents the definitions of a document with pools
+            let mut attrs = std::mem::take(&mut self.doc.attrs);
+            self.doc(root, &mut attrs);
+            self.doc.attrs = attrs;
+        }
         self.flows_and_artifacts();
         self.declarations_05(collab);
+        self.unreferenced();
+        self.sweep();
         self.derive_flow_ids();
         Ok((self.doc, self.warnings))
     }
@@ -573,7 +778,65 @@ impl<'a, 'i> Importer<'a, 'i> {
                 .flags
                 .push("executable".into());
         }
+        self.pool_processes.push((pool_idx, p));
         self.process(p, Some(pool_idx));
+    }
+
+    /// `process-name=` where the process name differs from the one tok derives: the title
+    /// in a document without pools or with one pool with a process, otherwise the label of
+    /// the pool (language 0.5; an empty value means a process without a name).
+    fn process_names(&mut self, single: Option<X<'a, 'i>>) {
+        let title = self.doc.title.clone().filter(|t| !t.is_empty());
+        if let Some(p) = single {
+            let name = clean_label(p.attribute("name"));
+            if name != title {
+                self.doc
+                    .attrs
+                    .insert("process-name".into(), name.unwrap_or_default());
+                self.uses_05();
+            }
+            return;
+        }
+        let inner = self.pool_processes.len();
+        for (i, p) in self.pool_processes.clone() {
+            let name = clean_label(p.attribute("name"));
+            let pool = &self.doc.pools[i];
+            let derived = if inner == 1 && title.is_some() {
+                title.clone()
+            } else {
+                pool.base.label.clone()
+            };
+            if name != derived {
+                self.doc.pools[i]
+                    .base
+                    .attrs
+                    .insert("process-name".into(), name.unwrap_or_default());
+                self.uses_05();
+            }
+        }
+    }
+
+    /// Attributes of a process that tok does not keep.
+    fn process_attributes(&mut self, p: X<'a, 'i>) {
+        let id = p.attribute("id");
+        if let Some(t) = p
+            .attribute("processType")
+            .filter(|t| !t.is_empty() && *t != "None")
+        {
+            self.warn(id, &format!("processType=\"{t}\" is not kept"), None);
+        }
+        if p.attribute("isClosed") == Some("true") {
+            self.warn(id, "isClosed=\"true\" is not kept", None);
+        }
+        if children(p).any(|c| {
+            is_bpmn(c)
+                && matches!(
+                    local(c),
+                    "performer" | "humanPerformer" | "potentialOwner" | "resourceRole"
+                )
+        }) {
+            self.warn(id, "performers of a process are not kept", None);
+        }
     }
 
     fn process(&mut self, p: X<'a, 'i>, pool: Option<usize>) {
@@ -592,6 +855,13 @@ impl<'a, 'i> Importer<'a, 'i> {
                 }
             }
             self.uses_03();
+        }
+        self.process_attributes(p);
+        if pool.is_none() {
+            // the header documents the process of a document without pools
+            let mut attrs = std::mem::take(&mut self.doc.attrs);
+            self.doc(p, &mut attrs);
+            self.doc.attrs = attrs;
         }
         let scope = match pool {
             Some(i) => self.doc.pools[i].process_id(),
@@ -660,11 +930,13 @@ impl<'a, 'i> Importer<'a, 'i> {
         lane_of: &mut IndexMap<String, String>,
     ) -> String {
         let lid = self.tid_s(e.attribute("id"));
+        let mut attrs = Attrs::new();
+        self.doc(e, &mut attrs);
         let base = Base::new(
             "lane",
             Some(lid.clone()),
             clean_label(e.attribute("name")),
-            Attrs::new(),
+            attrs,
             Vec::new(),
             0,
         );
@@ -838,6 +1110,20 @@ impl<'a, 'i> Importer<'a, 'i> {
                 let block = sub.or(pool).map(str::to_string);
                 let did = self.data(c, t, scope, block);
                 order.data.push(did);
+            } else if t == "dataObject" {
+                let id = c.attribute("id").unwrap_or("");
+                let refs = self.object_refs.get(id).copied().unwrap_or(0);
+                if refs == 0 || self.direct_objects.contains(id) {
+                    // tok declares data objects through their references (`data`)
+                    let block = sub.or(pool).map(str::to_string);
+                    let did = self.data(c, t, scope, block);
+                    order.data.push(did);
+                    self.warn(
+                        Some(id),
+                        "data object without a reference (or named directly by a data association) was imported as a data object reference",
+                        None,
+                    );
+                }
             } else if t == "laneSet" && sub.is_some() {
                 self.warn(
                     c.attribute("id"),
@@ -852,9 +1138,9 @@ impl<'a, 'i> Importer<'a, 'i> {
                         order.data.push(did);
                     }
                 } else {
-                    let made = implicit_io(e);
+                    self.io_sets(c);
                     for (x, kind) in io_items(c) {
-                        if x.attribute("id").is_some_and(|i| made.contains(i)) {
+                        if x.attribute("id").is_some_and(|i| self.implicit.contains(i)) {
                             continue;
                         }
                         if let Some(did) = self.io_data(x, kind, scope, block.clone(), None) {
@@ -952,13 +1238,12 @@ impl<'a, 'i> Importer<'a, 'i> {
             && let Some(r) = e.attribute("messageRef").filter(|r| !r.is_empty())
         {
             let name = self.named(r, "message");
-            n.base.attrs.insert("message".into(), name);
+            n.base.attrs.insert("message".into(), name.clone());
             if kind == "receive" && self.correlation(r).is_some() {
-                self.warn(
-                    Some(&nid),
-                    "correlation key of a receive task cannot be expressed in tok; use a message catch event",
-                    None,
+                let msg = format!(
+                    "correlation key of a receive task cannot be expressed in tok; use a message catch event (message '{name}')"
                 );
+                self.warn(Some(&nid), &msg, None);
             }
         }
         if kind == "script"
@@ -1021,6 +1306,10 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
         }
         self.extensions(e, &mut n);
+        let mut attrs = std::mem::take(&mut n.base.attrs);
+        self.doc(e, &mut attrs);
+        n.base.attrs = attrs;
+        self.unkept_attributes(e, kind);
         self.doc.ids.insert(
             nid.clone(),
             IdEntry {
@@ -1030,6 +1319,117 @@ impl<'a, 'i> Importer<'a, 'i> {
         );
         self.doc.nodes.insert(nid.clone(), n);
         nid
+    }
+
+    /// The process element that contains `e` executes (`isExecutable="true"`).
+    fn in_executable_process(e: X) -> bool {
+        e.ancestors()
+            .find(|a| is_b(*a, "process"))
+            .is_some_and(|p| p.attribute("isExecutable") == Some("true"))
+    }
+
+    /// Attributes and parts of a flow node that tok does not keep.
+    fn unkept_attributes(&mut self, e: X<'a, 'i>, kind: &str) {
+        let id = e.attribute("id");
+        let t = local(e);
+        let mut lost: Vec<String> = Vec::new();
+        for a in ["startQuantity", "completionQuantity"] {
+            if let Some(v) = e.attribute(a).filter(|v| !v.is_empty() && *v != "1") {
+                lost.push(format!("{a}=\"{v}\""));
+            }
+        }
+        let implementation_default = match t {
+            "serviceTask" | "sendTask" | "receiveTask" => Some("##WebService"),
+            "userTask" | "businessRuleTask" => Some("##unspecified"),
+            _ => None,
+        };
+        if let Some(v) = e
+            .attribute("implementation")
+            .filter(|v| !v.is_empty() && Some(*v) != implementation_default)
+        {
+            lost.push(format!("implementation=\"{v}\""));
+        }
+        if t == "scriptTask"
+            && let Some(f) = e.attribute("scriptFormat").filter(|f| !f.is_empty())
+        {
+            lost.push(format!("scriptFormat=\"{f}\""));
+        }
+        if let Some(mi) = find(e, "multiInstanceLoopCharacteristics") {
+            for part in [
+                "loopCardinality",
+                "loopDataInputRef",
+                "loopDataOutputRef",
+                "inputDataItem",
+                "outputDataItem",
+                "complexBehaviorDefinition",
+            ] {
+                if find(mi, part).is_some() {
+                    lost.push(format!("multi-instance {part}"));
+                }
+            }
+            if let Some(b) = mi.attribute("behavior").filter(|b| *b != "All") {
+                lost.push(format!("multi-instance behavior=\"{b}\""));
+            }
+            if find(mi, "completionCondition").is_some() && !Self::in_executable_process(e) {
+                lost.push("the completion condition of a multi-instance activity (exported only in executable processes)".into());
+            }
+        }
+        let roles: Vec<X> = children(e)
+            .filter(|c| {
+                is_bpmn(*c)
+                    && matches!(
+                        local(*c),
+                        "performer" | "humanPerformer" | "potentialOwner" | "resourceRole"
+                    )
+            })
+            .collect();
+        for (k, r) in roles.iter().enumerate() {
+            let role = local(*r);
+            let exported = if kind == "user" || kind == "manual" {
+                "humanPerformer"
+            } else {
+                "performer"
+            };
+            if k > 0 {
+                lost.push(format!("{role} (only the first performer is kept)"));
+            } else if find(*r, "resourceRef").is_none() {
+                lost.push(format!("{role} without a resource reference"));
+            } else if role != exported {
+                lost.push(format!("{role} (kept as by=, exported as {exported})"));
+            }
+            for part in ["resourceAssignmentExpression", "resourceParameterBinding"] {
+                if find(*r, part).is_some() {
+                    lost.push(format!("{part} of {role}"));
+                }
+            }
+        }
+        for d in children(e).filter(|c| is_bpmn(*c) && definition_key(local(*c)).is_some()) {
+            if local(d) == "messageEventDefinition" && d.attribute("operationRef").is_some() {
+                lost.push("operationRef of the message event definition".into());
+            }
+            if local(d) == "compensateEventDefinition"
+                && d.attribute("waitForCompletion") == Some("false")
+            {
+                lost.push("waitForCompletion=\"false\"".into());
+            }
+            if local(d) == "linkEventDefinition"
+                && children(d).any(|c| is_b(c, "source") || is_b(c, "target"))
+            {
+                lost.push(
+                    "source and target of the link event definition (tok pairs links by name)"
+                        .into(),
+                );
+            }
+            if let Some(x) =
+                children(d).find(|c| c.attribute("language").is_some_and(|l| !l.is_empty()))
+            {
+                let l = x.attribute("language").unwrap_or("");
+                lost.push(format!("expression language {l}"));
+            }
+        }
+        for x in lost {
+            self.warn(id, &format!("{x} is not kept"), None);
+        }
     }
 
     fn correlation(&self, msg_ref: &str) -> Option<String> {
@@ -1078,6 +1478,19 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
     }
 
+    /// A trigger without a value: the flag `message`, `timer`, `signal`, `condition`,
+    /// `error` or `escalation` (language 0.5). A second one of the same kind is reported.
+    fn nameless(&mut self, n: &mut Node, key: &str) {
+        if n.base.has(key) {
+            let msg = format!("a second {key} definition without a reference is not kept");
+            let nid = n.base.id().to_string();
+            self.warn(Some(&nid), &msg, None);
+            return;
+        }
+        n.base.flags.push(key.to_string());
+        self.uses_05();
+    }
+
     fn event_definition(&mut self, c: X<'a, 'i>, n: &mut Node) {
         let nid = n.base.id().to_string();
         let key = definition_key(local(c)).unwrap_or("message");
@@ -1105,18 +1518,14 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
             "message" => {
                 let r = c.attribute("messageRef").filter(|r| !r.is_empty());
-                let name = match r {
-                    Some(r) => self.named(r, "message"),
-                    None => label_or_id.clone(),
+                let Some(r) = r else {
+                    // a message event without a message (language 0.5)
+                    self.nameless(n, "message");
+                    return;
                 };
+                let name = self.named(r, "message");
                 Self::put_trigger(n, "message", name);
-                if r.is_none() {
-                    self.warn(Some(&nid), "message event without messageRef; the event label was used as message name", None);
-                }
-                if let Some(corr) = r
-                    .and_then(|r| self.correlation(r))
-                    .filter(|c| !c.is_empty())
-                {
+                if let Some(corr) = self.correlation(r).filter(|c| !c.is_empty()) {
                     n.base.attrs.insert("correlation".into(), corr);
                 }
             }
@@ -1142,13 +1551,8 @@ impl<'a, 'i> Importer<'a, 'i> {
                         n.base.flags.push(key.into());
                         self.uses_03();
                     }
-                    None => {
-                        Self::put_trigger(n, key, label_or_id.clone());
-                        let msg = format!(
-                            "{key} event without a reference; the event label was used as name"
-                        );
-                        self.warn(Some(&nid), &msg, None);
-                    }
+                    // an event without a signal, error or escalation (language 0.5)
+                    None => self.nameless(n, key),
                 }
             }
             "timer" => {
@@ -1161,19 +1565,21 @@ impl<'a, 'i> Importer<'a, 'i> {
                         break;
                     }
                 }
-                let value = match value {
-                    Some(v) => v,
-                    None => {
-                        self.warn(Some(&nid), "timer without a value; P1D was used", None);
-                        "P1D".into()
-                    }
-                };
-                Self::put_trigger(n, "timer", value);
+                match value {
+                    Some(v) => Self::put_trigger(n, "timer", v),
+                    // a timer without a time (language 0.5)
+                    None => self.nameless(n, "timer"),
+                }
             }
             "condition" => {
                 let x = find(c, "condition");
                 let v = strip_feel(x.and_then(text));
-                Self::put_trigger(n, "condition", if v.is_empty() { "true".into() } else { v });
+                if v.is_empty() {
+                    // a conditional event without a condition (language 0.5)
+                    self.nameless(n, "condition");
+                } else {
+                    Self::put_trigger(n, "condition", v);
+                }
             }
             _ => {
                 let v = c
@@ -1253,10 +1659,16 @@ impl<'a, 'i> Importer<'a, 'i> {
             // read with the content of the sub-process (`container`)
             return out;
         }
-        let made = implicit_io(e);
-        if let Some(io) = find(e, "ioSpecification") {
+        // an event has its data inputs or outputs and their set directly
+        let io = if is_event(kind_of_tag(local(e)).unwrap_or("")) {
+            Some(e)
+        } else {
+            find(e, "ioSpecification")
+        };
+        if let Some(io) = io {
+            self.io_sets(io);
             for (x, kind) in io_items(io) {
-                if x.attribute("id").is_some_and(|i| made.contains(i)) {
+                if x.attribute("id").is_some_and(|i| self.implicit.contains(i)) {
                     continue;
                 }
                 if let Some(did) = self.io_data(x, kind, scope, block.clone(), Some(nid)) {
@@ -1267,7 +1679,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         let props: Vec<X> = findall(e, "property").collect();
         for p in props {
             if p.attribute("name") == Some("__targetRef_placeholder")
-                || p.attribute("id").is_some_and(|i| made.contains(i))
+                || p.attribute("id").is_some_and(|i| self.implicit.contains(i))
             {
                 continue;
             }
@@ -1276,6 +1688,37 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
         }
         out
+    }
+
+    /// tok writes one input set with every data input and one output set with every data
+    /// output; other sets are reported.
+    fn io_sets(&mut self, io: X<'a, 'i>) {
+        for (item, set, refs) in [
+            ("dataInput", "inputSet", "dataInputRefs"),
+            ("dataOutput", "outputSet", "dataOutputRefs"),
+        ] {
+            let all: HashSet<&str> = children(io)
+                .filter(|x| is_b(*x, item))
+                .filter_map(|x| x.attribute("id"))
+                .collect();
+            let sets: Vec<X> = children(io).filter(|x| is_b(*x, set)).collect();
+            let plain = sets.len() <= 1
+                && sets.iter().all(|s| {
+                    let members: HashSet<&str> = children(*s)
+                        .filter(|r| is_b(*r, refs))
+                        .filter_map(text)
+                        .map(strip)
+                        .collect();
+                    children(*s).all(|r| is_b(r, refs)) && (members == all || all.is_empty())
+                });
+            if !plain {
+                let owner = io.parent_element().and_then(|p| p.attribute("id"));
+                let msg = format!(
+                    "the {set}s of the ioSpecification are not kept (tok writes one set of all {item}s)"
+                );
+                self.warn(owner, &msg, None);
+            }
+        }
     }
 
     /// One `input`, `output` or `property` (language 0.5).
@@ -1309,6 +1752,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         if let Some(o) = on {
             base.attrs.insert("on".into(), o.to_string());
         }
+        self.doc(x, &mut base.attrs);
         let mut d = Data {
             base,
             scope: None,
@@ -1342,7 +1786,12 @@ impl<'a, 'i> Importer<'a, 'i> {
             match t {
                 "itemDefinition" => {
                     let id = self.tid_s(e.attribute("id"));
-                    let label = find(e, "documentation").and_then(|x| clean_label(text(x)));
+                    // the label of an item is its documentation (an item definition has no name)
+                    let docs = find(e, "documentation");
+                    if let Some(d) = docs {
+                        self.docs_read.insert(d.id());
+                    }
+                    let label = docs.and_then(|x| clean_label(text(x)));
                     let mut b =
                         Base::new("item", Some(id.clone()), label, Attrs::new(), Vec::new(), 0);
                     if let Some(s) = e.attribute("structureRef").filter(|s| !s.is_empty()) {
@@ -1353,14 +1802,23 @@ impl<'a, 'i> Importer<'a, 'i> {
                             Some((p, name)) if e.lookup_namespace_uri(Some(p)) == Some(XSD_NS) => {
                                 format!("xsd:{name}")
                             }
-                            Some((_, name)) => {
-                                self.warn(
-                                    e.attribute("id"),
-                                    &format!("namespace prefix of structureRef '{s}' was dropped"),
-                                    None,
-                                );
-                                name.to_string()
-                            }
+                            Some((p, name)) => match e.lookup_namespace_uri(Some(p)) {
+                                // a prefixed name keeps its namespace (language 0.5)
+                                Some(ns) if !RESERVED_PREFIXES.contains(&p) => {
+                                    b.attrs.insert("namespace".into(), ns.to_string());
+                                    format!("{p}:{name}")
+                                }
+                                _ => {
+                                    self.warn(
+                                        e.attribute("id"),
+                                        &format!(
+                                            "namespace prefix of structureRef '{s}' was dropped"
+                                        ),
+                                        None,
+                                    );
+                                    name.to_string()
+                                }
+                            },
                         };
                         b.attrs.insert("structure".into(), v);
                     }
@@ -1396,27 +1854,19 @@ impl<'a, 'i> Importer<'a, 'i> {
                 "interface" => {
                     let id = self.tid_s(e.attribute("id"));
                     let label = name().filter(|l| *l != id);
-                    let base = Base::new(
-                        "interface",
-                        Some(id.clone()),
-                        label,
-                        Attrs::new(),
-                        Vec::new(),
-                        0,
-                    );
+                    let mut attrs = Attrs::new();
+                    self.doc(e, &mut attrs);
+                    let base =
+                        Base::new("interface", Some(id.clone()), label, attrs, Vec::new(), 0);
                     let mut operations = Vec::new();
                     let ops: Vec<X> = findall(e, "operation").collect();
                     for op in ops {
                         let oid = self.tid_s(op.attribute("id"));
                         let label = clean_label(op.attribute("name")).filter(|l| *l != oid);
-                        let mut b = Base::new(
-                            "operation",
-                            Some(oid.clone()),
-                            label,
-                            Attrs::new(),
-                            Vec::new(),
-                            0,
-                        );
+                        let mut attrs = Attrs::new();
+                        self.doc(op, &mut attrs);
+                        let mut b =
+                            Base::new("operation", Some(oid.clone()), label, attrs, Vec::new(), 0);
                         for (child, key, kind) in [
                             ("inMessageRef", "in", "message"),
                             ("outMessageRef", "out", "message"),
@@ -1452,16 +1902,24 @@ impl<'a, 'i> Importer<'a, 'i> {
                 _ => {
                     if let Some((kind, _)) = GLOBAL_KINDS.iter().find(|(_, g)| *g == t) {
                         let id = self.tid_s(e.attribute("id"));
-                        let mut b = Base::new(
-                            "global",
-                            Some(id.clone()),
-                            name(),
-                            Attrs::new(),
-                            Vec::new(),
-                            0,
-                        );
+                        let mut attrs = Attrs::new();
+                        self.doc(e, &mut attrs);
+                        let mut b =
+                            Base::new("global", Some(id.clone()), name(), attrs, Vec::new(), 0);
                         if *kind != "task" {
                             b.attrs.insert("kind".into(), (*kind).to_string());
+                        }
+                        let default = if *kind == "user" || *kind == "rule" {
+                            "##unspecified"
+                        } else {
+                            ""
+                        };
+                        if let Some(v) = e
+                            .attribute("implementation")
+                            .filter(|v| !v.is_empty() && *v != default)
+                        {
+                            let msg = format!("implementation=\"{v}\" is not kept");
+                            self.warn(e.attribute("id"), &msg, None);
                         }
                         self.register_05("global", &id);
                         self.doc.globals.insert(id, b);
@@ -1524,6 +1982,173 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
     }
 
+    /// Declarations that no element uses (tok declares messages, signals, errors,
+    /// escalations and data stores through their uses), and their attributes tok does not
+    /// keep.
+    fn unreferenced(&mut self) {
+        let root = self.root;
+        let mut used: HashSet<&str> = HashSet::new();
+        for e in root.descendants().filter(|e| is_bpmn(*e)) {
+            for a in [
+                "messageRef",
+                "signalRef",
+                "errorRef",
+                "escalationRef",
+                "dataStoreRef",
+                "categoryValueRef",
+            ] {
+                if let Some(v) = e.attribute(a) {
+                    used.insert(v.trim());
+                }
+            }
+            if matches!(local(e), "inMessageRef" | "outMessageRef" | "errorRef")
+                && let Some(t) = text(e)
+            {
+                used.insert(t.trim());
+            }
+        }
+        let decls: Vec<X> = children(root).filter(|e| is_bpmn(*e)).collect();
+        for e in decls {
+            let t = local(e);
+            let id = e.attribute("id");
+            if matches!(
+                t,
+                "message" | "signal" | "error" | "escalation" | "dataStore"
+            ) && !id.is_some_and(|i| used.contains(i))
+            {
+                let msg = format!("{t} that no element uses is not kept");
+                self.warn(id, &msg, None);
+                continue;
+            }
+            let mut lost: Vec<String> = Vec::new();
+            match t {
+                "message" => {
+                    if let Some(r) = e.attribute("itemRef").filter(|r| !r.is_empty()) {
+                        lost.push(format!("itemRef=\"{r}\""));
+                    }
+                }
+                "signal" | "error" | "escalation" => {
+                    if let Some(r) = e.attribute("structureRef").filter(|r| !r.is_empty()) {
+                        lost.push(format!("structureRef=\"{r}\""));
+                    }
+                }
+                "dataStore" => {
+                    if let Some(c) = e.attribute("capacity").filter(|c| !c.is_empty()) {
+                        lost.push(format!("capacity=\"{c}\""));
+                    }
+                    if e.attribute("isUnlimited") == Some("false") {
+                        lost.push("isUnlimited=\"false\"".into());
+                    }
+                    if let Some(r) = e.attribute("itemSubjectRef").filter(|r| !r.is_empty()) {
+                        lost.push(format!("itemSubjectRef=\"{r}\" of the data store"));
+                    }
+                }
+                "category" => {
+                    for v in children(e).filter(|v| is_b(*v, "categoryValue")) {
+                        if !v.attribute("id").is_some_and(|i| used.contains(i)) {
+                            let msg = format!(
+                                "category value '{}' that no group uses is not kept",
+                                v.attribute("value").unwrap_or("")
+                            );
+                            self.warn(v.attribute("id"), &msg, None);
+                        }
+                    }
+                    if e.attribute("name").is_some_and(|n| !n.trim().is_empty()) {
+                        lost.push("the name of the category".into());
+                    }
+                }
+                _ => {}
+            }
+            for x in lost {
+                self.warn(id, &format!("{x} is not kept"), None);
+            }
+        }
+    }
+
+    /// Everything else tok does not keep: documentation of elements that have no `doc=`,
+    /// extension elements and attributes of other tools, BPMN elements tok does not know,
+    /// expression languages, `isImmediate`.
+    fn sweep(&mut self) {
+        let root = self.root;
+        let mut immediate = 0;
+        for e in root.descendants().filter(|e| is_bpmn(*e)) {
+            let t = local(e);
+            let parent = e.parent_element();
+            let ptag = parent.map(local).unwrap_or("");
+            let pid = parent.and_then(|p| p.attribute("id"));
+            if t == "documentation" && !self.docs_read.contains(&e.id()) {
+                let msg = format!("documentation of {ptag} is not kept");
+                self.warn(pid, &msg, None);
+            }
+            if t == "extensionElements" && kind_of_tag(ptag).is_none() {
+                for z in children(e) {
+                    let ns = z.tag_name().namespace();
+                    let read = ns == Some(ZEEBE_NS)
+                        && matches!(
+                            (ptag, local(z)),
+                            ("message", "subscription")
+                                | ("process", "versionTag")
+                                | ("multiInstanceLoopCharacteristics", "loopCharacteristics")
+                        );
+                    if !read {
+                        let tag = clark(z);
+                        self.warn(
+                            pid,
+                            &format!("extension element {tag} was skipped"),
+                            Some(format!("ext-{tag}")),
+                        );
+                    }
+                }
+            }
+            for a in e.attributes() {
+                let Some(ns) = a.namespace() else {
+                    continue;
+                };
+                if ns == BPMN_NS
+                    || ns == crate::xml::MODELER_NS
+                    || (ns == crate::xml::XSI_NS && a.name() == "type")
+                {
+                    continue;
+                }
+                let qn = format!("{{{ns}}}{}", a.name());
+                self.warn(
+                    e.attribute("id").or(pid),
+                    &format!("attribute {qn} was skipped"),
+                    Some(format!("attr-{qn}")),
+                );
+            }
+            if t == "sequenceFlow" && e.attribute("isImmediate").is_some() {
+                immediate += 1;
+            }
+            if let Some(l) = e.attribute("language").filter(|l| !l.is_empty())
+                && matches!(t, "conditionExpression" | "transformation")
+            {
+                let msg = format!("expression language {l} is not kept");
+                self.warn(pid, &msg, Some(format!("language-{l}")));
+            }
+            let known = match ptag {
+                "process" | "subProcess" | "transaction" | "adHocSubProcess" => {
+                    kind_of_tag(t).is_some() || CONTAINER_PARTS.contains(&t)
+                }
+                "definitions" => {
+                    ROOT_PARTS.contains(&t) || GLOBAL_KINDS.iter().any(|(_, g)| *g == t)
+                }
+                "collaboration" => COLLABORATION_PARTS.contains(&t),
+                _ => true,
+            };
+            if !known {
+                let msg = format!("{t} is not supported and was skipped");
+                self.warn(e.attribute("id"), &msg, None);
+            }
+        }
+        if immediate > 0 {
+            let msg = format!(
+                "isImmediate of {immediate} sequence flow(s) is not kept (tok does not record it)"
+            );
+            self.warn(None, &msg, None);
+        }
+    }
+
     fn register_05(&mut self, kind: &str, id: &str) {
         self.doc.ids.insert(
             id.to_string(),
@@ -1551,6 +2176,14 @@ impl<'a, 'i> Importer<'a, 'i> {
                     Some(format!("ext-{tag}")),
                 );
                 continue;
+            }
+            if !Self::in_executable_process(e) {
+                // the text keeps them; `tok check` reports them (R055)
+                self.warn(
+                    Some(&nid),
+                    "Camunda extensions of a process that is not executable are not exported",
+                    Some("zeebe-not-executable".into()),
+                );
             }
             let attr = |name: &str| z.attribute(name).filter(|v| !v.is_empty());
             if t == "userTask" && kind == "user" {
@@ -1745,7 +2378,8 @@ impl<'a, 'i> Importer<'a, 'i> {
             } else if t == "taskDefinition"
                 && (kind == "service"
                     || kind == "send"
-                    || ((kind == "throw" || kind == "end") && n.base.attrs.contains_key("message")))
+                    || ((kind == "throw" || kind == "end")
+                        && (n.base.attrs.contains_key("message") || n.base.has("message"))))
             {
                 if let Some(ty) = attr("type") {
                     n.base.attrs.insert("type".into(), ty.to_string());
@@ -1774,24 +2408,51 @@ impl<'a, 'i> Importer<'a, 'i> {
 
     fn data(&mut self, e: X<'a, 'i>, t: &str, scope: &str, block: Option<String>) -> String {
         let did = self.tid_s(e.attribute("id"));
-        let mut x = if t == "dataObjectReference" {
-            let obj = e
-                .attribute("dataObjectRef")
-                .and_then(|r| self.by_id.get(r).copied());
-            let label = clean_label(e.attribute("name"))
-                .or_else(|| obj.and_then(|o| clean_label(o.attribute("name"))));
+        let mut attrs = Attrs::new();
+        self.doc(e, &mut attrs);
+        let mut x = if t == "dataObjectReference" || t == "dataObject" {
+            // a data object without a reference stands for itself
+            let obj = if t == "dataObject" {
+                Some(e)
+            } else {
+                e.attribute("dataObjectRef")
+                    .and_then(|r| self.by_id.get(r).copied())
+            };
+            let object_name = obj.and_then(|o| clean_label(o.attribute("name")));
+            let label = if t == "dataObject" {
+                object_name.clone()
+            } else {
+                clean_label(e.attribute("name")).or_else(|| object_name.clone())
+            };
             let mut x = Data {
                 base: Base::new(
                     "data",
                     Some(did.clone()),
-                    label,
-                    Attrs::new(),
+                    label.clone(),
+                    attrs,
                     Vec::new(),
                     0,
                 ),
                 scope: None,
                 block: None,
             };
+            if let Some(o) = obj {
+                // `object=` names a data object shared by several references, or one whose
+                // name differs from the reference's (language 0.5)
+                let oid = o.attribute("id").unwrap_or("");
+                let refs = self.object_refs.get(oid).copied().unwrap_or(0);
+                let shared = if t == "dataObject" {
+                    refs > 0
+                } else {
+                    refs > 1 || self.direct_objects.contains(oid)
+                };
+                if shared || object_name != label {
+                    x.base
+                        .attrs
+                        .insert("object".into(), object_name.clone().unwrap_or_default());
+                    self.uses_05();
+                }
+            }
             if let Some(st) = find(e, "dataState")
                 && let Some(name) = st.attribute("name").filter(|v| !v.is_empty())
             {
@@ -1814,25 +2475,21 @@ impl<'a, 'i> Importer<'a, 'i> {
             let store = e
                 .attribute("dataStoreRef")
                 .and_then(|r| self.by_id.get(r).copied());
-            let label = clean_label(e.attribute("name"))
-                .or_else(|| store.and_then(|o| clean_label(o.attribute("name"))));
+            let store_name = store.and_then(|o| clean_label(o.attribute("name")));
+            let label = clean_label(e.attribute("name")).or_else(|| store_name.clone());
+            if store.is_some() && store_name != label {
+                self.warn(
+                    e.attribute("id"),
+                    "the data store is named after its reference (tok shares data stores by label)",
+                    None,
+                );
+            }
             let mut x = Data {
-                base: Base::new(
-                    "store",
-                    Some(did.clone()),
-                    label,
-                    Attrs::new(),
-                    Vec::new(),
-                    0,
-                ),
+                base: Base::new("store", Some(did.clone()), label, attrs, Vec::new(), 0),
                 scope: None,
                 block: None,
             };
-            if let Some(t) = e
-                .attribute("itemSubjectRef")
-                .or(store.and_then(|s| s.attribute("itemSubjectRef")))
-                .filter(|t| !t.is_empty())
-            {
+            if let Some(t) = e.attribute("itemSubjectRef").filter(|t| !t.is_empty()) {
                 let t = self.tid_s(Some(t));
                 x.base.attrs.insert("type".into(), t);
                 self.uses_05();
@@ -1877,6 +2534,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
         self.associations(&assocs);
         let mut annotated: IndexMap<String, Option<String>> = IndexMap::new();
+        let mut unkept: Vec<(Option<&str>, String)> = Vec::new();
         for a in self.root.descendants().filter(|n| is_b(*n, "association")) {
             let (src, tgt) = (a.attribute("sourceRef"), a.attribute("targetRef"));
             let is_note = |r: Option<&str>| {
@@ -1884,28 +2542,62 @@ impl<'a, 'i> Importer<'a, 'i> {
                     .map(|e| local(*e) == "textAnnotation")
                     .unwrap_or(false)
             };
-            if is_note(src) {
-                annotated
-                    .entry(src.unwrap_or("").to_string())
-                    .or_insert(tgt.map(str::to_string));
+            let note = if is_note(src) {
+                Some((src, tgt))
             } else if is_note(tgt) {
-                annotated
-                    .entry(tgt.unwrap_or("").to_string())
-                    .or_insert(src.map(str::to_string));
+                Some((tgt, src))
+            } else {
+                None
+            };
+            match note {
+                Some((n, other)) => {
+                    let n = n.unwrap_or("").to_string();
+                    if annotated.contains_key(&n) {
+                        unkept.push((
+                            a.attribute("id"),
+                            format!(
+                                "a second association of text annotation '{n}' is not kept (a note has one on=)"
+                            ),
+                        ));
+                    } else {
+                        annotated.insert(n, other.map(str::to_string));
+                    }
+                }
+                None => {
+                    let skipped = match a.attribute("id") {
+                        Some(i) => self.skip_ids.contains(i),
+                        None => self.skip_none,
+                    };
+                    if !skipped {
+                        unkept.push((
+                            a.attribute("id"),
+                            format!(
+                                "association between '{}' and '{}' is not kept (tok associates notes and compensation handlers)",
+                                src.unwrap_or(""),
+                                tgt.unwrap_or("")
+                            ),
+                        ));
+                    }
+                }
             }
+        }
+        for (id, msg) in unkept {
+            self.warn(id, &msg, None);
         }
         for e in notes {
             let t = find(e, "text").and_then(text);
             let id = self.tid_s(e.attribute("id"));
             let label = clean_label(Some(t.unwrap_or(""))).unwrap_or_default();
-            let mut note = Base::new(
-                "note",
-                Some(id.clone()),
-                Some(label),
-                Attrs::new(),
-                Vec::new(),
-                0,
-            );
+            let mut attrs = Attrs::new();
+            self.doc(e, &mut attrs);
+            if let Some(f) = e
+                .attribute("textFormat")
+                .filter(|f| !f.is_empty() && *f != "text/plain")
+            {
+                let msg = format!("text format {f} of the annotation is not kept");
+                self.warn(e.attribute("id"), &msg, None);
+            }
+            let mut note = Base::new("note", Some(id.clone()), Some(label), attrs, Vec::new(), 0);
             let target = e
                 .attribute("id")
                 .and_then(|i| annotated.get(i))
@@ -1930,11 +2622,13 @@ impl<'a, 'i> Importer<'a, 'i> {
                 .and_then(|r| self.by_id.get(r).copied());
             let label = cv.and_then(|c| clean_label(c.attribute("value")));
             let id = self.tid_s(e.attribute("id"));
+            let mut attrs = Attrs::new();
+            self.doc(e, &mut attrs);
             self.doc.groups.push(Base::new(
                 "group",
                 Some(id.clone()),
                 label,
-                Attrs::new(),
+                attrs,
                 Vec::new(),
                 0,
             ));
@@ -1973,11 +2667,15 @@ impl<'a, 'i> Importer<'a, 'i> {
             Vec::new(),
             0,
         );
-        if let Some(c) = find(e, "conditionExpression")
-            && !strip(text(c).unwrap_or("")).is_empty()
-        {
-            base.attrs.insert("when".into(), strip_feel(text(c)));
+        if let Some(c) = find(e, "conditionExpression") {
+            let w = strip_feel(text(c));
+            if w.is_empty() {
+                // a condition without an expression (`when=""`, language 0.5)
+                self.uses_05();
+            }
+            base.attrs.insert("when".into(), w);
         }
+        self.doc(e, &mut base.attrs);
         if let Some(srcel) = e.attribute("sourceRef").and_then(|r| self.by_id.get(r))
             && srcel.attribute("default").is_some()
             && srcel.attribute("default") == e.attribute("id")
@@ -2002,11 +2700,63 @@ impl<'a, 'i> Importer<'a, 'i> {
                 continue;
             };
             let act = self.tid_s(Some(oid));
+            if kind_of_tag(local(owner)).is_some_and(is_event) {
+                // data of events (language 0.5)
+                self.uses_05();
+            }
             let (refname, kind) = if local(*e) == "dataInputAssociation" {
                 ("sourceRef", "reads")
             } else {
                 ("targetRef", "writes")
             };
+            // the end inside the activity: a data input or output declared with `input`
+            // or `output … on=ACTIVITY` gives `input=` / `output=` (language 0.5)
+            let inner: Vec<String> = children(*e)
+                .filter(|r| {
+                    is_b(
+                        *r,
+                        if kind == "reads" {
+                            "targetRef"
+                        } else {
+                            "sourceRef"
+                        },
+                    )
+                })
+                .filter_map(text)
+                .map(|t| strip(t).to_string())
+                .filter(|t| !t.is_empty())
+                .collect();
+            let (io_key, io_kind) = if kind == "reads" {
+                ("input", "input")
+            } else {
+                ("output", "output")
+            };
+            let mut declared = None;
+            for (k, x) in inner.iter().enumerate() {
+                let t = self.idmap.get(x).cloned().unwrap_or_else(|| x.clone());
+                if self
+                    .doc
+                    .data
+                    .get(&t)
+                    .is_some_and(|d| d.base.kind == io_kind)
+                {
+                    if k == 0 {
+                        declared = Some(t);
+                    } else {
+                        self.warn(
+                            e.attribute("id"),
+                            "only the first source of a data output association is kept",
+                            None,
+                        );
+                    }
+                }
+            }
+            for part in ["transformation", "assignment"] {
+                if find(*e, part).is_some() {
+                    let msg = format!("{part} of the data association is not kept");
+                    self.warn(e.attribute("id"), &msg, None);
+                }
+            }
             let refs: Vec<String> = children(*e)
                 .filter(|r| is_b(*r, refname))
                 .filter_map(|r| {
@@ -2036,11 +2786,16 @@ impl<'a, 'i> Importer<'a, 'i> {
                 None => (1u8, k as u64),
             };
             for x in data_ids {
+                let mut attrs = Attrs::new();
+                if let Some(io) = &declared {
+                    attrs.insert(io_key.into(), io.clone());
+                    self.uses_05();
+                }
                 let base = Base::new(
                     kind,
                     Some(format!("{kind}-{act}-{x}")),
                     None,
-                    Attrs::new(),
+                    attrs,
                     Vec::new(),
                     0,
                 );
@@ -2077,7 +2832,11 @@ impl<'a, 'i> Importer<'a, 'i> {
             if Some(&name) != label.as_ref() {
                 base.attrs.insert("message".into(), name);
             }
+        } else if let Some(l) = &label {
+            let msg = format!("message flow without a message; tok links it to the message '{l}'");
+            self.warn(e.attribute("id"), &msg, None);
         }
+        self.doc(e, &mut base.attrs);
         self.doc.messages.push(MessageFlow {
             base,
             source: src,
@@ -2177,11 +2936,83 @@ fn io_items<'a, 'i>(io: X<'a, 'i>) -> Vec<(X<'a, 'i>, &'static str)> {
         .collect()
 }
 
-/// Identifiers of the data inputs, outputs and properties of an activity that only serve
-/// its data associations: the targets of its input associations and the sources of its
-/// output associations (tok writes them for `reads` and `writes`).
-fn implicit_io(e: X) -> HashSet<String> {
-    let mut out = HashSet::new();
+/// Children of a process or sub-process that the import reads or reports itself.
+const CONTAINER_PARTS: &[&str] = &[
+    "sequenceFlow",
+    "dataObject",
+    "dataObjectReference",
+    "dataStoreReference",
+    "laneSet",
+    "ioSpecification",
+    "property",
+    "textAnnotation",
+    "association",
+    "group",
+    "documentation",
+    "extensionElements",
+    "incoming",
+    "outgoing",
+    "dataInputAssociation",
+    "dataOutputAssociation",
+    "standardLoopCharacteristics",
+    "multiInstanceLoopCharacteristics",
+    "completionCondition",
+    "supportedInterfaceRef",
+    "performer",
+    "humanPerformer",
+    "potentialOwner",
+    "resourceRole",
+    "choreographyTask",
+    "subChoreography",
+    "callChoreography",
+];
+
+/// Root elements that the import reads or reports itself.
+const ROOT_PARTS: &[&str] = &[
+    "import",
+    "itemDefinition",
+    "message",
+    "signal",
+    "error",
+    "escalation",
+    "dataStore",
+    "resource",
+    "interface",
+    "correlationProperty",
+    "category",
+    "collaboration",
+    "process",
+    "choreography",
+    "globalChoreographyTask",
+    "globalConversation",
+    "documentation",
+    "extensionElements",
+];
+
+/// Children of a collaboration that the import reads or reports itself.
+const COLLABORATION_PARTS: &[&str] = &[
+    "participant",
+    "messageFlow",
+    "correlationKey",
+    "textAnnotation",
+    "association",
+    "group",
+    "documentation",
+    "extensionElements",
+    "conversation",
+    "subConversation",
+    "callConversation",
+    "conversationLink",
+    "participantAssociation",
+    "conversationAssociation",
+    "messageFlowAssociation",
+    "choreography",
+];
+
+/// The ends inside the element of its data associations: targets of the input
+/// associations and sources of the output associations, each with the association.
+fn inner_ends<'a, 'i>(e: X<'a, 'i>) -> Vec<(String, X<'a, 'i>)> {
+    let mut out = Vec::new();
     for (assoc, end) in [
         ("dataInputAssociation", "targetRef"),
         ("dataOutputAssociation", "sourceRef"),
@@ -2189,12 +3020,43 @@ fn implicit_io(e: X) -> HashSet<String> {
         for a in children(e).filter(|c| is_b(*c, assoc)) {
             for r in children(a).filter(|c| is_b(*c, end)) {
                 if let Some(t) = text(r) {
-                    out.insert(strip(t).to_string());
+                    out.push((strip(t).to_string(), a));
                 }
             }
         }
     }
     out
+}
+
+/// The data element at the outer end of a data association: the sources of an input
+/// association, the target of an output association.
+fn outer_ends<'a>(a: X<'a, '_>) -> Vec<&'a str> {
+    let end = if local(a) == "dataInputAssociation" {
+        "sourceRef"
+    } else {
+        "targetRef"
+    };
+    children(a)
+        .filter(|c| is_b(*c, end))
+        .filter_map(text)
+        .map(strip)
+        .filter(|t| !t.is_empty())
+        .collect()
+}
+
+/// `ACTIVITY-in-N` or `ACTIVITY-out-N`, the identifiers tok gives the data inputs and
+/// outputs of `reads` and `writes`.
+fn generated_io_id(activity: &str, id: &str) -> bool {
+    let Some(rest) = id.strip_prefix(activity) else {
+        return false;
+    };
+    let Some(n) = rest
+        .strip_prefix("-in-")
+        .or_else(|| rest.strip_prefix("-out-"))
+    else {
+        return false;
+    };
+    !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit())
 }
 
 /// `-(?:dia|doa)-(\d+)$`

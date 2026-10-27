@@ -52,6 +52,8 @@ flag           a bare WORD after the identifier and label: a boolean set to true
 
 Attributes may appear in any order; the formatter prints them in the order of the attribute tables below. An unknown attribute key is a warning (`R010`); an unknown flag is an error (`R011`).
 
+**Documentation** (language 0.5). `doc="Text"` gives the BPMN `documentation` of the element a statement exports: flow nodes, flows, message flows, pools (the participant), lanes, `data`, `store`, `input`, `output`, `property`, notes, groups, `global`, `interface` and `operation`; on the header it documents the process of a document without pools and the definitions of a document with pools. It is plain text (`\n` for a line break) and allowed at every level. The label of an `item` is already its documentation.
+
 A key is normally given once; when it is repeated, the last value counts. In a document of language 0.5 the trigger keys of events (`message`, `timer`, `signal`, `error`, `escalation`, `condition`, `link`, §5.1.1) and `error` on an `operation` (§5.6) may repeat: every value counts, in written order, and the formatter prints the values of one key together.
 
 ## 4. Document structure
@@ -70,6 +72,8 @@ tok 0.5 "Interlibrary loan" executable
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
 | `target=camunda` | the execution platform for export; see §10 |
 | `version-tag="v1"` | version tag of the process (executable layer, §10.3) |
+| `process-name="Name"` | name of the process of a document without pools, when it differs from the title (language 0.5; `""` for a process without a name); a pool names its own process (§5.5) |
+| `doc="Text"` | documentation (§3) |
 
 After the header come top-level statements in any order:
 
@@ -112,11 +116,14 @@ Trigger attributes (one per event; several make a multiple event, §5.1.1):
 | `terminate` (flag) | terminate | end | no |
 | `compensate` (flag) | compensation | throw, end, boundary | no |
 | `cancel` (flag) | cancel (language 0.5) | end inside a transaction, boundary of a transaction (§5.3) | no |
-| `error`, `escalation` (flags without a name) | any error, any escalation | boundary, start of an event sub-process | no |
+| `error`, `escalation` (flags without a name) | any error, any escalation on boundary events and event sub-process starts; elsewhere (language 0.5) an error or escalation without a reference | as the attribute of the same name | no |
+| `message`, `timer`, `signal`, `condition` (flags without a value, language 0.5) | a trigger of that kind whose message, time, signal or condition is not given (the event definition has no reference; a conditional one has an empty condition) | as the attribute of the same name | yes |
 
 Other event attributes: `on=ID` (boundary only), `noninterrupting` (flag; boundary events and event sub-process starts), `parallel` (flag; a parallel multiple event, §5.1.1), `correlation="FEEL"` (message catch events in executable documents, §10).
 
 Messages, signals, errors and escalations are declared implicitly by name. Two triggers with the same name refer to the same declaration. `error` and `escalation` accept an optional `code="…"`.
+
+The trigger flags without a value describe a model whose details are not known yet, as BPMN tools draw them; the level `basic` rejects them like the other triggers (`R040`). In executable documents the BPMN rules report them (`C050`, `C080`); in simulation such a trigger waits for the event's `delay=`, like a message.
 
 #### 5.1.1 Multiple and parallel multiple events (language 0.5)
 
@@ -248,7 +255,7 @@ eventgw start-gw "Co przyszło najpierw?" instantiate parallel
 ### 5.5 Pools and lanes
 
 ```
-pool ID ["Label"] [process=ID] [executable]
+pool ID ["Label"] [process=ID] [process-name="Name"] [executable]
   lane ID ["Label"]
     ...flow nodes...
   lane ID ["Label"]
@@ -256,7 +263,7 @@ pool ID ["Label"] [process=ID] [executable]
 pool ID ["Label"]            # no block: a black-box pool
 ```
 
-- A pool with a block is a participant together with its process. The process identifier is `process=` or, by default, the pool identifier followed by `-process`.
+- A pool with a block is a participant together with its process. The process identifier is `process=` or, by default, the pool identifier followed by `-process`. The process is named after the title when the document has one pool with a block, otherwise after the pool label; `process-name="Name"` (language 0.5) names it otherwise (`""`: no name), and is allowed only on a pool with a block (`R013`).
 - A pool without a block is a black-box participant (no process).
 - A lane's block declares the flow nodes that belong to that lane. Lanes may nest. If a pool has lanes, every top-level flow node of its process must be inside a lane (`R030`).
 - If a document contains at least one pool, flow nodes may not appear at top level (`R031`).
@@ -294,14 +301,14 @@ flow G -> E "nie" default               # default flow of G
 
 - A `flow` line contains two or more node identifiers separated by `->`.
 - A line with a label or attributes must contain exactly one arrow (`R020`). Label and attributes describe that flow.
-- Flow attributes: `when="FEEL"` (condition expression), `default` (flag: the default flow of a splitting `xor`/`or`/`complex` gateway or activity), `p=NUMBER` (branch probability in simulation, §11), `id=ID` (explicit identifier).
+- Flow attributes: `when="FEEL"` (condition expression; in a document of language 0.5 `when=""` is a condition without an expression), `default` (flag: the default flow of a splitting `xor`/`or`/`complex` gateway or activity), `p=NUMBER` (branch probability in simulation, §11), `id=ID` (explicit identifier), `doc="Text"` (§3).
 - Flow identifiers are derived as `f-SOURCE-TARGET`, with `-2`, `-3`… on repeated pairs, unless `id=` is given.
 - Flow lines may appear anywhere: at top level, inside a pool, lane or sub-process block. The container of a flow is determined by its endpoints; both endpoints must be in the same process or sub-process (`R021`).
 
 ### 6.2 Message flows
 
 ```
-message A -> B ["Label"] [message="Name"]
+message A -> B ["Label"] [message="Name"] [doc="Text"]
 ```
 
 `A` and `B` are flow nodes or pools in different pools (`R022`). The label names the message flow; `message=` links it to a message declaration (default: the label).
@@ -321,15 +328,18 @@ key zamowienie "Numer zamówienia"
 ## 7. Data
 
 ```
-data ID ["Label"] [state="złożony"] [type=ITEM] [collection]
+data ID ["Label"] [state="złożony"] [type=ITEM] [object="Name"] [collection]
 store ID ["Label"] [type=ITEM]
-reads ACTIVITY DATA
-writes ACTIVITY DATA
+reads ACTIVITY DATA [input=ID]
+writes ACTIVITY DATA [output=ID]
 ```
 
 - `data` declares a data object reference (and its data object). Several `data` statements may share a label to show different states of one document; each needs its own identifier.
+- `object="Name"` (language 0.5) names the data object of the reference when it differs from the label; the `data` statements with the same object name in one process or sub-process share one data object (`""`: a data object without a name). `object=` stands on `data` only (`R013`).
 - `store` declares a data store reference; its data store is shared by all references with the same label.
 - `reads` creates a data input association from the data element to the activity; `writes` creates a data output association. The data element may be a data object, a data store, or (language 0.5) an input, output or property (§7.1).
+- In a document of language 0.5 `reads` may also name an end or intermediate throw event and `writes` a start, intermediate catch or boundary event: the event gets the data input or output, its association and its set, without an `ioSpecification` (`R003` for other events).
+- `input=ID` on `reads` and `output=ID` on `writes` (language 0.5) connect the data element with the data input or output `ID` declared for the activity or event (`input ID … on=ACTIVITY`, or in the block of a sub-process) instead of a generated one (`R066` when it is not declared, `R013` when it belongs to another element).
 - Data elements belong to the process (or sub-process) in whose block they are declared, or to the process of the first activity that reads or writes them.
 - In a document of language 0.5 each association connects the data element with a data input (`ACTIVITY-in-N`) or data output (`ACTIVITY-out-N`) of the activity's `ioSpecification`, named after the data element, as BPMN 2.0.2 §10.4 describes; documents of 0.1 and 0.3 keep the target property that Camunda Modeler writes (`__targetRef_placeholder`).
 - **State transitions.** Data objects carry `state=`; a transition is an activity that reads a data object in one state and writes it (another `data` statement with the same label) in another. The checker warns when an activity reads and writes a data object in the same state (`R064`).
@@ -347,15 +357,15 @@ input kryteria "Kryteria oceny" on=ocena collection
 
 | Statement | BPMN |
 |---|---|
-| `item ID ["Label"] [structure=NAME] [kind=information\|physical] [collection]` (top level) | `itemDefinition` with `structureRef`, `itemKind`, `isCollection`; the label is its `documentation` (an item definition has no name) |
+| `item ID ["Label"] [structure=NAME] [namespace="URI"] [kind=information\|physical] [collection]` (top level) | `itemDefinition` with `structureRef`, `itemKind`, `isCollection`; the label is its `documentation` (an item definition has no name) |
 | `input ID ["Label"] [type=ITEM] [collection] [on=ACTIVITY]` | `dataInput` of the process (or of the sub-process in whose block it stands, or of the activity named by `on=`), in its `ioSpecification`; one `inputSet` lists every input |
 | `output ID ["Label"] [type=ITEM] [collection] [on=ACTIVITY]` | `dataOutput`, likewise, with one `outputSet` |
 | `property ID ["Label"] [type=ITEM] [on=ID]` | `property` of the process (or sub-process), or of the activity or event named by `on=` |
 | `type=ITEM` on `data`, `store`, `input`, `output`, `property` | `itemSubjectRef` (of the data object for `data`, of the reference for `store`) |
 
 - `input`, `output` and `property` stand wherever `data` may stand and are printed with the data of their block.
-- `structure=` is a qualified XML name: a type name without a prefix (`Wniosek`) or an XML Schema type (`xsd:string`; the exporter declares the prefix). Anything else, such as a file path, is `R013`; `kind=` other than `information` or `physical` is `R013`.
-- A reference of `type=` to an undeclared item is `R066`; `on=` must name an activity (for `property` also an event).
+- `structure=` is a qualified XML name: a type name without a prefix (`Wniosek`), an XML Schema type (`xsd:string`; the exporter declares the prefix), or a name with another prefix whose namespace `namespace=` gives (`structure="feel:string" namespace="https://www.omg.org/spec/DMN/20191111/FEEL/"`; the exporter declares the prefix). A prefix has one namespace in a document and cannot be one that the exporter uses itself (`bpmn`, `bpmndi`, `dc`, `di`, `xsi`, `xsd`, `zeebe`, `modeler`, `xml`). Anything else, such as a file path, or `namespace=` without a prefixed name, is `R013`; `kind=` other than `information` or `physical` is `R013`.
+- A reference of `type=` to an undeclared item is `R066`; `on=` must name an activity, for `input` also an end or intermediate throw event, for `output` a start, intermediate catch or boundary event, and for `property` any event.
 - A process input or output is drawn as a data input or output shape. Inputs and outputs of activities are not drawn.
 
 ### 7.2 Resources and performers
@@ -370,8 +380,8 @@ In a document of language 0.5, `resource` (§11) also exports a BPMN `resource` 
 ## 8. Artifacts
 
 ```
-note ID "Text" [on=ID]
-group ID "Label" members="ID ID ID"
+note ID "Text" [on=ID] [doc="Text"]
+group ID "Label" members="ID ID ID" [doc="Text"]
 ```
 
 A note with `on=` is associated with that element.
@@ -459,7 +469,7 @@ The second kind follows the convention of Camunda Modeler. A document that is no
 
 **Connectors.** `connector=rest` with `method=`, `url=`, `result=` (and optional `body=`, `query=`, `headers-in=`) expands to the Camunda REST outbound connector; other connectors are reachable through `type=`, `inputs=` and `headers=`.
 
-**Compensation.** `compensate=HANDLER` on an activity attaches a compensation boundary event associated with the handler; the handler carries the flag `compensation` and has no sequence flows (`R051`). `throw … compensate [activity=ID]` and `end … compensate [activity=ID]` set `activityRef`.
+**Compensation.** `compensate=HANDLER` on an activity attaches a compensation boundary event associated with the handler; the handler carries the flag `compensation` and has no sequence flows (`R051`). When the activity has a boundary event with the flag `compensate` (`boundary ID "Label" on=ACTIVITY compensate`), that event is the one associated with the handler. `throw … compensate [activity=ID]` and `end … compensate [activity=ID]` set `activityRef`.
 
 **Errors and escalations.** The flags `error` and `escalation` without a name on boundary events and event sub-process starts catch every error or escalation. Camunda 8 passes to the catching event only the variables sent together with the error; they are merged into the process with `outputs=` on the catching event. The code and message of the error are not available as variables.
 
@@ -560,7 +570,7 @@ The full list is in `diagnostics.md`. The `--level` option restricts the accepte
 | `analytic` | everything except the executable profile and layer (§10.1, §10.3), forms and decisions |
 | `full` (default) | everything, including all elements of language 0.5 |
 
-The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules.
+The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules. The descriptive additions `doc=`, `process-name=`, `object=`, `when=""` and the data of events are allowed at every level; the trigger flags without a value (§5.1) are rejected at the level `basic` like the other triggers.
 
 ## 14. Canonical form
 
@@ -588,7 +598,9 @@ An implementation conforms at level **core** if, for every document in `conforma
 
 Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export, FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
 
-Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33 and following cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110` and the errors `R060`–`R066`); their expected outputs are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
+Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33 and following cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects); their expected outputs are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
+
+The reference models of the BPMN Model Interchange Working Group in `conformance/miwg` are the conformance gate of BPMN import and export: their semantic content must survive import, printing and export; `miwg.md` lists, per model, what is kept and what is not.
 
 ## 16. Example
 

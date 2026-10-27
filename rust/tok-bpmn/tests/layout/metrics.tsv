@@ -42,6 +42,9 @@ cases/40-global-interface	0	0	0	0	0	0	0	0	0	58
 cases/41-correlation	0	0	0	0	0	0	0	0	0	150
 cases/42-executable-05	0	0	0	0	0	2	0	0	0	828
 cases/43-err-05	0	1	0	0	0	1	0	1	0	570
+cases/44-documentation	0	1	0	0	0	5	0	0	0	501
+cases/45-documentation-pools	1	1	0	0	0	3	0	0	0	293
+cases/46-err-documentation	0	1	0	0	0	0	0	1	0	210
 import/01-wypozyczenie-pierwszy-model	0	0	0	0	0	2	0	0	0	328
 import/02-wypozyczenie-wymagania-norm	0	0	0	0	0	3	0	0	0	1017
 import/03-rejestracja-pisma-z-bledem	0	0	0	0	0	4	0	0	0	621

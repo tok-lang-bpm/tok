@@ -14,21 +14,26 @@ const TRIGGER_FLAGS = ("terminate", "compensate", "cancel")
 const REPEATABLE_KEYS = ("message", "timer", "signal", "error", "escalation", "condition", "link")
 # catch-all flags (no name): catch every error or escalation (language 0.3)
 const CATCH_ALL_FLAGS = ("error", "escalation")
+# triggers written as flags without a value (language 0.5): an event definition without a
+# message, signal, time or condition
+const NAMELESS_TRIGGERS = ("message", "timer", "signal", "condition")
 
 const EVENT_KEYS = ("on", "message", "timer", "signal", "error", "escalation", "code", "condition", "link",
                     "correlation", "form", "binding", "version", "activity", "events",
-                    "type", "retries", "headers", "outputs", "listeners", "delay", "assign")
-const EVENT_FLAGS = ("noninterrupting", "terminate", "compensate", "cancel", "error", "escalation", "parallel")
+                    "type", "retries", "headers", "outputs", "listeners", "delay", "assign", "doc")
+const EVENT_FLAGS = ("noninterrupting", "terminate", "compensate", "cancel", "error", "escalation",
+                     "message", "timer", "signal", "condition", "parallel")
 const TASK_KEYS = ("message", "operation", "process", "task", "form", "decision", "expr", "result", "type",
                    "binding", "version", "child-vars", "parent-vars", "business-id", "while", "loop-max",
                    "collection", "item", "output", "output-item", "until", "active",
                    "assignee", "candidate-users", "candidate-groups", "due", "follow-up", "priority",
                    "retries", "headers", "connector", "method", "url", "query", "headers-in", "body",
                    "inputs", "outputs", "compensate", "listeners",
-                   "by", "duration", "assign")
+                   "by", "duration", "assign", "doc")
 const TASK_FLAGS = ("loop", "test-before", "parallel", "sequential", "compensation", "wait", "instantiate")
 # attributes of a complex gateway and flags of an event-based gateway (language 0.5)
-const COMPLEX_KEYS = ("activation",)
+const COMPLEX_KEYS = ("activation", "doc")
+const GATEWAY_KEYS = ("doc",)
 const EVENTGW_FLAGS = ("instantiate", "parallel")
 # values of `method=` on a transaction and their BPMN form
 const TRANSACTION_METHODS = Dict("compensate" => "##Compensate", "store" => "##Store", "image" => "##Image")
@@ -44,6 +49,7 @@ function node_keys(kind)
     kind in EVENT_KINDS && return EVENT_KEYS
     is_activity(kind) && return TASK_KEYS
     kind == "complex" && return COMPLEX_KEYS
+    kind in GATEWAY_KINDS && return GATEWAY_KEYS
     return ()
 end
 
@@ -54,17 +60,21 @@ function node_flags(kind)
     return ()
 end
 
-const HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration", "version-tag")
+const HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration", "version-tag", "process-name", "doc")
 const HEADER_FLAGS = ("executable",)
-const POOL_KEYS = ("process", "version-tag")
+const POOL_KEYS = ("process", "version-tag", "process-name", "doc")
 const POOL_FLAGS = ("executable",)
-const FLOW_KEYS = ("id", "when", "p")
+const LANE_KEYS = ("doc",)
+const FLOW_KEYS = ("id", "when", "p", "doc")
 const FLOW_FLAGS = ("default",)
-const MESSAGE_KEYS = ("id", "message", "delay")
-const DATA_KEYS = ("state", "type")
+const MESSAGE_KEYS = ("id", "message", "delay", "doc")
+const DATA_KEYS = ("state", "type", "object", "doc")
 const DATA_FLAGS = ("collection",)
-const NOTE_KEYS = ("on",)
-const GROUP_KEYS = ("members",)
+# `reads ACTIVITY DATA input=ID`, `writes ACTIVITY DATA output=ID` (language 0.5)
+const READS_KEYS = ("input",)
+const WRITES_KEYS = ("output",)
+const NOTE_KEYS = ("on", "doc")
+const GROUP_KEYS = ("members", "doc")
 const DECISION_KEYS = ("hit",)
 const FIELD_KEYS = ("type", "options", "min", "max", "default")
 const FIELD_FLAGS = ("required",)
@@ -72,12 +82,13 @@ const SIMULATE_KEYS = ("cases", "seed", "arrival", "start")
 const RESOURCE_KEYS = ("count",)
 # process data of language 0.5: `input`, `output`, `property`
 const IO_KINDS = ("input", "output", "property")
-const IO_KEYS = ("type", "on")
+const IO_KEYS = ("type", "on", "doc")
 const IO_FLAGS = ("collection",)
-const ITEM_KEYS = ("structure", "kind")
+const ITEM_KEYS = ("structure", "namespace", "kind")
 const ITEM_FLAGS = ("collection",)
-const GLOBAL_KEYS = ("kind",)
-const OPERATION_KEYS = ("in", "out", "error")
+const GLOBAL_KEYS = ("kind", "doc")
+const INTERFACE_KEYS = ("doc",)
+const OPERATION_KEYS = ("in", "out", "error", "doc")
 const PROP_KEYS = ("message", "path")
 
 const MaybeStr = Union{Nothing,String}

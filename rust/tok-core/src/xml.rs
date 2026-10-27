@@ -33,6 +33,9 @@ pub struct XElem {
     /// Namespaces declared on this element although no tag or attribute name uses them
     /// (prefixes in attribute values, such as `structureRef="xsd:string"`).
     pub declare: Vec<&'static str>,
+    /// Further namespaces with their prefixes, declared on this element when it is the root
+    /// (`structure="feel:string" namespace="…"` of language 0.5).
+    pub prefixed: Vec<(String, String)>,
 }
 
 impl XElem {
@@ -180,9 +183,14 @@ impl XElem {
         if root {
             let mut used = Vec::new();
             self.used_namespaces(&mut used);
-            used.sort_by_key(|u| prefix(u));
-            for ns in used {
-                let p = prefix(ns);
+            let mut decls: Vec<(&str, &str)> = used.iter().map(|ns| (prefix(ns), *ns)).collect();
+            for (p, ns) in &self.prefixed {
+                if !decls.iter().any(|(q, _)| q == p) {
+                    decls.push((p.as_str(), ns.as_str()));
+                }
+            }
+            decls.sort_by_key(|d| d.0);
+            for (p, ns) in decls {
                 if p.is_empty() {
                     out.push_str(&format!(" xmlns=\"{}\"", escape_attrib(ns)));
                 } else {

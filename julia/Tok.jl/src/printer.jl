@@ -12,7 +12,8 @@ const QUOTED_KEYS = Set(["when", "expr", "condition", "correlation", "duration",
                          "candidate-users", "candidate-groups", "due", "follow-up", "business-id", "version",
                          "version-tag",
                          # language 0.5
-                         "while", "activation", "structure", "in", "out", "path"])
+                         "while", "activation", "structure", "in", "out", "path", "doc", "process-name",
+                         "object"])
 
 const EXECUTION_LISTENER_EVENTS = ("start", "end")
 
@@ -143,7 +144,7 @@ function run!(pr::Printer)
     end
     for x in ovalues(d.interfaces)
         blank!(pr)
-        emit!(pr, 0, join(["interface", x.id, tail(x, (), ())...], " "), x)
+        emit!(pr, 0, join(["interface", x.id, tail(x, INTERFACE_KEYS, ())...], " "), x)
         for op in x.items
             emit!(pr, 1, join(["operation", op.id, tail(op, OPERATION_KEYS, ())...], " "), op)
         end
@@ -180,7 +181,8 @@ function run!(pr::Printer)
     if !isempty(d.assocs)
         blank!(pr)
         for a in d.assocs
-            emit!(pr, 0, "$(a.kind) $(a.source) $(a.target)", a)
+            keys = a.kind == "reads" ? READS_KEYS : WRITES_KEYS
+            emit!(pr, 0, join([a.kind, a.source, a.target, tail(a, keys, ())...], " "), a)
         end
     end
     if !isempty(d.notes) || !isempty(d.groups)
@@ -239,7 +241,7 @@ function children!(pr::Printer, ids::Vector{String}, indent::Int)
             node!(pr, d.nodes[i], indent)
         elseif haskey(d.lanes, i)
             lane = d.lanes[i]
-            emit!(pr, indent, join(["lane", lane.id, tail(lane, (), ())...], " "), lane)
+            emit!(pr, indent, join(["lane", lane.id, tail(lane, LANE_KEYS, ())...], " "), lane)
             children!(pr, lane.children, indent + 1)
         elseif haskey(d.data, i)
             push!(datas, d.data[i])

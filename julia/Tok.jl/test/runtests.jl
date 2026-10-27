@@ -41,5 +41,5 @@ end
     @test length(diags) == 1
     @test message(diags[1]) == "unknown keyword 'procez'"
     @test message(diags[1], "pl") == "nieznane słowo kluczowe „procez”"
-    @test format_diag(diags[1], "pl") == "linia 2: błąd P001: nieznane słowo kluczowe „procez”"
+    @test format_diag(diags[1], "pl") == "wiersz 2: błąd P001: nieznane słowo kluczowe „procez”"
 end

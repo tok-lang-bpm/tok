@@ -88,4 +88,4 @@ The BPMN validation, layout and SVG rendering come from the `bpmn.py` validator 
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+GNU General Public License v3.0 or later, see [LICENSE](LICENSE).

@@ -14,7 +14,7 @@ ANALYTIC_EXCLUDED_KEYS = {"form", "decision", "expr", "result", "type", "correla
 
 KIND_NAMES = {"node": ("flow node", "element przepływu"), "activity": ("activity", "czynność"),
               "data": ("data object or store", "obiekt lub magazyn danych"), "form": ("form", "formularz"),
-              "decision": ("decision", "decyzja"), "resource": ("resource", "zasób"), "pool": ("pool", "pula")}
+              "decision": ("decision", "decyzja"), "resource": ("resource", "zasób"), "pool": ("pool", "basen")}
 
 
 def kind_name(what):

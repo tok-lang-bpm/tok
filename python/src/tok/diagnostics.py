@@ -22,11 +22,11 @@ MESSAGES = {
     "P006": (WARNING, "unknown language version {version}; this tool reads version 0.1",
              "nieznana wersja języka {version}; to narzędzie czyta wersję 0.1"),
     "P007": (ERROR, "malformed attribute near '{near}'", "niepoprawny atrybut w pobliżu „{near}”"),
-    "P008": (ERROR, "malformed {keyword} line: {detail}", "niepoprawna linia {keyword}: {detail}"),
+    "P008": (ERROR, "malformed {keyword} line: {detail}", "niepoprawny wiersz {keyword}: {detail}"),
     "P009": (ERROR, "malformed decision table row: {detail}", "niepoprawny wiersz tabeli decyzyjnej: {detail}"),
     "P010": (ERROR, "a second header", "drugi nagłówek dokumentu"),
     # references and structure
-    "R001": (ERROR, "identifier '{id}' is already used on line {other}", "identyfikator „{id}” jest już użyty w linii {other}"),
+    "R001": (ERROR, "identifier '{id}' is already used on line {other}", "identyfikator „{id}” jest już użyty w wierszu {other}"),
     "R002": (ERROR, "unknown {what} '{id}'", "nieznany element ({what_pl}): „{id}”"),
     "R003": (ERROR, "'{id}' is a '{actual}' element; required here: {expected}",
              "„{id}” to {actual}, a tu wymagany jest element: {expected_pl}"),
@@ -37,14 +37,14 @@ MESSAGES = {
     "R012": (ERROR, "an event can have only one trigger ({triggers})", "zdarzenie może mieć tylko jeden wyzwalacz ({triggers})"),
     "R013": (ERROR, "'{key}' requires {requirement}", "„{key}” wymaga: {requirement}"),
     "R020": (ERROR, "a flow line with a label or attributes must contain exactly one arrow",
-             "linia flow z etykietą lub atrybutami musi mieć dokładnie jedną strzałkę"),
+             "wiersz flow z etykietą lub atrybutami musi mieć dokładnie jedną strzałkę"),
     "R021": (ERROR, "sequence flow {source} -> {target} crosses a process or sub-process boundary",
              "przepływ sekwencji {source} -> {target} przekracza granicę procesu lub podprocesu"),
     "R022": (ERROR, "message flow {source} -> {target} must connect two different pools",
-             "przepływ komunikatów {source} -> {target} musi łączyć dwie różne pule"),
-    "R030": (ERROR, "'{id}' is in a pool with lanes but outside every lane", "„{id}” leży w puli z torami, ale poza torami"),
+             "przepływ komunikatów {source} -> {target} musi łączyć dwa różne baseny"),
+    "R030": (ERROR, "'{id}' is in a pool with lanes but outside every lane", "„{id}” leży w basenie z liniami, ale poza liniami"),
     "R031": (ERROR, "'{id}' is declared at top level, but the document has pools; move it into a pool",
-             "„{id}” zadeklarowano poza pulą, a dokument ma pule; przenieś go do puli"),
+             "„{id}” zadeklarowano poza basenem, a dokument ma baseny; przenieś go do basenu"),
     "R032": (ERROR, "boundary event '{id}' needs on=ACTIVITY", "zdarzenie graniczne „{id}” wymaga on=CZYNNOŚĆ"),
     "R040": (ERROR, "'{keyword}' is not available at level {level}", "„{keyword}” nie jest dostępne na poziomie {level}"),
     # decisions
@@ -163,7 +163,7 @@ class Diag:
 def format_diag(d, lang="en", path=None):
     sev = {"en": {ERROR: "error", WARNING: "warning", NOTE: "note"},
            "pl": {ERROR: "błąd", WARNING: "ostrzeżenie", NOTE: "uwaga"}}[lang][d.severity]
-    where = "%s:%d" % (path, d.line) if path else ("line %d" if lang == "en" else "linia %d") % d.line
+    where = "%s:%d" % (path, d.line) if path else ("line %d" if lang == "en" else "wiersz %d") % d.line
     return "%s: %s %s: %s" % (where, sev, d.code, d.message(lang))
 
 

@@ -424,13 +424,13 @@ def validate(m, kroki=False, opis_kroki=None):
             continue
         if local(s.tag) not in FLOWNODE or local(t.tag) not in FLOWNODE:
             add("błąd", "E005", fid, "Przepływ sekwencji %s łączy %s z %s. Przepływ sekwencji może łączyć "
-                "tylko zadania, zdarzenia i bramki (nie obiekty danych, pule ani adnotacje)."
+                "tylko zadania, zdarzenia i bramki (nie obiekty danych, baseny ani adnotacje)."
                 % (fid, local(s.tag), local(t.tag)))
             continue
         c = m.parent.get(f)
         if m.container(s) is not c or m.container(t) is not c:
             add("błąd", "E006", fid, "Przepływ sekwencji %s (%s → %s) przekracza granicę procesu lub "
-                "podprocesu. Między pulami używa się przepływu komunikatów; wnętrze podprocesu ma własne "
+                "podprocesu. Między basenami używa się przepływu komunikatów; wnętrze podprocesu ma własne "
                 "zdarzenie początkowe." % (fid, m.label(s), m.label(t)))
 
     # --- przepływy komunikatów
@@ -441,12 +441,12 @@ def validate(m, kroki=False, opis_kroki=None):
             continue
         ps, pt = m.participant_of(s), m.participant_of(t)
         if ps is None or pt is None:
-            add("błąd", "E007", fid, "Przepływ komunikatów %s: jeden z końców nie należy do żadnej puli "
-                "(uczestnika). Komunikaty płyną między pulami." % fid)
+            add("błąd", "E007", fid, "Przepływ komunikatów %s: jeden z końców nie należy do żadnej basenu "
+                "(uczestnika). Komunikaty płyną między basenami." % fid)
         elif ps is pt:
-            add("błąd", "E008", fid, "Przepływ komunikatów %s łączy elementy tej samej puli %s "
-                "(%s → %s). Wewnątrz jednej puli, także między torami, używa się przepływu sekwencji; "
-                "komunikaty płyną tylko między pulami." % (fid, m.label(ps), m.label(s), m.label(t)))
+            add("błąd", "E008", fid, "Przepływ komunikatów %s łączy elementy tego samego basenu %s "
+                "(%s → %s). Wewnątrz jednego basenu, także między liniami, używa się przepływu sekwencji; "
+                "komunikaty płyną tylko między basenami." % (fid, m.label(ps), m.label(s), m.label(t)))
         for x, role in ((s, "źródłem"), (t, "celem")):
             tx = local(x.tag)
             if tx in GWS or tx in DATA or tx == "textAnnotation":
@@ -615,7 +615,7 @@ def validate(m, kroki=False, opis_kroki=None):
         if t in ACT and not m.name(e) and not m.is_event_sub(e):
             add("uwaga", "L030", eid, "%s bez nazwy (%s)." % (TAG_PL.get(t, t).capitalize(), eid))
 
-    # --- tory
+    # --- linie
     for proc in m.processes:
         lanes = m.lanes_of(proc)
         if not lanes:
@@ -630,17 +630,17 @@ def validate(m, kroki=False, opis_kroki=None):
                 if not v:
                     continue
                 if v in seen:
-                    add("błąd", "E030", v, "Element %s jest przypisany do dwóch torów (%s i %s)."
+                    add("błąd", "E030", v, "Element %s jest przypisany do dwóch linii (%s i %s)."
                         % (m.label(m.get(v)), seen[v], lane.get("name") or lane.get("id")))
                 seen[v] = lane.get("name") or lane.get("id")
                 if v in m.ids and v not in direct:
-                    add("ostrzeżenie", "W030", v, "Tor %s wskazuje element %s, który nie jest bezpośrednim "
-                        "elementem procesu %s (elementy wnętrza podprocesu nie należą do torów)."
+                    add("ostrzeżenie", "W030", v, "Linia %s wskazuje element %s, który nie jest bezpośrednim "
+                        "elementem procesu %s (elementy wnętrza podprocesu nie należą do linii)."
                         % (lane.get("name") or lane.get("id"), v, proc.get("id")))
         for c in proc:
             ct = local(c.tag)
             if ct in FLOWNODE and ct != "boundaryEvent" and c.get("id") not in seen:
-                add("ostrzeżenie", "W031", c.get("id"), "%s nie jest przypisany do żadnego toru "
+                add("ostrzeżenie", "W031", c.get("id"), "%s nie jest przypisany do żadnej linii "
                     "(dodaj <bpmn:flowNodeRef> w odpowiednim <bpmn:lane>)." % m.label(c))
 
     # --- osiągalność i ślepe zaułki
@@ -787,8 +787,8 @@ def validate(m, kroki=False, opis_kroki=None):
                 and "messageEventDefinition" in m.eventdefs(e))
             if is_msg and e.get("id") not in ends:
                 add("ostrzeżenie", "W054", e.get("id"), "%s wysyła lub odbiera wiadomość, ale nie łączy go żaden "
-                    "przepływ komunikatów. Jeśli partner jest osobną pulą, dodaj messageFlow; jeśli jest wewnątrz "
-                    "tej samej puli, rozważ inny typ elementu." % m.label(e))
+                    "przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz "
+                    "tego samego basenu, rozważ inny typ elementu." % m.label(e))
 
     # --- numery kroków (konwencja kursowa)
     if kroki:
@@ -1000,7 +1000,7 @@ def summarize(m):
     r = m.root
     n_nodes = sum(1 for e in r.iter() if local(e.tag) in FLOWNODE)
     n_lanes = sum(1 for e in r.iter(M + "lane"))
-    return ("węzły: %d, przepływy sekwencji: %d, przepływy komunikatów: %d, pule: %d, tory: %d"
+    return ("węzły: %d, przepływy sekwencji: %d, przepływy komunikatów: %d, baseny: %d, linie: %d"
             % (n_nodes, len(m.seq), len(m.msg), len(m.participants), n_lanes))
 
 
@@ -1030,7 +1030,7 @@ PAD_B = 30
 SUB_PAD_T = 40
 MIN_LANE_H = 130
 POOL_GAP = 40
-BB_H = 70  # wysokość puli zamkniętej (black box)
+BB_H = 70  # wysokość basenu zamkniętego (black box)
 
 
 class Box:
@@ -1166,7 +1166,7 @@ def layout_container(m, cont, lane_list=None, top_pad=PAD_T):
         if i not in topo:
             topo.append(i)
 
-    # tory
+    # linie
     nl = len(lane_list) if lane_list else 1
     lane_idx = {}
     if lane_list:
@@ -1268,7 +1268,7 @@ def layout_container(m, cont, lane_list=None, top_pad=PAD_T):
             pref = 0
         place(xid, layer[xid], pref)
 
-    # podprocesy zdarzeniowe - osobny wiersz na dole toru
+    # podprocesy zdarzeniowe - osobny wiersz na dole linii
     ev_rows = {}
     for ev in evsubs:
         eid = ev.get("id")
@@ -1298,7 +1298,7 @@ def layout_container(m, cont, lane_list=None, top_pad=PAD_T):
         content_w = max(content_w, PAD_L + sizes[ev.get("id")][0] + PAD_R)
     content_w = _even10(content_w)
 
-    # wysokości wierszy i torów
+    # wysokości wierszy i linii
     rowh = {}
     for i in all_ids:
         key = (lane_idx[i], row[i])
@@ -1483,7 +1483,7 @@ def _event_side_point(box, side, dy=8):
 
 
 def _route_msg_node_pool(m, node_id, pool_box, out, from_node, k):
-    """Przepływ komunikatów między węzłem a pulą zamkniętą (black box)."""
+    """Przepływ komunikatów między węzłem a basenem zamkniętym (black box)."""
     n = out[node_id]
     nx, ny, nw, nh = n
     ncx = nx + nw / 2.0
@@ -2028,7 +2028,7 @@ def render_svg(m, title=None):
     def el(i):
         return m.get(i)
 
-    # pule i tory
+    # baseny i linie
     for i, (x, y, w, h) in shapes.items():
         e = el(i)
         if e is None or local(e.tag) not in ("participant", "lane"):

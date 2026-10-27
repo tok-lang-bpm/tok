@@ -8,12 +8,12 @@ version = "0.1.0"
 description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
 readme = "README.md"
 requires-python = ">=3.8"
-license = { text = "MIT" }
+license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Marek Deja" }]
 keywords = ["BPMN", "DMN", "process modelling", "simulation", "Camunda"]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
   "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = []

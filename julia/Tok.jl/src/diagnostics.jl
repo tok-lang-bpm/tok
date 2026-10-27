@@ -18,16 +18,16 @@ const MESSAGES = Dict{String,Tuple{String,String,String}}(
     "P006" => (WARNING, "unknown language version {version}; this tool reads version 0.1",
                "nieznana wersja języka {version}; to narzędzie czyta wersję 0.1"),
     "P007" => (ERROR, "malformed attribute near '{near}'", "niepoprawny atrybut w pobliżu „{near}”"),
-    "P008" => (ERROR, "malformed {keyword} line: {detail}", "niepoprawna linia {keyword}: {detail}"),
+    "P008" => (ERROR, "malformed {keyword} line: {detail}", "niepoprawny wiersz {keyword}: {detail}"),
     "P009" => (ERROR, "malformed decision table row: {detail}", "niepoprawny wiersz tabeli decyzyjnej: {detail}"),
     "P010" => (ERROR, "a second header", "drugi nagłówek dokumentu"),
     # references and structure
-    "R001" => (ERROR, "identifier '{id}' is already used on line {other}", "identyfikator „{id}” jest już użyty w linii {other}"),
+    "R001" => (ERROR, "identifier '{id}' is already used on line {other}", "identyfikator „{id}” jest już użyty w wierszu {other}"),
     "R004" => (ERROR, "identifier '{id}' must use only ASCII letters, digits, '_' and '-'",
                "identyfikator „{id}” może zawierać tylko litery ASCII, cyfry, „_” i „-”"),
     "R011" => (ERROR, "unknown flag '{flag}' on {kind}", "nieznana flaga „{flag}” w elemencie {kind}"),
     "R020" => (ERROR, "a flow line with a label or attributes must contain exactly one arrow",
-               "linia flow z etykietą lub atrybutami musi mieć dokładnie jedną strzałkę"),
+               "wiersz flow z etykietą lub atrybutami musi mieć dokładnie jedną strzałkę"),
     # decisions
     "D002" => (ERROR, "rule has {got} cells, the header has {expected}", "reguła ma {got} komórek, a nagłówek {expected}"),
     "D004" => (ERROR, "header cell '{cell}' must be 'name: type' with type string, number, boolean or date",
@@ -64,6 +64,6 @@ end
 function format_diag(d::Diag, lang::AbstractString="en", path=nothing)
     sev = lang == "en" ? Dict(ERROR => "error", WARNING => "warning", NOTE => "note") :
                          Dict(ERROR => "błąd", WARNING => "ostrzeżenie", NOTE => "uwaga")
-    where_ = path !== nothing ? "$(path):$(d.line)" : (lang == "en" ? "line $(d.line)" : "linia $(d.line)")
+    where_ = path !== nothing ? "$(path):$(d.line)" : (lang == "en" ? "line $(d.line)" : "wiersz $(d.line)")
     return "$(where_): $(sev[severity(d)]) $(d.code): $(message(d, lang))"
 end

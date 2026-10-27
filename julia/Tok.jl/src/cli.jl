@@ -46,8 +46,8 @@ let
     example = """
     # przykład
     tok 0.1 "Przykład" executable
-    pool p "Pula" process=proc
-      lane l "Tor"
+    pool p "Basen" process=proc
+      lane l "Linia"
         start s "Start" form=f
         user u "Zadanie" form=f
         rule r "Decyzja" decision=d

@@ -6,3 +6,4 @@ dist/
 venv/
 julia/Tok.jl/Manifest.toml
 *.svg.tmp
+rust/target/

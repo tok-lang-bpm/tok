@@ -157,7 +157,7 @@ function run!(ex::Exporter)
     nonempty(d.title) && setattr!(root, "name", d.title)
     setattr!(root, "targetNamespace", get(d.attrs, "namespace", "http://bpmn.io/schema/bpmn"))
     setattr!(root, "exporter", "tok")
-    setattr!(root, "exporterVersion", VERSION_STRING)
+    setattr!(root, "exporterVersion", d.version === nothing ? "0.1" : d.version)
     if ex.camunda
         setattr!(root, "executionPlatform", "Camunda Cloud"; ns=MODELER_NS)
         setattr!(root, "executionPlatformVersion", "8.10.0"; ns=MODELER_NS)

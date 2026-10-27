@@ -57,7 +57,7 @@ class Checker:
         self.feel()
         self.simulation()
         self.levels()
-        if self.bpmn and not any(x.severity == "error" and x.code[0] in "TPR" for x in self.diags):
+        if self.bpmn and not any(x.severity == "error" for x in self.diags):
             self.bpmn_rules()
         return self.diags
 
@@ -258,7 +258,7 @@ class Checker:
             res = feel.check_expr(text)
             if res is not None:
                 code, detail = res
-                self.add(code, line, id, detail=detail)
+                self.add(code, line, id, detail=detail, detail_pl=feel.detail_pl(detail))
 
     def simulation(self):
         try:

@@ -129,7 +129,7 @@ def cmd_export(args):
             f.write(forms.export_form(form))
         written.append(p)
     for p in written:
-        sys.stdout.write(p + "\n")
+        sys.stdout.write(os.path.normpath(p) + "\n")
     return EXIT_OK
 
 

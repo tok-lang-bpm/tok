@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Bramka OR" targetNamespace="http://bpmn.io/schema/bpmn">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1" id="definitions" name="Bramka OR" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:message id="Message_Powiadomienie_e_mail" name="Powiadomienie e-mail" />
   <bpmn:message id="Message_Powiadomienie_SMS" name="Powiadomienie SMS" />
   <bpmn:process id="process" isExecutable="false" name="Bramka OR">

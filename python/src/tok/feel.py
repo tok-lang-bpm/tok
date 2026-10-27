@@ -18,6 +18,7 @@ Unary tests:
 """
 
 import datetime
+import re
 import decimal
 from decimal import Decimal
 
@@ -429,6 +430,58 @@ def check_unary(text):
     except FeelError as ex:
         return (ex.code, str(ex))
     return None
+
+
+def _pl_token(text):
+    """'x' -> „x”, end of expression -> koniec wyrażenia."""
+    text = text.strip()
+    if text == "end of expression":
+        return "koniec wyrażenia"
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
+        return "„%s”" % text[1:-1]
+    return text
+
+
+_PL_FIXED = {
+    "unterminated string": "niezamknięty tekst",
+    "exponentiation '**'": "potęgowanie „**”",
+    "'instance of'": "„instance of”",
+    "expected an interval": "oczekiwano przedziału",
+    "expected ']' or ')' closing the interval": "oczekiwano „]” albo „)” zamykającego przedział",
+    "expected a name after '.'": "oczekiwano nazwy po „.”",
+    "filter expressions": "wyrażenia filtrujące",
+    "an interval is allowed only after 'in' or as a unary test":
+        "przedział jest dozwolony tylko po „in” albo jako test jednoargumentowy",
+    "empty expression": "puste wyrażenie",
+    "empty cell; use '-' for any value": "pusta komórka; dla dowolnej wartości wpisz „-”",
+    "an interval is not a value": "przedział nie jest wartością",
+}
+
+_PL_PATTERNS = (
+    (re.compile(r"^'(.*)' \(contexts, filters and temporal literals are not in the subset\)$"),
+     lambda m: "„%s” (konteksty, filtry i literały czasowe nie należą do podzbioru)" % m.group(1)),
+    (re.compile(r"^unexpected character (.+)$"), lambda m: "nieoczekiwany znak %s" % _pl_token(m.group(1))),
+    (re.compile(r"^expected (.+?), found (.+)$"),
+     lambda m: "oczekiwano %s, znaleziono %s" % (_pl_token(m.group(1)), _pl_token(m.group(2)))),
+    (re.compile(r"^unexpected keyword (.+)$"), lambda m: "nieoczekiwane słowo kluczowe %s" % _pl_token(m.group(1))),
+    (re.compile(r"^unexpected end of expression$"), lambda m: "nieoczekiwany koniec wyrażenia"),
+    (re.compile(r"^unexpected (.+)$"), lambda m: "nieoczekiwany element %s" % _pl_token(m.group(1))),
+    (re.compile(r"^'(.*)' expressions$"), lambda m: "wyrażenia „%s”" % m.group(1)),
+    (re.compile(r"^function (.+)$"), lambda m: "funkcja %s" % _pl_token(m.group(1))),
+    (re.compile(r"^(.+)\(\) takes (.+) arguments$"), lambda m: "%s(): liczba argumentów: %s" % (m.group(1), m.group(2))),
+    (re.compile(r"^unknown node (.+)$"), lambda m: "nieznany węzeł %s" % m.group(1)),
+)
+
+
+def detail_pl(text):
+    """Polish version of an F001/F002 detail produced by this module."""
+    if text in _PL_FIXED:
+        return _PL_FIXED[text]
+    for rx, fn in _PL_PATTERNS:
+        m = rx.match(text)
+        if m:
+            return fn(m)
+    return text
 
 
 # ------------------------------------------------------------------ evaluator

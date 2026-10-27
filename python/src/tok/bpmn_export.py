@@ -5,7 +5,6 @@ import unicodedata
 import xml.etree.ElementTree as ET
 
 from . import model as M
-from . import __version__
 
 BPMN = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 XSI = "http://www.w3.org/2001/XMLSchema-instance"
@@ -98,7 +97,7 @@ class Exporter:
             root.set("name", d.title)
         root.set("targetNamespace", d.attrs.get("namespace", "http://bpmn.io/schema/bpmn"))
         root.set("exporter", "tok")
-        root.set("exporterVersion", __version__)
+        root.set("exporterVersion", d.version or "0.1")
         if self.camunda:
             root.set("{%s}executionPlatform" % MODELER, "Camunda Cloud")
             root.set("{%s}executionPlatformVersion" % MODELER, "8.10.0")

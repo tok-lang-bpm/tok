@@ -7,7 +7,7 @@ The goal of the 0.x series is a language and a tool chain that cover BPMN 2.0.2 
 | Component | Language | Role |
 |---|---|---|
 | `tok-core` | Rust | reference engine from 0.2: lexer, parser, IR, checker, printer, BPMN/DMN/form readers and writers, layout and SVG, FEEL, simulation; C ABI and WebAssembly builds |
-| `tok-lang` (Python) | Rust core via PyO3, wheels built with maturin | command line `tok` and Python API; the pure-Python 0.1 implementation remains the executable specification until 0.4 |
+| `tok-lang` (Python) | Rust core via PyO3, wheels built with maturin | command line `tok` and Python API; the pure-Python implementation is the installed package until prebuilt wheels exist (0.4) and stays the executable specification |
 | `tok` (R) | Rust core via extendr | R API, knitr engine `{tok}`, event logs as data frames |
 | `Tok.jl` | Julia, standalone | an independent second implementation of the specification, no bindings to the Rust core |
 | conformance corpus | text files | the contract between implementations: every implementation passes it before a release |
@@ -23,15 +23,14 @@ Camunda 8.10 execution coverage, as published by Camunda: supported — pools, l
 ## 0.1.1 — release hygiene
 
 - Polish detail text in FEEL syntax errors (F002); concrete example values in overlap warnings (D010); platform-native paths in `tok export`; BPMN style notes not reported next to FEEL errors.
-- Publication of `tok-lang` on PyPI; release archive with DOI on Zenodo.
-- Changelog and versioning policy (`docs/changelog.md`).
+- Changelog and versioning policy (`docs/changelog.md`). Until 1.0 the packages are installed from the Codeberg archive; registry releases come with the stable version.
 
 ## 0.2 — Rust core at parity with 0.1
 
 - `rust/tok-core`: lexer, parser, IR, diagnostics catalogue (EN/PL), checker (T, P, R, C, D, M codes), canonical printer, semantic BPMN export, BPMN import.
 - Port of the BPMN rules and layout/SVG of `bpmnlib` to Rust (E, W, L codes identical).
 - `rust/tok-cli`: native `tok` binary with the same commands and output as the Python 0.1 CLI.
-- Python: `tok-lang` wheels on the Rust core (abi3, Windows/macOS/Linux); the pure-Python package kept as a fallback build.
+- Python bindings on the Rust core (PyO3, built with maturin) used for parity testing; until the 1.0 registry release the installed `tok-lang` stays pure Python, so users need no Rust compiler.
 - Conformance: the 18-case corpus extended with BPMN import cases and diagnostics of all layers; Python, Rust and Julia pass the core level byte for byte.
 
 ## 0.3 — complete Camunda 8 coverage
@@ -62,7 +61,7 @@ Language additions (each with checker rules, export, import, conformance cases a
 - R package `tok` on the Rust core: `tok_read()`, `tok_check()` (diagnostics as a data frame), `tok_fmt()`, `tok_export()`, `tok_plot()` (SVG in the RStudio viewer and documents), `tok_sim()` (event log and cases as data frames, compatible with process-mining packages), `tok_eval()`; knitr engine `{tok}`; vendored crates for offline CRAN builds.
 - Simulation engine in Rust with identical semantics to the Python reference; statistical comparison of indicators on fixed seeds; XES event-log export.
 - Layout engine in Rust: deterministic, faster, with better routing of message flows and boundary paths.
-- The Python package switches its default build to the Rust core; the pure-Python implementation becomes the specification test oracle only.
+- Prebuilt Python wheels on the Rust core produced for every release archive (abi3, Windows/macOS/Linux); the pure-Python implementation becomes the specification test oracle only.
 
 ## 0.5 — BPMN 2.0.2 process modelling conformance
 
@@ -110,5 +109,5 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 ## 1.0 — stable
 
 - Specification 1.0: every BPMN 2.0.2 element reachable from the language, conformance tables for Camunda 8 and BPMN 2.0.2 published with the release.
-- Releases on crates.io, PyPI, CRAN and the Julia General registry from one version number.
+- First registry releases, from one version number: crates.io, PyPI (`tok-lang`), CRAN and the Julia General registry; archived release with a DOI on Zenodo.
 - Semantic versioning promise: 1.x keeps every valid 1.0 document valid and prints it identically; new Camunda versions and DMN revisions are tracked in minor releases.

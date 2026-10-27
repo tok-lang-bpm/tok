@@ -133,18 +133,21 @@ def check_decision(decision):
     for expr, _ in decision.inputs:
         r = feel.check_expr(expr)
         if r:
-            out.append((r[0], hline, {"detail": "%s (%s)" % (r[1], expr)}))
+            out.append((r[0], hline, {"detail": "%s (%s)" % (r[1], expr),
+                                      "detail_pl": "%s (%s)" % (feel.detail_pl(r[1]), expr)}))
     for rule in decision.rules:
         for cell in rule.inputs:
             r = feel.check_unary(cell)
             if r:
-                out.append((r[0], rule.line, {"detail": "%s (%s)" % (r[1], cell)}))
+                out.append((r[0], rule.line, {"detail": "%s (%s)" % (r[1], cell),
+                                              "detail_pl": "%s (%s)" % (feel.detail_pl(r[1]), cell)}))
         for cell in rule.outputs:
             if cell.strip() == "-":
                 continue
             r = feel.check_expr(cell)
             if r:
-                out.append((r[0], rule.line, {"detail": "%s (%s)" % (r[1], cell)}))
+                out.append((r[0], rule.line, {"detail": "%s (%s)" % (r[1], cell),
+                                              "detail_pl": "%s (%s)" % (feel.detail_pl(r[1]), cell)}))
     if decision.hit == "unique" and decision.inputs:
         out.extend(_overlaps(decision))
     return out
@@ -233,9 +236,12 @@ def _meet(a, b):
     return _example(("iv", lo, loc, hi, hic))
 
 
+ANY = object()   # both cells accept any value: pick a representative for the column
+
+
 def _example(atom):
     if atom[0] == "any":
-        return "-"
+        return ANY
     if atom[0] in ("str", "bool"):
         return atom[1]
     _, lo, loc, hi, hic = atom
@@ -248,8 +254,26 @@ def _example(atom):
     return Decimal(0)
 
 
+def _representative(cells, col, typ):
+    """A concrete value for a column where both rules accept anything."""
+    for row in cells:
+        atoms = row[col]
+        if not atoms:
+            continue
+        for a in atoms:
+            if a[0] != "any":
+                return _example(a)
+    if typ == "number":
+        return Decimal(0)
+    if typ == "boolean":
+        return True
+    return None
+
+
 def _show(v):
-    if isinstance(v, str) and v != "-":
+    if v is None:
+        return "null"
+    if isinstance(v, str):
         return '"%s"' % v
     if isinstance(v, bool):
         return "true" if v else "false"
@@ -281,6 +305,8 @@ def _overlaps(decision):
                 if found is None:
                     ok = False
                     break
+                if found is ANY:
+                    found = _representative(cells, col, decision.inputs[col][1])
                 example.append("%s=%s" % (decision.inputs[col][0], _show(found)))
             if ok:
                 out.append(("D010", decision.rules[j].line,

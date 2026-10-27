@@ -8,7 +8,7 @@ corpus in `conformance/`.
 """
 module Tok
 
-const VERSION_STRING = "0.1.0"
+const VERSION_STRING = "0.1.1"
 
 include("odict.jl")
 include("diagnostics.jl")

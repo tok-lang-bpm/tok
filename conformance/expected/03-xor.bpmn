@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1.0" id="defs-xor" name="Rozgałęzienie XOR" targetNamespace="http://bpmn.io/schema/bpmn">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1" id="defs-xor" name="Rozgałęzienie XOR" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="wypozyczenie" isExecutable="false" name="Rozgałęzienie XOR">
     <bpmn:startEvent id="s" />
     <bpmn:userTask id="k" name="Sprawdzenie &quot;katalogu&quot; i C:\dane" />

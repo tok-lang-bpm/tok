@@ -67,8 +67,8 @@ Every diagnostic has a stable code, a severity and a line number. `tok check --l
 
 | Code | Severity | Message (English) | Message (Polish) |
 |---|---|---|---|
-| F001 | warning | FEEL expression outside the supported subset: {detail} | wyrażenie FEEL spoza obsługiwanego podzbioru: {detail} |
-| F002 | error | FEEL syntax error: {detail} | błąd składni FEEL: {detail} |
+| F001 | warning | FEEL expression outside the supported subset: {detail} | wyrażenie FEEL spoza obsługiwanego podzbioru: {detail_pl} |
+| F002 | error | FEEL syntax error: {detail} | błąd składni FEEL: {detail_pl} |
 
 ## Simulation (S)
 

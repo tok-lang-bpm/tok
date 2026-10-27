@@ -62,8 +62,8 @@ MESSAGES = {
              "pole „{id}” typu {type} wymaga options=\"wartość:Etykieta, …\""),
     # FEEL
     "F001": (WARNING, "FEEL expression outside the supported subset: {detail}",
-             "wyrażenie FEEL spoza obsługiwanego podzbioru: {detail}"),
-    "F002": (ERROR, "FEEL syntax error: {detail}", "błąd składni FEEL: {detail}"),
+             "wyrażenie FEEL spoza obsługiwanego podzbioru: {detail_pl}"),
+    "F002": (ERROR, "FEEL syntax error: {detail}", "błąd składni FEEL: {detail_pl}"),
     # simulation
     "S001": (ERROR, "invalid distribution '{text}': {detail}", "niepoprawny rozkład „{text}”: {detail}"),
     "S002": (WARNING, "probabilities of the flows leaving '{id}' sum to {total}, not 1",

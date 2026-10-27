@@ -560,12 +560,13 @@ fn seg_len(a: Pt, b: Pt) -> f64 {
     (dx * dx + dy * dy).powf(0.5)
 }
 
-fn flow_label(nm: &str, pts: &[Pt]) -> String {
-    let lines = wrap(nm, 90.0, 10.0);
+/// Anchor (start of the first baseline) of the label of a sequence flow drawn without label
+/// bounds: next to the first long segment.
+pub(crate) fn flow_label_anchor(pts: &[Pt]) -> Pt {
     let ((x1, y1), (x2, y2)) = (pts[0], pts[1]);
     let first_vertical = (x2 - x1).abs() < (y2 - y1).abs();
     if first_vertical && pts.len() >= 3 && (y2 - y1).abs() > 40.0 {
-        return text(&lines, x2 + 8.0, y2 - 7.0, 10, "start", "");
+        return (x2 + 8.0, y2 - 7.0);
     }
     if !first_vertical
         && pts.len() >= 3
@@ -573,9 +574,9 @@ fn flow_label(nm: &str, pts: &[Pt]) -> String {
         && (pts[2].1 - y2).abs() > 30.0
     {
         if pts[2].1 > y2 {
-            return text(&lines, x2 + 6.0, y2 + 18.0, 10, "start", "");
+            return (x2 + 6.0, y2 + 18.0);
         }
-        return text(&lines, x2 + 6.0, y2 - 8.0, 10, "start", "");
+        return (x2 + 6.0, y2 - 8.0);
     }
     let mut k = 0;
     while k + 2 < pts.len() && seg_len(pts[k], pts[k + 1]) < 30.0 {
@@ -583,16 +584,54 @@ fn flow_label(nm: &str, pts: &[Pt]) -> String {
     }
     let ((x1, y1), (x2, y2)) = (pts[k], pts[k + 1]);
     if (x2 - x1).abs() >= (y2 - y1).abs() {
-        return text(&lines, x1 + 8.0, y1 - 7.0, 10, "start", "");
+        return (x1 + 8.0, y1 - 7.0);
     }
     if y2 > y1 {
-        return text(&lines, x1 + 6.0, y1 + 16.0, 10, "start", "");
+        return (x1 + 6.0, y1 + 16.0);
     }
-    text(&lines, x1 + 6.0, y1 - 8.0, 10, "start", "")
+    (x1 + 6.0, y1 - 8.0)
+}
+
+/// Anchor (start of the first baseline) of the label of a message flow drawn without label
+/// bounds: next to the middle segment.
+pub(crate) fn msg_label_anchor(pts: &[Pt]) -> Pt {
+    let k = pts.len() / 2;
+    let ((x1, y1), (x2, y2)) = (pts[k - 1], pts[k]);
+    ((x1 + x2) / 2.0 + 6.0, (y1 + y2) / 2.0 - 4.0)
+}
+
+fn flow_label(nm: &str, pts: &[Pt]) -> String {
+    let (x, y) = flow_label_anchor(pts);
+    text(&wrap(nm, 90.0, 10.0), x, y, 10, "start", "")
 }
 
 fn parse_f(v: Option<&str>) -> f64 {
     v.and_then(|s| s.trim().parse::<f64>().ok()).unwrap_or(0.0)
+}
+
+/// An external label drawn in its BPMNDI bounds: wrapped to the width of the bounds,
+/// centred, first baseline 8 below the top.
+fn bounded_label(nm: &str, b: [f64; 4], extra: &str) -> String {
+    text(
+        &wrap(nm, b[2] + 1.0, 10.0),
+        b[0] + b[2] / 2.0,
+        b[1] + 8.0,
+        10,
+        "middle",
+        extra,
+    )
+}
+
+/// Bounds of the `BPMNLabel` of a shape or an edge.
+fn label_bounds(md: &Model, di: Id) -> Option<[f64; 4]> {
+    let l = md.doc.find(di, &qn(BPMNDI_NS, "BPMNLabel"))?;
+    let b = md.doc.find(l, &qn(DC_NS, "Bounds"))?;
+    Some([
+        parse_f(md.attr(b, "x")),
+        parse_f(md.attr(b, "y")),
+        parse_f(md.attr(b, "width")),
+        parse_f(md.attr(b, "height")),
+    ])
 }
 
 /// Render a model that already has BPMNDI as SVG.
@@ -604,10 +643,14 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
     let d = &md.doc;
     let r = d.root;
     let mut shapes: OMap<[f64; 4]> = OMap::default();
+    let mut lbounds: OMap<[f64; 4]> = OMap::default();
     for s in d.iter_tag(r, &qn(BPMNDI_NS, "BPMNShape")) {
         let Some(b) = d.find(s, &qn(DC_NS, "Bounds")) else {
             continue;
         };
+        if let Some(lb) = label_bounds(md, s) {
+            lbounds.insert(&key(md.attr(s, "bpmnElement")), lb);
+        }
         shapes.insert(
             &key(md.attr(s, "bpmnElement")),
             [
@@ -625,6 +668,9 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             .iter()
             .map(|p| (parse_f(md.attr(*p, "x")), parse_f(md.attr(*p, "y"))))
             .collect();
+        if let Some(lb) = label_bounds(md, e) {
+            lbounds.insert(&key(md.attr(e, "bpmnElement")), lb);
+        }
         edges.insert(&key(md.attr(e, "bpmnElement")), pts);
     }
     if shapes.keys.is_empty() {
@@ -641,6 +687,10 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             xs.push(x);
             ys.push(y);
         }
+    }
+    for (_, [x, y, w, h]) in lbounds.items() {
+        xs.extend([x, x + w]);
+        ys.extend([y, y + h]);
     }
     let fmin = |v: &[f64]| v.iter().copied().fold(f64::INFINITY, f64::min);
     let fmax = |v: &[f64]| v.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -854,7 +904,10 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             }
             let nm = md.name(Some(e));
             if !nm.is_empty() {
-                labels.push(flow_label(&nm, &pts));
+                labels.push(match lbounds.get(&i) {
+                    Some(b) => bounded_label(&nm, *b, ""),
+                    None => flow_label(&nm, &pts),
+                });
             }
         } else if t == "messageFlow" {
             p.push(format!(
@@ -862,13 +915,14 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
                  stroke-dasharray=\"7 4\" marker-start=\"url(#msgStart)\" marker-end=\"url(#msgEnd)\"/>"
             ));
             let nm = md.name(Some(e));
-            if !nm.is_empty() {
-                let k = pts.len() / 2;
-                let ((x1, y1), (x2, y2)) = (pts[k - 1], pts[k]);
+            if let (false, Some(b)) = (nm.is_empty(), lbounds.get(&i)) {
+                labels.push(bounded_label(&nm, *b, "font-style=\"italic\""));
+            } else if !nm.is_empty() {
+                let (x, y) = msg_label_anchor(&pts);
                 labels.push(text(
                     &wrap(&nm, 110.0, 10.0),
-                    (x1 + x2) / 2.0 + 6.0,
-                    (y1 + y2) / 2.0 - 4.0,
+                    x,
+                    y,
                     10,
                     "start",
                     "font-style=\"italic\"",
@@ -893,7 +947,7 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
     }
 
     // nodes
-    let mut boundary_draw: Vec<(Id, [f64; 4])> = Vec::new();
+    let mut boundary_draw: Vec<(Id, [f64; 4], Option<[f64; 4]>)> = Vec::new();
     for (i, bx) in shapes.items() {
         let Some(e) = el(&i) else {
             continue;
@@ -903,16 +957,17 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             continue;
         }
         if t == "boundaryEvent" {
-            boundary_draw.push((e, bx));
+            boundary_draw.push((e, bx, lbounds.get(&i).copied()));
             continue;
         }
         if is_subp(&t) && md.has_flow_children(e) {
             continue;
         }
-        p.push(draw_node(md, e, &t, bx, &mut labels));
+        let lb = lbounds.get(&i).copied();
+        p.push(draw_node(md, e, &t, bx, lb, &mut labels));
     }
-    for (e, bx) in boundary_draw {
-        p.push(draw_node(md, e, "boundaryEvent", bx, &mut labels));
+    for (e, bx, lb) in boundary_draw {
+        p.push(draw_node(md, e, "boundaryEvent", bx, lb, &mut labels));
     }
     p.extend(labels);
     p.push("</svg>".to_string());
@@ -920,7 +975,14 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
 }
 
 #[allow(clippy::too_many_lines)]
-fn draw_node(md: &Model, e: Id, t: &str, b: [f64; 4], labels: &mut Vec<String>) -> String {
+fn draw_node(
+    md: &Model,
+    e: Id,
+    t: &str,
+    b: [f64; 4],
+    lb: Option<[f64; 4]>,
+    labels: &mut Vec<String>,
+) -> String {
     let [x, y, w, h] = b;
     let mut s = String::new();
     let nm = md.name(Some(e));
@@ -1015,7 +1077,9 @@ fn draw_node(md: &Model, e: Id, t: &str, b: [f64; 4], labels: &mut Vec<String>) 
         }
         let filled = t == "endEvent" || t == "intermediateThrowEvent";
         s.push_str(&event_icon(&defs, cx, cy, filled));
-        if !nm.is_empty() {
+        if let (false, Some(b)) = (nm.is_empty(), lb) {
+            labels.push(bounded_label(&nm, b, ""));
+        } else if !nm.is_empty() {
             labels.push(text(
                 &wrap(&nm, 110.0, 10.0),
                 cx,
@@ -1121,7 +1185,9 @@ fn draw_node(md: &Model, e: Id, t: &str, b: [f64; 4], labels: &mut Vec<String>) 
             }
             _ => {}
         }
-        if !nm.is_empty() {
+        if let (false, Some(b)) = (nm.is_empty(), lb) {
+            labels.push(bounded_label(&nm, b, ""));
+        } else if !nm.is_empty() {
             labels.push(text(
                 &wrap(&nm, 120.0, 10.0),
                 cx,
@@ -1169,7 +1235,9 @@ fn draw_node(md: &Model, e: Id, t: &str, b: [f64; 4], labels: &mut Vec<String>) 
         {
             lab.push_str(&format!(" [{stn}]"));
         }
-        if !lab.is_empty() {
+        if let (false, Some(b)) = (lab.is_empty(), lb) {
+            labels.push(bounded_label(&lab, b, ""));
+        } else if !lab.is_empty() {
             labels.push(text(
                 &wrap(&lab, 110.0, 10.0),
                 cx,
@@ -1215,7 +1283,9 @@ fn draw_node(md: &Model, e: Id, t: &str, b: [f64; 4], labels: &mut Vec<String>) 
         } else {
             nm.clone()
         };
-        if !lab.is_empty() {
+        if let (false, Some(b)) = (lab.is_empty(), lb) {
+            labels.push(bounded_label(&lab, b, ""));
+        } else if !lab.is_empty() {
             labels.push(text(
                 &wrap(&lab, 110.0, 10.0),
                 cx,

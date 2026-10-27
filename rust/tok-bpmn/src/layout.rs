@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::model::{Model, is_act, is_data, is_flownode, is_gw, is_subp, m};
 use crate::pyfmt::round_str;
+use crate::refine;
 use crate::svg::wrap;
 use crate::xml::{BPMNDI_NS, DC_NS, DI_NS, Id, qn};
 
@@ -66,6 +67,8 @@ struct LBox {
     h: i64,
     lanes: Vec<(Option<String>, i64, i64)>,
     back: HashSet<String>,
+    /// the barycentre sweeps changed the order of some nodes
+    reordered: bool,
 }
 
 fn even10(v: i64) -> i64 {
@@ -103,7 +106,13 @@ fn strip_text(md: &Model, e: Id) -> String {
 }
 
 #[allow(clippy::too_many_lines)]
-fn layout_container(md: &Model, cont: Id, lane_list: Option<&[Id]>, top_pad: i64) -> LBox {
+fn layout_container(
+    md: &Model,
+    cont: Id,
+    lane_list: Option<&[Id]>,
+    top_pad: i64,
+    reorder: bool,
+) -> LBox {
     let mut bx = LBox::default();
     let d = &md.doc;
     let kids: Vec<Id> = d.children(cont).to_vec();
@@ -133,8 +142,9 @@ fn layout_container(md: &Model, cont: Id, lane_list: Option<&[Id]>, top_pad: i64
     for &n in nodes.iter().chain(evsubs.iter()) {
         let nid = kid(n);
         if is_subp(&md.tag(n)) && md.has_flow_children(n) {
-            let cb = layout_container(md, n, None, SUB_PAD_T);
+            let cb = layout_container(md, n, None, SUB_PAD_T, reorder);
             bx.back.extend(cb.back.iter().cloned());
+            bx.reordered |= cb.reordered;
             sizes.insert(nid.clone(), (cb.w, cb.h));
             bx.children.insert(nid, cb);
         } else {
@@ -333,6 +343,10 @@ fn layout_container(md: &Model, cont: Id, lane_list: Option<&[Id]>, top_pad: i64
             }
         }
         place(i, layer[i], pref, &mut occ, &mut row, &lane_idx);
+    }
+    if reorder {
+        bx.reordered |=
+            barycentre_sweeps(&ids, &layer, &lane_idx, &pred, &succ, &back, nl, &mut row);
     }
 
     // data objects and annotations
@@ -569,6 +583,81 @@ fn layout_container(md: &Model, cont: Id, lane_list: Option<&[Id]>, top_pad: i64
     bx
 }
 
+/// Order the nodes of every column of a lane by the mean position of their neighbours
+/// (predecessors in sweeps to the right, successors in sweeps to the left). The rows a column
+/// occupies stay the same, so do the heights of rows and lanes; only their assignment to the
+/// nodes changes. Ties keep the classic order. Returns whether any node moved.
+#[allow(clippy::too_many_arguments)]
+fn barycentre_sweeps(
+    ids: &[String],
+    layer: &HashMap<String, i64>,
+    lane_idx: &HashMap<String, usize>,
+    pred: &HashMap<String, Vec<(String, bool)>>,
+    succ: &HashMap<String, Vec<(String, bool)>>,
+    back: &HashSet<(String, String)>,
+    nl: usize,
+    row: &mut HashMap<String, i64>,
+) -> bool {
+    #[allow(clippy::cast_precision_loss)]
+    let pos = |i: &str, row: &HashMap<String, i64>| lane_idx[i] as f64 * 1000.0 + row[i] as f64;
+    let nlay = ids.iter().map(|i| layer[i]).max().map_or(0, |x| x + 1);
+    let mut moved = false;
+    for sweep in 0..4 {
+        let forward = sweep % 2 == 0;
+        let layers: Vec<i64> = if forward {
+            (0..nlay).collect()
+        } else {
+            (0..nlay).rev().collect()
+        };
+        for l in layers {
+            for k in 0..nl {
+                let group: Vec<&String> = ids
+                    .iter()
+                    .filter(|i| layer[*i] == l && lane_idx[*i] == k)
+                    .collect();
+                if group.len() < 2 {
+                    continue;
+                }
+                let mut keyed: Vec<(f64, i64, String)> = group
+                    .iter()
+                    .map(|v| {
+                        let nb: Vec<f64> = if forward {
+                            pred[*v]
+                                .iter()
+                                .filter(|(p, _)| !back.contains(&(p.clone(), (*v).clone())))
+                                .map(|(p, vb)| pos(p, row) + f64::from(u8::from(*vb)))
+                                .collect()
+                        } else {
+                            succ[*v]
+                                .iter()
+                                .filter(|(t, _)| !back.contains(&((*v).clone(), t.clone())))
+                                .map(|(t, _)| pos(t, row))
+                                .collect()
+                        };
+                        #[allow(clippy::cast_precision_loss)]
+                        let b = if nb.is_empty() {
+                            pos(v, row)
+                        } else {
+                            nb.iter().sum::<f64>() / nb.len() as f64
+                        };
+                        (b, row[*v], (*v).clone())
+                    })
+                    .collect();
+                let mut rows_used: Vec<i64> = keyed.iter().map(|x| x.1).collect();
+                rows_used.sort_unstable();
+                keyed.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.cmp(&b.1)));
+                for (r, (_, old, v)) in rows_used.iter().zip(keyed.iter()) {
+                    if r != old {
+                        moved = true;
+                    }
+                    row.insert(v.clone(), *r);
+                }
+            }
+        }
+    }
+    moved
+}
+
 fn place_box(bx: &LBox, x0: i64, y0: i64, out: &mut OMap<Rect>) {
     for (i, r) in bx.pos.items() {
         out.insert(&i, [x0 + r[0], y0 + r[1], r[2], r[3]]);
@@ -621,16 +710,17 @@ fn score(pts: &[Pt], obstacles: &[[f64; 4]]) -> usize {
     hits * 100 + pts.len()
 }
 
-/// `min(cands, key=score)`: first candidate with the lowest score.
-fn best(cands: Vec<Vec<Pt>>, obs: &[[f64; 4]]) -> Vec<Pt> {
-    let mut best: Option<(usize, Vec<Pt>)> = None;
-    for c in cands {
-        let s = score(&c, obs);
+/// `min(cands, key=score)`: first candidate with the lowest score, and all candidates.
+fn best(cands: Vec<Vec<Pt>>, obs: &[[f64; 4]]) -> (Vec<Pt>, Vec<Vec<Pt>>) {
+    let mut best: Option<(usize, &Vec<Pt>)> = None;
+    for c in &cands {
+        let s = score(c, obs);
         if best.as_ref().is_none_or(|(bs, _)| s < *bs) {
             best = Some((s, c));
         }
     }
-    best.map(|(_, c)| c).unwrap_or_default()
+    let b = best.map(|(_, c)| c.clone()).unwrap_or_default();
+    (b, cands)
 }
 
 fn obstacles_for(
@@ -671,7 +761,7 @@ fn route_seq(
     out: &OMap<Rect>,
     back_ids: &HashSet<String>,
     counter: &mut i64,
-) -> Vec<Pt> {
+) -> (Vec<Pt>, Vec<Vec<Pt>>) {
     let s_id = key(md.attr(f, "sourceRef"));
     let t_id = key(md.attr(f, "targetRef"));
     let [sx, sy, sw, sh] = rf(out.map[&s_id]);
@@ -822,7 +912,7 @@ fn route_msg_node_pool(
     out: &OMap<Rect>,
     from_node: bool,
     k: i64,
-) -> Vec<Pt> {
+) -> (Vec<Pt>, Vec<Vec<Pt>>) {
     let n = out.map[node_id];
     let [nx, ny, nw, nh] = rf(n);
     let ncx = nx + nw / 2.0;
@@ -848,11 +938,14 @@ fn route_msg_node_pool(
         };
         cands.push(vec![p0, (chx, p0.1), (chx, edge_y)]);
     }
-    let mut b = best(cands, &obs);
+    let (mut b, mut all) = best(cands, &obs);
     if !from_node {
         b.reverse();
+        for c in &mut all {
+            c.reverse();
+        }
     }
-    b
+    (b, all)
 }
 
 fn spread_ports(md: &Model, wp: &mut OMap<Vec<Pt>>, out: &OMap<Rect>) {
@@ -941,14 +1034,68 @@ fn spread_ports(md: &Model, wp: &mut OMap<Vec<Pt>>, out: &OMap<Rect>) {
     }
 }
 
+/// A complete layout: shapes, lanes, routes, label bounds and its quality.
+struct Plan {
+    out: OMap<Rect>,
+    lanes_out: OMap<Rect>,
+    wp: OMap<Vec<Pt>>,
+    labels: HashMap<String, [i64; 4]>,
+    plane_ref: Option<String>,
+    quality: refine::Quality,
+}
+
+/// Area of the drawing (shapes and waypoints), in square units.
+fn drawing_area(out: &OMap<Rect>, lanes_out: &OMap<Rect>, wp: &OMap<Vec<Pt>>) -> f64 {
+    let mut b = [
+        f64::INFINITY,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::NEG_INFINITY,
+    ];
+    for r in out.map.values().chain(lanes_out.map.values()) {
+        let [x, y, w, h] = rf(*r);
+        b = [b[0].min(x), b[1].min(y), b[2].max(x + w), b[3].max(y + h)];
+    }
+    for pts in wp.map.values() {
+        for p in pts {
+            let (x, y) = (p.0.round_ties_even(), p.1.round_ties_even());
+            b = [b[0].min(x), b[1].min(y), b[2].max(x), b[3].max(y)];
+        }
+    }
+    if b[0] > b[2] {
+        return 0.0;
+    }
+    (b[2] - b[0]) * (b[3] - b[1])
+}
+
 /// Generate the complete BPMNDI of the model (replacing an existing diagram).
 /// Returns the number of shapes, like `bpmn.py layout()`.
-#[allow(clippy::too_many_lines)]
+///
+/// The classic layout is refined (see `refine.rs`); a second layout with the nodes of every
+/// column ordered by barycentre sweeps is used instead when it is better and no quality
+/// measure (nor the area) is worse than in the classic layout.
 pub fn layout_model(md: &mut Model) -> usize {
+    let Some(classic) = plan(md, false, None) else {
+        return 0;
+    };
+    let chosen = match plan(md, true, Some(&classic.quality)) {
+        Some(p) if p.quality.better_than(&classic.quality) => p,
+        _ => classic,
+    };
+    write_di(md, chosen)
+}
+
+/// Lay the model out; with `reorder`, the nodes are ordered by barycentre sweeps and the
+/// refinement keeps every measure within the starting values of `limit` (the classic
+/// layout). `None` when the sweeps change nothing.
+#[allow(clippy::too_many_lines)]
+fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Option<Plan> {
+    let mut reordered = false;
     let mut out: OMap<Rect> = OMap::default();
     let mut back: HashSet<String> = HashSet::new();
     let mut lanes_out: OMap<Rect> = OMap::default();
     let mut pools: HashMap<String, Rect> = HashMap::new();
+    let mut content_x: HashMap<String, i64> = HashMap::new();
     let plane_ref: Option<String>;
     if let Some(&collab) = md.collabs.first() {
         plane_ref = md.id_of(collab).map(str::to_string);
@@ -983,7 +1130,9 @@ pub fn layout_model(md: &mut Model) -> usize {
                             Some(&leaves)
                         },
                         PAD_T,
+                        reorder,
                     );
+                    reordered |= lb.reordered;
                     back.extend(lb.back.iter().cloned());
                     entries.push(Entry {
                         p,
@@ -1018,6 +1167,7 @@ pub fn layout_model(md: &mut Model) -> usize {
             out.insert(&pid, [0, y, w_all, lb.h]);
             pools.insert(pid.clone(), [0, y, w_all, lb.h]);
             let x0 = 30 + en.maxd * 30;
+            content_x.insert(pid.clone(), x0);
             place_box(lb, x0, y, &mut out);
             let band: HashMap<String, (i64, i64)> = lb
                 .lanes
@@ -1067,11 +1217,16 @@ pub fn layout_model(md: &mut Model) -> usize {
             .map(str::to_string);
         let mut y = 0;
         for &proc in &md.processes.clone() {
-            let lb = layout_container(md, proc, None, PAD_T);
+            let lb = layout_container(md, proc, None, PAD_T, reorder);
+            reordered |= lb.reordered;
             back.extend(lb.back.iter().cloned());
             place_box(&lb, 0, y, &mut out);
             y += lb.h + POOL_GAP;
         }
+    }
+
+    if reorder && !reordered {
+        return None;
     }
 
     // boundary events
@@ -1088,13 +1243,15 @@ pub fn layout_model(md: &mut Model) -> usize {
 
     // edges
     let mut wp: OMap<Vec<Pt>> = OMap::default();
+    let mut classic: HashMap<String, Vec<Vec<Pt>>> = HashMap::new();
     let mut counter = 0i64;
     for &f in &md.seq {
         if out.contains(&key(md.attr(f, "sourceRef")))
             && out.contains(&key(md.attr(f, "targetRef")))
         {
-            let pts = route_seq(md, f, &out, &back, &mut counter);
+            let (pts, cands) = route_seq(md, f, &out, &back, &mut counter);
             wp.insert(&key(md.id_of(f)), pts);
+            classic.insert(key(md.id_of(f)), cands);
         }
     }
     let mut allbox = out.clone();
@@ -1124,11 +1281,15 @@ pub fn layout_model(md: &mut Model) -> usize {
         mcount.insert(kk, k + 1);
         let fid = key(md.id_of(f));
         if t_is_pool && !s_is_pool && out.contains(&s_id) {
-            wp.insert(&fid, route_msg_node_pool(md, &s_id, t, &out, true, k));
+            let (pts, cands) = route_msg_node_pool(md, &s_id, t, &out, true, k);
+            wp.insert(&fid, pts);
+            classic.insert(fid, cands);
             continue;
         }
         if s_is_pool && !t_is_pool && out.contains(&t_id) {
-            wp.insert(&fid, route_msg_node_pool(md, &t_id, s, &out, false, k));
+            let (pts, cands) = route_msg_node_pool(md, &t_id, s, &out, false, k);
+            wp.insert(&fid, pts);
+            classic.insert(fid, cands);
             continue;
         }
         let s_pool: Option<Rect> = match ps {
@@ -1242,7 +1403,49 @@ pub fn layout_model(md: &mut Model) -> usize {
         wp.insert(&key(md.id_of(e)), vec![p1, p2]);
     }
 
-    // writing DI
+    // refinement: routes and labels
+    let scene_input = refine::Input {
+        out: &out,
+        lanes: &lanes_out,
+        content_x: &content_x,
+        wp: &wp,
+        classic: &classic,
+    };
+    let area0 = drawing_area(&out, &lanes_out, &wp);
+    let mut scene = refine::Scene::build(md, &scene_input);
+    if let Some(q) = limit {
+        scene.limit(q);
+    }
+    scene.refine();
+    for (k, fid) in scene.edge_ids.iter().enumerate() {
+        wp.insert(fid, scene.route(k).to_vec());
+    }
+    let labels: HashMap<String, [i64; 4]> = scene
+        .labels
+        .iter()
+        .map(|l| (l.owner.clone(), l.di))
+        .collect();
+    let quality = scene.quality(area0, drawing_area(&out, &lanes_out, &wp));
+    Some(Plan {
+        out,
+        lanes_out,
+        wp,
+        labels,
+        plane_ref,
+        quality,
+    })
+}
+
+/// Write the BPMNDI of a layout into the document; returns the number of shapes.
+fn write_di(md: &mut Model, plan: Plan) -> usize {
+    let Plan {
+        out,
+        lanes_out,
+        wp,
+        labels,
+        plane_ref,
+        ..
+    } = plan;
     let root = md.doc.root;
     for dg in md.doc.findall(root, &qn(BPMNDI_NS, "BPMNDiagram")) {
         md.doc.remove_child(root, dg);
@@ -1322,6 +1525,9 @@ pub fn layout_model(md: &mut Model) -> usize {
             &qn(DC_NS, "Bounds"),
             &[("x", &xs), ("y", &ys), ("width", &ws), ("height", &hs)],
         );
+        if let Some(lb) = labels.get(i) {
+            write_label(md, sh, *lb);
+        }
     }
     for e in md.doc.iter(root) {
         if md.id_of(e).is_none() {
@@ -1340,8 +1546,27 @@ pub fn layout_model(md: &mut Model) -> usize {
                 md.doc
                     .sub_element(ed, &qn(DI_NS, "waypoint"), &[("x", &xs), ("y", &ys)]);
             }
+            if let Some(lb) = labels.get(&i) {
+                write_label(md, ed, *lb);
+            }
         }
     }
     md.reindex();
     order.len()
+}
+
+/// `<bpmndi:BPMNLabel><dc:Bounds .../></bpmndi:BPMNLabel>` inside a shape or an edge.
+fn write_label(md: &mut Model, parent: Id, b: [i64; 4]) {
+    let lb = md.doc.sub_element(parent, &qn(BPMNDI_NS, "BPMNLabel"), &[]);
+    let (xs, ys, ws, hs) = (
+        b[0].to_string(),
+        b[1].to_string(),
+        b[2].to_string(),
+        b[3].to_string(),
+    );
+    md.doc.sub_element(
+        lb,
+        &qn(DC_NS, "Bounds"),
+        &[("x", &xs), ("y", &ys), ("width", &ws), ("height", &hs)],
+    );
 }

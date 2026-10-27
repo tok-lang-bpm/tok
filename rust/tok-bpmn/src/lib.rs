@@ -1,14 +1,18 @@
 //! BPMN 2.0 rules, automatic layout and SVG rendering used by tok.
 //!
-//! This crate is a faithful port of the course validator `bpmn.py` 1.2 (shipped
-//! with the Python implementation as `tok.bpmnlib`). Given the same input, every
-//! function produces the same output as its Python counterpart: the same
-//! diagnostics with identical Polish messages, byte-identical BPMN XML after
-//! layout and byte-identical SVG. See `PARITY.md` for the verification.
+//! The validator is a faithful port of the course validator `bpmn.py` 1.2 (shipped
+//! with the Python implementation as `tok.bpmnlib`): the same diagnostics with
+//! identical Polish messages and the same semantic BPMN XML. The layout engine
+//! started as a port of `bpmn.py` and, from tok 0.4, refines its result: flows are
+//! rerouted around shapes, labels and other flows, labels are placed without
+//! overlaps and written as `BPMNLabel` bounds, and no quality measure is ever worse
+//! than in the classic layout. A model that brings its own diagram is drawn exactly
+//! as by `bpmn.py`. See `PARITY.md` for the verification.
 
 mod layout;
 mod model;
 mod pyfmt;
+mod refine;
 mod steps;
 mod svg;
 mod validate;

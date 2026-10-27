@@ -1,7 +1,12 @@
 //! Parity with the Python reference `tok.bpmnlib` (= bpmn.py 1.2).
 //!
-//! Expected outputs are produced by `tests/gen_expected.py`; every output of the
-//! Rust port must be identical to them.
+//! Expected outputs are produced by `tests/gen_expected.py`. Identical to them must be:
+//! the diagnostics (codes, levels, element ids and messages of `validate`, `validate_with`
+//! and `validate_camunda`), the summary, the semantic part of the laid-out XML (everything
+//! except the `BPMNDiagram`) and the drawing of a model that brings its own diagram.
+//! The automatic layout itself and the drawing of a model laid out by it are no longer
+//! compared with Python (the layout engine of tok 0.4 differs from `bpmn.py`); they are
+//! covered by `tests/golden.rs` and `tests/layout_quality.rs`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -35,6 +40,20 @@ fn first_diff(a: &str, b: &str) -> String {
         a.lines().count(),
         b.lines().count()
     )
+}
+
+/// The document without its `BPMNDiagram` element (and the whitespace before it).
+fn strip_di(xml: &str) -> String {
+    let Some(start) = xml.find(":BPMNDiagram ").and_then(|k| xml[..k].rfind('<')) else {
+        return xml.to_string();
+    };
+    let prefix = &xml[start + 1..xml[start..].find(':').map_or(start, |k| start + k)];
+    let close = format!("</{prefix}:BPMNDiagram>");
+    let Some(end) = xml[start..].find(&close).map(|k| start + k + close.len()) else {
+        return xml.to_string();
+    };
+    let head = xml[..start].trim_end_matches([' ', '\t', '\n', '\r']);
+    format!("{head}{}", &xml[end..])
 }
 
 fn fixtures() -> Vec<(String, PathBuf)> {
@@ -139,17 +158,27 @@ fn parity_with_python_reference() {
             failures.push(format!("{tag} summary: {summary}"));
         }
 
-        let laid = tok_bpmn::layout(&xml).expect("layout");
-        let want = expected(&group, &stem, ".layout.bpmn").expect("expected layout");
+        let laid = strip_di(&tok_bpmn::layout(&xml).expect("layout"));
+        let want = strip_di(&expected(&group, &stem, ".layout.bpmn").expect("expected layout"));
         if laid != want {
-            failures.push(format!("{tag} layout {}", first_diff(&laid, &want)));
+            failures.push(format!(
+                "{tag} layout (semantic part) {}",
+                first_diff(&laid, &want)
+            ));
         }
 
+        // a model with its own diagram is drawn as it is, exactly as by Python
+        let own_diagram = xml.contains(":BPMNShape") || xml.contains("<BPMNShape");
         match tok_bpmn::render_svg(&xml, Some("model.bpmn")) {
             Ok(svg) => {
-                let want = expected(&group, &stem, ".svg").unwrap_or_default();
-                if svg != want {
-                    failures.push(format!("{tag} svg {}", first_diff(&svg, &want)));
+                let want = expected(&group, &stem, ".svg");
+                if want.is_none() {
+                    failures.push(format!("{tag} svg drawn, Python reports an error"));
+                } else if own_diagram && Some(&svg) != want.as_ref() {
+                    failures.push(format!(
+                        "{tag} svg {}",
+                        first_diff(&svg, &want.unwrap_or_default())
+                    ));
                 }
             }
             Err(e) => {
@@ -161,6 +190,10 @@ fn parity_with_python_reference() {
         checked += 1;
     }
     assert!(checked >= 30, "only {checked} fixtures found");
+    assert_eq!(
+        strip_di("<a>\n  <b/>\n  <x:BPMNDiagram id=\"d\">\n    <x:c/>\n  </x:BPMNDiagram>\n</a>"),
+        "<a>\n  <b/>\n</a>"
+    );
     assert!(
         failures.is_empty(),
         "{} mismatches:\n{}",

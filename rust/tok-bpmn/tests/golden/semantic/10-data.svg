@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 10 1060 626" width="1060" height="626" font-family="Arial, Helvetica, sans-serif">
+<title>model.bpmn</title>
+<defs><marker id="seqEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2328"/></marker><marker id="msgEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0.5,0.5 L9.5,5 L0.5,9.5 z" fill="#fff" stroke="#1f2328"/></marker><marker id="msgStart" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"><circle cx="5" cy="5" r="4" fill="#fff" stroke="#1f2328"/></marker><marker id="assocEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#1f2328"/></marker></defs>
+<rect x="10" y="10" width="1060" height="626" fill="#fff"/>
+<rect x="390.0" y="30.0" width="340.0" height="250.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/>
+<text x="400.0" y="48.0" font-size="11" text-anchor="start" font-weight="bold"><tspan x="400.0" dy="0.0">Ocena</tspan></text>
+
+<polyline points="95.0,173.0 95.0,330.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="275.0,195.0 275.0,330.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="556.0,200.0 556.0,150.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="456.0,110.0 506.0,110.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="606.0,110.0 656.0,110.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="293.0,349.0 780.0,173.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="830.0,195.0 830.0,330.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="830.0,430.0 830.0,195.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="830.0,195.0 830.0,530.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#assocEnd)"/>
+<polyline points="113.0,155.0 225.0,155.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="325.0,155.0 390.0,155.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="730.0,155.0 780.0,155.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="880.0,155.0 930.0,155.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="275.0,435.0 275.0,195.0" fill="none" stroke="#1f2328" stroke-width="1.2" stroke-dasharray="2 3"/>
+<circle cx="95.0" cy="155.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<rect x="225.0" y="115.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><circle cx="239.0" cy="127.0" r="4" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><path d="M231.0,141.0 Q231.0,132.0 239.0,132.0 Q247.0,132.0 247.0,141.0 Z" fill="#fff" stroke="#1f2328" stroke-width="1.2"/><text x="275.0" y="157.2" font-size="11" text-anchor="middle" ><tspan x="275.0" dy="0.0">Złożenie</tspan><tspan x="275.0" dy="13.2">wniosku</tspan></text>
+<circle cx="438.0" cy="110.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<rect x="506.0" y="70.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="556.0" y="112.8" font-size="11" text-anchor="middle" ><tspan x="556.0" dy="0.0">Analiza</tspan></text>
+<circle cx="674.0" cy="110.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<path d="M538.0,200.0 h26.0 l10,10 v40.0 h-36.0 z M564.0,200.0 v10 h10" fill="#fff" stroke="#1f2328" stroke-width="1.3" stroke-linejoin="round"/>
+<rect x="780.0" y="115.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/><text x="830.0" y="157.8" font-size="11" text-anchor="middle" ><tspan x="830.0" dy="0.0">Rejestracja</tspan></text>
+<circle cx="948.0" cy="155.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<path d="M257.0,330.0 h26.0 l10,10 v40.0 h-36.0 z M283.0,330.0 v10 h10" fill="#fff" stroke="#1f2328" stroke-width="1.3" stroke-linejoin="round"/>
+<path d="M812.0,330.0 h26.0 l10,10 v40.0 h-36.0 z M838.0,330.0 v10 h10" fill="#fff" stroke="#1f2328" stroke-width="1.3" stroke-linejoin="round"/>
+<path d="M77.0,330.0 h26.0 l10,10 v40.0 h-36.0 z M103.0,330.0 v10 h10" fill="#fff" stroke="#1f2328" stroke-width="1.3" stroke-linejoin="round"/><line x1="91.0" y1="367.0" x2="91.0" y2="376.0" stroke="#1f2328" stroke-width="2"/><line x1="95.0" y1="367.0" x2="95.0" y2="376.0" stroke="#1f2328" stroke-width="2"/><line x1="99.0" y1="367.0" x2="99.0" y2="376.0" stroke="#1f2328" stroke-width="2"/>
+<path d="M805.0,436.0 a25.0,6 0 0 0 50.0,0 a25.0,6 0 0 0 -50.0,0 v38.0 a25.0,6 0 0 0 50.0,0 v-38.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/><path d="M805.0,441.0 a25.0,6 0 0 0 50.0,0 M805.0,446.0 a25.0,6 0 0 0 50.0,0" fill="none" stroke="#1f2328" stroke-width="1.1"/>
+<path d="M805.0,536.0 a25.0,6 0 0 0 50.0,0 a25.0,6 0 0 0 -50.0,0 v38.0 a25.0,6 0 0 0 50.0,0 v-38.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/><path d="M805.0,541.0 a25.0,6 0 0 0 50.0,0 M805.0,546.0 a25.0,6 0 0 0 50.0,0" fill="none" stroke="#1f2328" stroke-width="1.1"/>
+<path d="M70.0,436.0 a25.0,6 0 0 0 50.0,0 a25.0,6 0 0 0 -50.0,0 v38.0 a25.0,6 0 0 0 50.0,0 v-38.0" fill="#fff" stroke="#1f2328" stroke-width="1.3"/><path d="M70.0,441.0 a25.0,6 0 0 0 50.0,0 M70.0,446.0 a25.0,6 0 0 0 50.0,0" fill="none" stroke="#1f2328" stroke-width="1.1"/>
+<path d="M220.0,435.0 h-10 v40.0 h10" fill="none" stroke="#1f2328" stroke-width="1.3"/><text x="216.0" y="450.0" font-size="11" text-anchor="start" ><tspan x="216.0" dy="0.0">Podstawa: regulamin</tspan><tspan x="216.0" dy="13.2">biblioteki</tspan></text>
+<path d="M40.0,540.0 h-10 v30.0 h10" fill="none" stroke="#1f2328" stroke-width="1.3"/><text x="36.0" y="555.0" font-size="11" text-anchor="start" ><tspan x="36.0" dy="0.0">Uwaga ogólna</tspan></text>
+<text x="597.0" y="228.0" font-size="10" text-anchor="middle" ><tspan x="597.0" dy="0.0">Notatka</tspan></text>
+<text x="222.0" y="391.0" font-size="10" text-anchor="middle" ><tspan x="222.0" dy="0.0">Wniosek [złożony]</tspan></text>
+<text x="780.0" y="391.0" font-size="10" text-anchor="middle" ><tspan x="780.0" dy="0.0">Wniosek</tspan><tspan x="780.0" dy="12.0">[zarejestrowany]</tspan></text>
+<text x="95.0" y="393.0" font-size="10" text-anchor="middle" ><tspan x="95.0" dy="0.0">Lista pozycji</tspan></text>
+<text x="805.0" y="491.0" font-size="10" text-anchor="middle" ><tspan x="805.0" dy="0.0">Katalog</tspan></text>
+<text x="830.0" y="593.0" font-size="10" text-anchor="middle" ><tspan x="830.0" dy="0.0">Katalog</tspan></text>
+<text x="95.0" y="493.0" font-size="10" text-anchor="middle" ><tspan x="95.0" dy="0.0">rej</tspan></text>
+</svg>

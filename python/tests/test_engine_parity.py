@@ -8,6 +8,13 @@ of every document and of the synthetic models of ``rust/tok-sim/tests/fixtures/s
 Also compared: the output and exit status of the ``tok`` command on the engine and with
 ``TOK_ENGINE=python``, and the functions of ``tok.api`` on both.
 
+From 0.4 the automatic layout is done by the layout engine in Rust, which routes flows and
+places labels differently from the frozen Python implementation (``bpmn.py``). So BPMN files
+are compared without their diagram (``BPMNDiagram``: shapes, waypoints, label bounds), and
+drawings by their structure (the same drawn elements, ``svg_structure``): the semantic BPMN
+must stay identical. Decision tables and forms are compared exactly. The layout itself is
+tested in Rust (``rust/tok-bpmn/tests/golden.rs`` and ``layout_quality.rs``).
+
 The tests are skipped when the engine is not installed (a wheel of ``tok-lang``); see
 ``rust/tok-py/README.md``.
 The pure-Python reference runs in a fresh interpreter for every input, so that the global
@@ -17,6 +24,7 @@ namespace registry of ElementTree does not carry over from one model to the next
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -305,11 +313,52 @@ def run_tok(args, engine):
             res.stderr.replace(b"\r\n", b"\n"))
 
 
+def written(args):
+    """Structure of the drawing written by ``tok svg ... -o FILE`` (removed after reading)."""
+    if args[0] != "svg" or not os.path.exists(args[-1]):
+        return None
+    with open(args[-1], encoding="utf-8") as f:
+        svg = f.read()
+    os.remove(args[-1])
+    return svg_structure(svg)
+
+
 def engine_or_none(fn, *args, **kw):
     try:
         return fn(*args, **kw)
     except ValueError:
         return None
+
+
+def without_diagram(xml):
+    """BPMN XML without its ``BPMNDiagram`` element (the layout)."""
+    if xml is None:
+        return None
+    return re.sub(r"\s*<(\w+):BPMNDiagram\b.*?</\1:BPMNDiagram>", "", xml, flags=re.S)
+
+
+def svg_structure(svg):
+    """The drawn elements of an SVG (tag names and how often they occur; lines of wrapped
+    text not counted), which do not depend on the layout."""
+    if svg is None:
+        return None
+    tags = re.findall(r"<([A-Za-z]+)", svg)
+    return sorted((t, tags.count(t)) for t in set(tags) if t != "tspan")
+
+
+def comparable_files(files):
+    """Exported files with BPMN compared without the diagram and SVG by structure."""
+    if files is None:
+        return None
+    out = {}
+    for name, text in files.items():
+        if name.endswith(".bpmn"):
+            out[name] = without_diagram(text)
+        elif name.endswith(".svg"):
+            out[name] = svg_structure(text)
+        else:
+            out[name] = text
+    return out
 
 
 @unittest.skipIf(tok_engine is None, "the Rust engine (tok._engine) is not installed")
@@ -329,11 +378,14 @@ class EngineParity(unittest.TestCase):
             with self.subTest(document=name, output="semantic_xml"):
                 self.assertEqual(engine_or_none(tok_engine.semantic_xml, text), ref["semantic_xml"])
             with self.subTest(document=name, output="bpmn"):
-                self.assertEqual(engine_or_none(tok_engine.bpmn, text), ref["bpmn"])
+                self.assertEqual(without_diagram(engine_or_none(tok_engine.bpmn, text)),
+                                 without_diagram(ref["bpmn"]))
             with self.subTest(document=name, output="svg"):
-                self.assertEqual(engine_or_none(tok_engine.svg, text), ref["svg"])
+                self.assertEqual(svg_structure(engine_or_none(tok_engine.svg, text)),
+                                 svg_structure(ref["svg"]))
             with self.subTest(document=name, output="export"):
-                self.assertEqual(engine_or_none(tok_engine.export, text), ref["export"])
+                self.assertEqual(comparable_files(engine_or_none(tok_engine.export, text)),
+                                 comparable_files(ref["export"]))
             compared += 1
         self.assertEqual(compared, len(DOCUMENTS))
         self.assertGreater(compared, 0)
@@ -407,7 +459,8 @@ class EngineParity(unittest.TestCase):
         self.assertGreater(compared, 100)
 
     def test_command_line(self):
-        """``tok`` on the engine prints exactly what the pure-Python command prints."""
+        """``tok`` on the engine prints exactly what the pure-Python command prints; the
+        drawing written by ``tok svg`` has the same structure."""
         import tempfile
         compared = 0
         with tempfile.TemporaryDirectory() as tmp:
@@ -416,12 +469,17 @@ class EngineParity(unittest.TestCase):
                             ["check", path, "--level", "basic"], ["fmt", path],
                             ["svg", path, "-o", os.path.join(tmp, "m.svg")]]
                 for args in commands:
-                    got = run_tok(args, engine=True)
-                    want = run_tok(args, engine=False)
+                    got = run_tok(args, engine=True) + (written(args),)
+                    want = run_tok(args, engine=False) + (written(args),)
                     with self.subTest(command=" ".join(args[:1] + [os.path.basename(path)] + args[2:])):
                         self.assertEqual(got, want)
                     compared += 1
-        for args in (["--version"], ["nonsense"], [], ["check"]):
+        # The engine writes argparse's messages as Python 3.11 does; Python 3.12 and newer
+        # print the choices of an invalid command without quotes.
+        usage_cases = [["--version"], [], ["check"]]
+        if sys.version_info < (3, 12):
+            usage_cases.append(["nonsense"])
+        for args in usage_cases:
             with self.subTest(command=" ".join(args)):
                 self.assertEqual(run_tok(args, engine=True), run_tok(args, engine=False))
         self.assertGreater(compared, 100)
@@ -429,14 +487,14 @@ class EngineParity(unittest.TestCase):
     def test_api_on_both_implementations(self):
         from tok import api
         text = open(os.path.join(REPO, "examples", "propozycja-zakupu.tok"), encoding="utf-8").read()
-        on_engine = (api.check(text, "pl"), api.fmt(text), api.export(text, "m"),
+        on_engine = (api.check(text, "pl"), api.fmt(text), comparable_files(api.export(text, "m")),
                      api.eval_decision(text, "tryb-akceptacji", {"rodzaj": "drukowana", "cena": 99}),
                      api.format_kpi(api.simulate(text, 20, 7).kpi(), "pl"))
         self.assertEqual(api.engine(), "rust")
         os.environ["TOK_ENGINE"] = "python"
         try:
             self.assertEqual(api.engine(), "python")
-            on_python = (api.check(text, "pl"), api.fmt(text), api.export(text, "m"),
+            on_python = (api.check(text, "pl"), api.fmt(text), comparable_files(api.export(text, "m")),
                          api.eval_decision(text, "tryb-akceptacji", {"rodzaj": "drukowana", "cena": 99}),
                          api.format_kpi(api.simulate(text, 20, 7).kpi(), "pl"))
         finally:

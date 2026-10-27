@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="tok" exporterVersion="0.1" id="definitions" name="Kwerenda genealogiczna" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Wniosek" name="Wniosek" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:message id="Message_Wplata" name="Wpłata" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="wn" name="Wnioskodawca" />
+    <bpmn:participant id="arch" name="Archiwum Państwowe" processRef="kwerenda" />
+    <bpmn:participant id="bank" name="Bank" processRef="platnosci" />
+    <bpmn:messageFlow id="m-wn-s" messageRef="Message_Wniosek" name="Wniosek" sourceRef="wn" targetRef="s" />
+    <bpmn:messageFlow id="m-o-wn" messageRef="Message_Odpowiedz" name="Odpowiedź" sourceRef="o" targetRef="wn" />
+    <bpmn:messageFlow id="mf-przelew" messageRef="Message_Wplata" name="Przelew" sourceRef="wn" targetRef="bp" />
+    <bpmn:messageFlow id="m-wn-bp" sourceRef="wn" targetRef="bp" />
+  </bpmn:collaboration>
+  <bpmn:process id="kwerenda" isExecutable="false" name="Archiwum Państwowe">
+    <bpmn:laneSet id="arch-lanes">
+      <bpmn:lane id="kanc" name="Kancelaria">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>r</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="mer" name="Oddział merytoryczny">
+        <bpmn:childLaneSet id="mer-lanes">
+          <bpmn:lane id="arc" name="Archiwista">
+            <bpmn:flowNodeRef>q</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="kier" name="Kierownik oddziału">
+            <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>o</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>e</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Wniosek wpłynął">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_Wniosek" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="r" name="Rejestracja wniosku" />
+    <bpmn:userTask id="q" name="Poszukiwania" />
+    <bpmn:userTask id="z" name="Zatwierdzenie odpowiedzi" />
+    <bpmn:sendTask id="o" messageRef="Message_Odpowiedz" name="Wysłanie odpowiedzi" />
+    <bpmn:endEvent id="e" name="Odpowiedź wysłana" />
+    <bpmn:sequenceFlow id="f-s-r" sourceRef="s" targetRef="r" />
+    <bpmn:sequenceFlow id="f-r-q" sourceRef="r" targetRef="q" />
+    <bpmn:sequenceFlow id="f-q-z" sourceRef="q" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-o" sourceRef="z" targetRef="o" />
+    <bpmn:sequenceFlow id="f-o-e" sourceRef="o" targetRef="e" />
+  </bpmn:process>
+  <bpmn:process id="platnosci" isExecutable="false" name="Bank">
+    <bpmn:startEvent id="bs" />
+    <bpmn:receiveTask id="bp" messageRef="Message_Wplata" name="Przyjęcie wpłaty" />
+    <bpmn:endEvent id="be" />
+    <bpmn:sequenceFlow id="f-bs-bp" sourceRef="bs" targetRef="bp" />
+    <bpmn:sequenceFlow id="f-bp-be" sourceRef="bp" targetRef="be" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="wn_di" bpmnElement="wn" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="880" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="arch_di" bpmnElement="arch" isHorizontal="true">
+        <dc:Bounds x="0" y="110" width="880" height="420" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bank_di" bpmnElement="bank" isHorizontal="true">
+        <dc:Bounds x="0" y="570" width="880" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kanc_di" bpmnElement="kanc" isHorizontal="true">
+        <dc:Bounds x="30" y="110" width="850" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="mer_di" bpmnElement="mer" isHorizontal="true">
+        <dc:Bounds x="30" y="250" width="850" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="arc_di" bpmnElement="arc" isHorizontal="true">
+        <dc:Bounds x="60" y="250" width="820" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kier_di" bpmnElement="kier" isHorizontal="true">
+        <dc:Bounds x="60" y="390" width="820" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="120" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="96" y="203" width="84" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="r_di" bpmnElement="r">
+        <dc:Bounds x="206" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="q_di" bpmnElement="q">
+        <dc:Bounds x="356" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z">
+        <dc:Bounds x="506" y="420" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="o_di" bpmnElement="o">
+        <dc:Bounds x="656" y="420" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="806" y="442" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="776" y="483" width="96" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bs_di" bpmnElement="bs">
+        <dc:Bounds x="60" y="622" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bp_di" bpmnElement="bp">
+        <dc:Bounds x="146" y="600" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="be_di" bpmnElement="be">
+        <dc:Bounds x="296" y="622" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="m-wn-s_di" bpmnElement="m-wn-s">
+        <di:waypoint x="138" y="70" />
+        <di:waypoint x="138" y="162" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="143" y="76" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-o-wn_di" bpmnElement="m-o-wn">
+        <di:waypoint x="706" y="420" />
+        <di:waypoint x="706" y="70" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="711" y="233" width="52" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="mf-przelew_di" bpmnElement="mf-przelew">
+        <di:waypoint x="188" y="70" />
+        <di:waypoint x="188" y="600" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="143" y="584" width="40" height="11" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m-wn-bp_di" bpmnElement="m-wn-bp">
+        <di:waypoint x="196" y="70" />
+        <di:waypoint x="196" y="600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-r_di" bpmnElement="f-s-r">
+        <di:waypoint x="156" y="180" />
+        <di:waypoint x="206" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-r-q_di" bpmnElement="f-r-q">
+        <di:waypoint x="306" y="180" />
+        <di:waypoint x="406" y="180" />
+        <di:waypoint x="406" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-q-z_di" bpmnElement="f-q-z">
+        <di:waypoint x="456" y="320" />
+        <di:waypoint x="556" y="320" />
+        <di:waypoint x="556" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-z-o_di" bpmnElement="f-z-o">
+        <di:waypoint x="606" y="460" />
+        <di:waypoint x="656" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-o-e_di" bpmnElement="f-o-e">
+        <di:waypoint x="756" y="460" />
+        <di:waypoint x="806" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-bs-bp_di" bpmnElement="f-bs-bp">
+        <di:waypoint x="96" y="640" />
+        <di:waypoint x="146" y="640" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-bp-be_di" bpmnElement="f-bp-be">
+        <di:waypoint x="246" y="640" />
+        <di:waypoint x="296" y="640" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

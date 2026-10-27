@@ -31,7 +31,7 @@ Every diagnostic has a stable code, a severity and a line number. `tok check --l
 |---|---|---|---|
 | R001 | error | identifier '{id}' is already used on line {other} | identyfikator „{id}” jest już użyty w linii {other} |
 | R002 | error | unknown {what} '{id}' | nieznany element ({what_pl}): „{id}” |
-| R003 | error | '{id}' is a {actual}, but a {expected} is required here | „{id}” to {actual}, a tu wymagany jest element: {expected_pl} |
+| R003 | error | '{id}' is a '{actual}' element; required here: {expected} | „{id}” to {actual}, a tu wymagany jest element: {expected_pl} |
 | R004 | error | identifier '{id}' must use only ASCII letters, digits, '_' and '-' | identyfikator „{id}” może zawierać tylko litery ASCII, cyfry, „_” i „-” |
 | R010 | warning | unknown attribute '{key}' on {kind} | nieznany atrybut „{key}” w elemencie {kind} |
 | R011 | error | unknown flag '{flag}' on {kind} | nieznana flaga „{flag}” w elemencie {kind} |

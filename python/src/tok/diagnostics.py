@@ -28,7 +28,7 @@ MESSAGES = {
     # references and structure
     "R001": (ERROR, "identifier '{id}' is already used on line {other}", "identyfikator „{id}” jest już użyty w linii {other}"),
     "R002": (ERROR, "unknown {what} '{id}'", "nieznany element ({what_pl}): „{id}”"),
-    "R003": (ERROR, "'{id}' is a {actual}, but a {expected} is required here",
+    "R003": (ERROR, "'{id}' is a '{actual}' element; required here: {expected}",
              "„{id}” to {actual}, a tu wymagany jest element: {expected_pl}"),
     "R004": (ERROR, "identifier '{id}' must use only ASCII letters, digits, '_' and '-'",
              "identyfikator „{id}” może zawierać tylko litery ASCII, cyfry, „_” i „-”"),

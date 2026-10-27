@@ -90,11 +90,12 @@ tok eval model.tok DECISION a=1  # evaluate a decision table
 |---|---|
 | `python/` | reference implementation (package `tok-lang`, command `tok`) and its tests |
 | `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-cli` (native `tok`), `tok-py` (Python bindings) |
+| `r/tokr` | R package `tokr` on the Rust engine: diagnostics as data frames, diagrams in the viewer, knitr engine `{tok}` |
 | `julia/Tok.jl` | Julia implementation of the core |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |
 | `docs/`, `examples/`, `skills/` | documentation, examples, agent skill |
 
-`tools/check.sh` runs every check of a release (Rust, Python and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program) on Linux, macOS or Windows with Git Bash.
+`tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program) on Linux, macOS or Windows with Git Bash.
 
 The BPMN validation, layout and SVG rendering come from the `bpmn.py` validator used in the course *Modelowanie procesów informacyjnych* (Jagiellonian University), shipped here as `tok.bpmnlib`; its rule messages are in Polish and `tok` adds English equivalents.
 

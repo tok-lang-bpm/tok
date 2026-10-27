@@ -72,6 +72,18 @@ if [ "$CROSS" = 1 ] && [ "$PLATFORM" = linux ]; then
   done
 fi
 
+if command -v Rscript > /dev/null; then
+  step "R package tokr"
+  RLIB="$ROOT/rust/target/check-rlib"
+  rm -rf "$RLIB"
+  mkdir -p "$RLIB"
+  R CMD INSTALL --no-multiarch --library="$RLIB" r/tokr > rust/target/check-rlib.log 2>&1 ||
+    { tail -40 rust/target/check-rlib.log; exit 1; }
+  (cd r/tokr && RLIB="$RLIB" Rscript -e '.libPaths(c(Sys.getenv("RLIB"), .libPaths())); testthat::test_local(".", load_package = "installed", reporter = "summary", stop_on_failure = TRUE)')
+else
+  step "R package tokr: skipped (R not installed)"
+fi
+
 if command -v julia > /dev/null; then
   step "Julia core"
   julia --project=julia/Tok.jl -e 'using Pkg; Pkg.test()'

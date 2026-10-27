@@ -1,0 +1,22 @@
+Package: tokr
+Type: Package
+Title: Plain-Text Information-Process Models in tok (BPMN 2.0, DMN, Forms)
+Version: 0.3.0.9000
+Authors@R: person("Marek", "Deja", email = "marek.deja@uj.edu.pl", role = c("aut", "cre", "cph"))
+Description: Reads, checks, formats and exports process models written in tok,
+    a plain-text language for BPMN 2.0 processes with decision tables (DMN),
+    Camunda forms and simulation parameters. Models are checked against the
+    BPMN 2.0 rules with diagnostics in English or Polish, exported to BPMN XML
+    with diagram layout, SVG pictures, DMN and form files, and drawn in the
+    viewer or in R Markdown and Quarto documents through a knitr engine. The
+    work is done by the Rust engine of tok, shared with the Python package.
+License: GPL (>= 3)
+URL: https://codeberg.org/MarekDeja/tok
+BugReports: https://codeberg.org/MarekDeja/tok/issues
+Encoding: UTF-8
+Depends: R (>= 4.2)
+Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
+Config/testthat/edition: 3
+SystemRequirements: Cargo (Rust's package manager), rustc >= 1.99
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0

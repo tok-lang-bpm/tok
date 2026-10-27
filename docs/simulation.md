@@ -50,7 +50,7 @@ A distribution is a duration (`30m`), a number, or a call. Durations use the uni
 
 `assign=` lists several variables separated by semicolons: `assign="zgoda=bern(0.8); pilne=bern(0.1)"`.
 
-All draws come from one random number generator seeded with `seed=`. The same document and seed always give the same log. Other implementations of tok use their own generators, so results agree statistically, not number by number.
+All draws come from one random number generator seeded with `seed=`. The same document and seed always give the same log. The Rust engine (`tok-sim`, the native `tok sim`) reproduces the generator and the simulator of the reference implementation, so it gives the same log and indicators number by number; the last bit of normal, log-normal and exponential draws comes from the platform's C library, so results can differ in that bit between operating systems.
 
 ## Diagnostics
 
@@ -79,7 +79,7 @@ All draws come from one random number generator seeded with `seed=`. The same do
 
 The log can be read by process-mining tools: `case` is the case identifier, `label` the activity, `start` and `end` the timestamps.
 
-**Cases** (`--cases cases.csv`): case number, start, end, end event, cycle time in seconds and the case variables (JSON).
+**Cases** (`--cases-csv cases.csv`): case number, start, end, end event, cycle time in seconds and the case variables (JSON).
 
 **Indicators** (`tok sim`, `--json`):
 

@@ -1,0 +1,56 @@
+tok 0.3 "Bramki"
+
+start s "Start"
+script k "Koszt" expr="cena + 10" result=koszt
+xor g "Drogo?"
+task drogo "Akceptacja" duration="1h"
+task tanio "Automat" duration="5m"
+task pomin "Pominięcie"
+xor gj
+or o "Zakres"
+task x "Część X" duration="2h"
+task y "Część Y" duration="3h"
+task w "Część W" duration="30m"
+or oj "Zbieranie"
+xor p "Losowanie"
+end e1 "Wariant 1"
+end e2 "Wariant 2"
+end e3 "Wariant 3"
+xor bez "Bez warunków"
+task b1 "Pierwszy"
+task b2 "Drugi"
+xor q "Błędne warunki"
+xor u "Nazwy kluczowe"
+
+flow s -> k -> g
+flow g -> drogo "drogo" when="koszt > 150"
+flow g -> tanio "tanio" when="koszt <= 150 and rodzaj = \"e-book\""
+flow g -> pomin default
+flow drogo -> gj
+flow tanio -> gj
+flow pomin -> gj
+flow gj -> o
+flow o -> x when="zgoda"
+flow o -> y p=0.5
+flow o -> w default
+flow x -> oj
+flow y -> oj
+flow w -> oj
+flow oj -> bez
+flow bez -> b1
+flow bez -> b2
+flow b1 -> q
+flow b2 -> q
+flow q -> u when="koszt ** 2 > 100"
+flow q -> u when="some > 100"
+flow q -> p default
+flow u -> p
+flow p -> e1 p=0.2
+flow p -> e2 p=0.3
+flow p -> e3 p=0.5
+
+simulate cases=30 seed=2 arrival="exp(2h)"
+variable cena "unif(20, 300)"
+variable rodzaj "cat(drukowana=0.7, e-book=0.3)"
+variable zgoda "bern(0.4)"
+variable some "unif(0, 200)"

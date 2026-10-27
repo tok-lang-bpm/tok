@@ -9,10 +9,12 @@ repository.workspace = true
 description = "Discrete-event simulator of the tok process language"
 
 [dependencies]
+tok-core = { path = "../tok-core" }
 thiserror = "2.0.21"
+indexmap = "2"
 
 [dev-dependencies]
-tok-core = { path = "../tok-core" }
+serde_json = "1.0.154"
 
 [lints]
 workspace = true

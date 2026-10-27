@@ -1,0 +1,42 @@
+tok 0.3 "Wiele instancji" executable
+
+start s "Start"
+script podw "Podwojenie" parallel expr="x * 2" result=y collection="[1, 2, 3]" item=x output=wyniki output-item="y" duration="10m"
+user ocena "Ocena" sequential collection="[\"a\", \"b\", \"c\"]" item=r until="numberOfCompletedInstances >= 2" duration="1h" by=recenzenci
+user rown "Recenzje równoległe" parallel collection="recenzje" item=r by=recenzenci duration="tri(1h, 2h, 6h)" assign="ok=bern(0.5)" output=oceny output-item="ok"
+task pusta "Pusta lista" parallel collection="[]" output=nic output-item="1"
+task nielista "Nie lista" parallel collection="liczba" duration="5m"
+task blad "Błędna kolekcja" sequential collection="x ** 2" duration="5m"
+task wyjscie "Błędne wyjście" parallel collection="[1, 2]" item=v output-item="v ** 2" output=bledy
+task warunek "Błędny warunek" sequential collection="[1, 2, 3]" until="v ** 2" item=v
+adhoc op "Opracowanie" active="[\"inw\", 7, \"brak\"]"
+  task inw "Inwentarz" duration="2h"
+  task sk "Skany" duration="5h"
+adhoc wszystko "Wszystko naraz"
+  task w1 "Pierwszy" duration="1h"
+  task w2 "Drugi" duration="3h"
+  task w3 "Po pierwszym" duration="30m"
+  flow w1 -> w3
+adhoc dosc "Do skutku" until="licznik >= 0"
+  task d1 "Krok 1" duration="1h"
+  task d2 "Krok 2" duration="4h"
+adhoc czeka "Z oczekiwaniem" wait until="licznik >= 0"
+  task c1 "Krok A" duration="1h"
+  task c2 "Krok B" duration="2h"
+adhoc nic "Nic do zrobienia" active="[]"
+  task n1 "Nieużywany"
+task rez "Rezerwacja" duration="5m" compensate=zw
+task zw "Zwolnienie" duration="7m" compensation
+task rez2 "Druga rezerwacja" duration="5m" compensate=zw2
+task zw2 "Zwolnienie drugiej" duration="3m" compensation
+throw cof "Cofnięcie" compensate activity=rez
+throw cof2 "Cofnięcie powtórne" compensate activity=rez
+end e "Koniec" compensate
+
+flow s -> podw -> ocena -> rown -> pusta -> nielista -> blad -> wyjscie -> warunek -> op -> wszystko -> dosc -> czeka -> nic -> rez -> rez2 -> cof -> cof2 -> e
+
+simulate cases=6 seed=1 arrival="exp(3h)"
+resource recenzenci "Recenzenci" count=2
+variable recenzje "cat(1=0.5, 2=0.5)"
+variable liczba "unif(0, 1)"
+variable licznik "unif(0, 1)"

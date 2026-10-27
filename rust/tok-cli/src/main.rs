@@ -1,5 +1,5 @@
 //! Command line interface of the tok process language: the same commands, options and
-//! output as `python -m tok` (language 0.3). `sim` arrives with tok 0.4.
+//! output as `python -m tok` (language 0.3).
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -55,16 +55,20 @@ fn emit(text: &str, to_stderr: bool) {
 }
 
 macro_rules! out {
-    ($($t:tt)*) => { emit(&format!($($t)*), false) };
+    ($($t:tt)*) => { $crate::emit(&format!($($t)*), false) };
 }
 
 macro_rules! outln {
-    ($($t:tt)*) => { emit(&(format!($($t)*) + "\n"), false) };
+    ($($t:tt)*) => { $crate::emit(&(format!($($t)*) + "\n"), false) };
 }
 
 macro_rules! errln {
-    ($($t:tt)*) => { emit(&(format!($($t)*) + "\n"), true) };
+    ($($t:tt)*) => { $crate::emit(&(format!($($t)*) + "\n"), true) };
 }
+
+mod argparse;
+
+use argparse::{Conv, Opt};
 
 /// BPMN rules from the `tok-bpmn` crate.
 struct Rules;
@@ -139,12 +143,7 @@ fn run(argv: &[String]) -> Result<u8, ExitCode> {
         }
         "check" | "fmt" | "bpmn" | "svg" | "export" | "import" => {}
         "eval" => return eval_command(&argv[1..]),
-        "sim" => {
-            errln!(
-                "tok: '{cmd}' is not available in this build (planned for tok 0.4); use the Python implementation"
-            );
-            return Ok(EXIT_USAGE);
-        }
+        "sim" => return sim_command(&argv[1..]),
         other => {
             return Err(usage(&format!(
                 "argument command: invalid choice: '{other}'"
@@ -233,7 +232,10 @@ fn read(path: &str) -> String {
             text.replace("\r\n", "\n").replace('\r', "\n")
         }
         Err(e) => {
-            errln!("tok: cannot read {path}: {e}");
+            errln!(
+                "tok: cannot read {path}: {}",
+                tok_sim::result::os_error(&e, path).message
+            );
             std::process::exit(EXIT_USAGE as i32);
         }
     }
@@ -561,9 +563,12 @@ fn cmd_import(a: &Args) -> u8 {
 
 // ------------------------------------------------------------------------- eval
 
-const EVAL_USAGE: &str = "usage: tok eval [-h] [--lang {en,pl}] file decision [values ...]";
+const LANGS: &[&str] = &["en", "pl"];
 
-const EVAL_HELP: &str = "usage: tok eval [-h] [--lang {en,pl}] file decision [values ...]
+const EVAL: argparse::Spec = argparse::Spec {
+    name: "eval",
+    usage: "usage: tok eval [-h] [--lang {en,pl}] file decision [values ...]",
+    help: "usage: tok eval [-h] [--lang {en,pl}] file decision [values ...]
 
 positional arguments:
   file
@@ -573,384 +578,21 @@ positional arguments:
 options:
   -h, --help      show this help message and exit
   --lang {en,pl}  language of messages (default: en, or TOK_LANG)
-";
+",
+    options: &[
+        ("-h", Opt::Help),
+        ("--help", Opt::Help),
+        ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
+    ],
+    positionals: &[("file", false), ("decision", false), ("values", true)],
+};
 
-/// An error of the `eval` subcommand's argument parser.
-fn eval_usage(msg: &str) -> ExitCode {
-    errln!("{EVAL_USAGE}");
-    errln!("tok eval: error: {msg}");
-    ExitCode::from(EXIT_USAGE)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EvalOpt {
-    Help,
-    Lang,
-}
-
-/// Option strings of `tok eval`, in declaration order.
-const EVAL_OPTIONS: [(&str, EvalOpt); 3] = [
-    ("-h", EvalOpt::Help),
-    ("--help", EvalOpt::Help),
-    ("--lang", EvalOpt::Lang),
-];
-
-fn eval_option(s: &str) -> Option<EvalOpt> {
-    EVAL_OPTIONS.iter().find(|o| o.0 == s).map(|o| o.1)
-}
-
-/// An argument that looks like an option: (action, option string, separator before the
-/// explicit argument: `=`, empty for `-hX`, or none; explicit argument).
-type OptTuple = (
-    Option<EvalOpt>,
-    String,
-    Option<&'static str>,
-    Option<String>,
-);
-
-/// argparse `_negative_number_matcher`: `^-\d+$|^-\d*\.\d+$`.
-fn negative_number(s: &str) -> bool {
-    let Some(body) = s.strip_prefix('-') else {
-        return false;
-    };
-    let digit = |c: char| tok_core::pyutil::decimal_value(c).is_some();
-    if !body.is_empty() && body.chars().all(digit) {
-        return true;
+/// The language of messages: `--lang`, else `TOK_LANG`, else English.
+fn lang_of(p: &argparse::Parsed) -> String {
+    match p.value("lang") {
+        Some(l) => l.to_string(),
+        None => std::env::var("TOK_LANG").unwrap_or_else(|_| "en".into()),
     }
-    match body.split_once('.') {
-        Some((a, b)) => a.chars().all(digit) && !b.is_empty() && b.chars().all(digit),
-        None => false,
-    }
-}
-
-/// argparse `_parse_optional` for the `eval` subparser; `Err` is an ambiguity error.
-fn eval_parse_optional(arg: &str) -> Result<Option<OptTuple>, String> {
-    if !arg.starts_with('-') {
-        return Ok(None);
-    }
-    if let Some(o) = eval_option(arg) {
-        return Ok(Some((Some(o), arg.to_string(), None, None)));
-    }
-    if arg.chars().count() == 1 {
-        return Ok(None);
-    }
-    if let Some((opt, val)) = arg.split_once('=')
-        && let Some(o) = eval_option(opt)
-    {
-        return Ok(Some((
-            Some(o),
-            opt.to_string(),
-            Some("="),
-            Some(val.to_string()),
-        )));
-    }
-    let mut tuples: Vec<OptTuple> = Vec::new();
-    if arg.starts_with("--") {
-        let (prefix, sep, explicit) = match arg.split_once('=') {
-            Some((p, e)) => (p, Some("="), Some(e.to_string())),
-            None => (arg, None, None),
-        };
-        for (s, o) in EVAL_OPTIONS {
-            if s.starts_with(prefix) {
-                tuples.push((Some(o), s.to_string(), sep, explicit.clone()));
-            }
-        }
-    } else {
-        let short: String = arg.chars().take(2).collect();
-        let short_explicit: String = arg.chars().skip(2).collect();
-        for (s, o) in EVAL_OPTIONS {
-            if s == short {
-                tuples.push((
-                    Some(o),
-                    s.to_string(),
-                    Some(""),
-                    Some(short_explicit.clone()),
-                ));
-            } else if s.starts_with(arg) {
-                tuples.push((Some(o), s.to_string(), None, None));
-            }
-        }
-    }
-    if tuples.len() > 1 {
-        let names: Vec<&str> = tuples.iter().map(|t| t.1.as_str()).collect();
-        return Err(format!(
-            "ambiguous option: {arg} could match {}",
-            names.join(", ")
-        ));
-    }
-    if let Some(t) = tuples.pop() {
-        return Ok(Some(t));
-    }
-    if negative_number(arg) || arg.contains(' ') {
-        return Ok(None);
-    }
-    Ok(Some((None, arg.to_string(), None, None)))
-}
-
-/// Parsed arguments of `tok eval`.
-struct EvalArgs {
-    file: String,
-    decision: String,
-    values: Vec<String>,
-    lang: String,
-}
-
-/// Greedy match of the remaining positionals (`false`: exactly one argument, `true`: any
-/// number) against the argument pattern: the argument counts of the longest prefix of the
-/// positionals that matches (argparse `_match_arguments_partial`).
-fn match_positionals(kinds: &[bool], pattern: &[char]) -> Vec<usize> {
-    for n in (1..=kinds.len()).rev() {
-        let mut counts = Vec::new();
-        let mut i = 0;
-        let mut ok = true;
-        for many in &kinds[..n] {
-            let start = i;
-            if *many {
-                while i < pattern.len() && (pattern[i] == 'A' || pattern[i] == '-') {
-                    i += 1;
-                }
-            } else {
-                while i < pattern.len() && pattern[i] == '-' {
-                    i += 1;
-                }
-                if i < pattern.len() && pattern[i] == 'A' {
-                    i += 1;
-                } else {
-                    ok = false;
-                    break;
-                }
-                while i < pattern.len() && pattern[i] == '-' {
-                    i += 1;
-                }
-            }
-            counts.push(i - start);
-        }
-        if ok {
-            return counts;
-        }
-    }
-    Vec::new()
-}
-
-/// State of the `eval` argument parser.
-struct EvalParser<'a> {
-    argv: &'a [String],
-    pattern: Vec<char>,
-    /// remaining positionals: (name, takes any number of arguments)
-    positionals: Vec<(&'static str, bool)>,
-    taken: Vec<(&'static str, Vec<String>)>,
-}
-
-impl EvalParser<'_> {
-    /// argparse `consume_positionals`: the index after the consumed arguments.
-    fn consume_positionals(&mut self, start: usize) -> usize {
-        let kinds: Vec<bool> = self.positionals.iter().map(|p| p.1).collect();
-        let counts = match_positionals(&kinds, &self.pattern[start..]);
-        let mut i = start;
-        for (p, n) in self.positionals.iter().zip(&counts) {
-            let mut args: Vec<String> = self.argv[i..i + n].to_vec();
-            if let Some(k) = args.iter().position(|a| a == "--") {
-                args.remove(k);
-            }
-            self.taken.push((p.0, args));
-            i += n;
-        }
-        self.positionals.drain(..counts.len());
-        i
-    }
-
-    fn get(&self, name: &str) -> Vec<String> {
-        self.taken
-            .iter()
-            .find(|t| t.0 == name)
-            .map(|t| t.1.clone())
-            .unwrap_or_default()
-    }
-}
-
-fn ignored_explicit(name: &str, arg: &str) -> ExitCode {
-    eval_usage(&format!(
-        "argument {name}: ignored explicit argument {}",
-        tok_core::pyutil::repr_str(arg)
-    ))
-}
-
-/// Arguments of `tok eval FILE DECISION name=value …`, parsed like Python's argparse
-/// (including its handling of options between the positional arguments). `Err` carries
-/// the exit code after a usage error or the help text.
-fn parse_eval_args(argv: &[String]) -> Result<EvalArgs, ExitCode> {
-    let mut pattern: Vec<char> = Vec::new();
-    let mut options: Vec<Option<OptTuple>> = Vec::new();
-    let mut rest_positional = false;
-    for arg in argv {
-        if rest_positional {
-            pattern.push('A');
-            options.push(None);
-        } else if arg == "--" {
-            pattern.push('-');
-            options.push(None);
-            rest_positional = true;
-        } else {
-            if arg.starts_with("--=") {
-                // the main parser classifies the arguments first and cannot resolve this prefix
-                return Err(usage(&format!(
-                    "ambiguous option: {arg} could match --help, --version"
-                )));
-            }
-            match eval_parse_optional(arg).map_err(|m| eval_usage(&m))? {
-                Some(t) => {
-                    pattern.push('O');
-                    options.push(Some(t));
-                }
-                None => {
-                    pattern.push('A');
-                    options.push(None);
-                }
-            }
-        }
-    }
-    let mut p = EvalParser {
-        argv,
-        pattern,
-        positionals: vec![("file", false), ("decision", false), ("values", true)],
-        taken: Vec::new(),
-    };
-    let mut extras: Vec<String> = Vec::new();
-    let mut lang: Option<String> = None;
-    let option_indices: Vec<usize> = (0..p.pattern.len())
-        .filter(|i| p.pattern[*i] == 'O')
-        .collect();
-    let max_option = option_indices.last().copied();
-    let mut start = 0usize;
-    while max_option.is_some_and(|m| start <= m) {
-        let next_option = option_indices
-            .iter()
-            .copied()
-            .find(|i| *i >= start)
-            .unwrap_or(p.pattern.len());
-        if start != next_option {
-            let end = p.consume_positionals(start);
-            if end > start {
-                start = end;
-                continue;
-            }
-            start = end;
-        }
-        if p.pattern.get(start) != Some(&'O') {
-            extras.extend(argv[start..next_option].iter().cloned());
-            start = next_option;
-        }
-        // consume_optional
-        let Some(Some((action, mut option_string, mut sep, mut explicit))) =
-            options.get(start).cloned()
-        else {
-            break;
-        };
-        let Some(mut action) = action else {
-            extras.push(argv[start].clone());
-            start += 1;
-            continue;
-        };
-        let mut actions: Vec<(EvalOpt, Option<String>)> = Vec::new();
-        let stop;
-        loop {
-            let name = match action {
-                EvalOpt::Help => "-h/--help",
-                EvalOpt::Lang => "--lang",
-            };
-            if let Some(exp) = explicit.clone() {
-                if action == EvalOpt::Lang {
-                    actions.push((action, Some(exp)));
-                    stop = start + 1;
-                    break;
-                }
-                // a single-dash flag with an explicit argument: `-hX` reads X as further flags
-                if option_string.chars().nth(1) != Some('-') && !exp.is_empty() {
-                    if sep == Some("=") || exp.starts_with('-') {
-                        return Err(ignored_explicit(name, &exp));
-                    }
-                    actions.push((action, None));
-                    let next = format!("-{}", exp.chars().next().unwrap_or('-'));
-                    let rest: String = exp.chars().skip(1).collect();
-                    if let Some(o) = eval_option(&next) {
-                        action = o;
-                        option_string = next;
-                        if rest.is_empty() {
-                            sep = None;
-                            explicit = None;
-                        } else if let Some(r) = rest.strip_prefix('=') {
-                            sep = Some("=");
-                            explicit = Some(r.to_string());
-                        } else {
-                            sep = Some("");
-                            explicit = Some(rest);
-                        }
-                        continue;
-                    }
-                    extras.push(format!("-{exp}"));
-                    stop = start + 1;
-                    break;
-                }
-                return Err(ignored_explicit(name, &exp));
-            }
-            match action {
-                EvalOpt::Help => {
-                    actions.push((action, None));
-                    stop = start + 1;
-                }
-                EvalOpt::Lang => {
-                    if p.pattern.get(start + 1) != Some(&'A') {
-                        return Err(eval_usage(&format!(
-                            "argument {name}: expected one argument"
-                        )));
-                    }
-                    actions.push((action, Some(argv[start + 1].clone())));
-                    stop = start + 2;
-                }
-            }
-            break;
-        }
-        for (act, value) in actions {
-            match act {
-                EvalOpt::Help => {
-                    out!("{EVAL_HELP}");
-                    return Err(ExitCode::from(EXIT_OK));
-                }
-                EvalOpt::Lang => {
-                    let v = value.unwrap_or_default();
-                    if v != "en" && v != "pl" {
-                        return Err(eval_usage(&format!(
-                            "argument --lang: invalid choice: {} (choose from 'en', 'pl')",
-                            tok_core::pyutil::repr_str(&v)
-                        )));
-                    }
-                    lang = Some(v);
-                }
-            }
-        }
-        start = stop;
-    }
-    let stop = p.consume_positionals(start);
-    extras.extend(argv[stop..].iter().cloned());
-    if !p.positionals.is_empty() {
-        let names: Vec<&str> = p.positionals.iter().map(|q| q.0).collect();
-        return Err(eval_usage(&format!(
-            "the following arguments are required: {}",
-            names.join(", ")
-        )));
-    }
-    if !extras.is_empty() {
-        return Err(usage(&format!(
-            "unrecognized arguments: {}",
-            extras.join(" ")
-        )));
-    }
-    Ok(EvalArgs {
-        file: p.get("file").concat(),
-        decision: p.get("decision").concat(),
-        values: p.get("values"),
-        lang: lang.unwrap_or_else(|| std::env::var("TOK_LANG").unwrap_or_else(|_| "en".into())),
-    })
 }
 
 /// A command-line value (`cli._value`): `true`/`false` (any case), a decimal number, or text.
@@ -967,11 +609,13 @@ fn cli_value(text: &str) -> tok_core::feel_eval::Value {
 }
 
 fn eval_command(argv: &[String]) -> Result<u8, ExitCode> {
-    let e = parse_eval_args(argv)?;
+    let p = EVAL.parse(argv)?;
+    let file = p.positional("file").concat();
+    let decision = p.positional("decision").concat();
     let a = Args {
         cmd: "eval".into(),
-        file: e.file.clone(),
-        lang: e.lang.clone(),
+        file: file.clone(),
+        lang: lang_of(&p),
         level: "full".into(),
         ..Default::default()
     };
@@ -980,12 +624,12 @@ fn eval_command(argv: &[String]) -> Result<u8, ExitCode> {
         report(&a, &diags);
         return Ok(EXIT_ERRORS);
     }
-    let Some(dec) = doc.decisions.get(&e.decision) else {
-        errln!("tok: no decision '{}' in {}", e.decision, e.file);
+    let Some(dec) = doc.decisions.get(&decision) else {
+        errln!("tok: no decision '{decision}' in {file}");
         return Ok(EXIT_USAGE);
     };
     let mut ctx = tok_core::feel_eval::Context::new();
-    for pair in &e.values {
+    for pair in &p.positional("values") {
         let Some((k, v)) = pair.split_once('=') else {
             errln!("tok: expected NAME=VALUE, got '{pair}'");
             return Ok(EXIT_USAGE);
@@ -1000,6 +644,88 @@ fn eval_command(argv: &[String]) -> Result<u8, ExitCode> {
         Err(err) if err.kind == "tok.dmn.DecisionError" => {
             errln!("tok: {}", err.message);
             Ok(EXIT_ERRORS)
+        }
+        Err(err) => {
+            // an exception the reference implementation does not catch: its traceback
+            // ends with this line
+            errln!("{err}");
+            Ok(EXIT_ERRORS)
+        }
+    }
+}
+
+// -------------------------------------------------------------------------- sim
+
+const SIM_USAGE: &str = "usage: tok sim [-h] [--cases CASES] [--seed SEED] [--log LOG] \
+                         [--cases-csv CASES_CSV] [--lang {en,pl}] [--json] file";
+
+const SIM: argparse::Spec = argparse::Spec {
+    name: "sim",
+    usage: SIM_USAGE,
+    help: "usage: tok sim [-h] [--cases CASES] [--seed SEED] [--log LOG] \
+           [--cases-csv CASES_CSV] [--lang {en,pl}] [--json] file
+
+positional arguments:
+  file
+
+options:
+  -h, --help            show this help message and exit
+  --cases CASES
+  --seed SEED
+  --log LOG             write the event log (CSV)
+  --cases-csv CASES_CSV
+                        write one row per case (CSV)
+  --lang {en,pl}        language of messages (default: en, or TOK_LANG)
+  --json                machine-readable output
+",
+    options: &[
+        ("-h", Opt::Help),
+        ("--help", Opt::Help),
+        ("--cases", Opt::Value("cases", Conv::Int)),
+        ("--seed", Opt::Value("seed", Conv::Int)),
+        ("--log", Opt::Value("log", Conv::Text)),
+        ("--cases-csv", Opt::Value("cases_csv", Conv::Text)),
+        ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
+        ("--json", Opt::Flag("json")),
+    ],
+    positionals: &[("file", false)],
+};
+
+/// `tok sim FILE`: simulate the process and print the indicators (`cli.cmd_sim`).
+fn sim_command(argv: &[String]) -> Result<u8, ExitCode> {
+    let p = SIM.parse(argv)?;
+    let a = Args {
+        cmd: "sim".into(),
+        file: p.positional("file").concat(),
+        lang: lang_of(&p),
+        json: p.flag("json"),
+        level: "full".into(),
+        ..Default::default()
+    };
+    let (doc, diags) = load(&a, true);
+    if diags.iter().any(Diag::is_error) {
+        report(&a, &diags);
+        return Ok(EXIT_ERRORS);
+    }
+    let param = |dest: &str| p.value(dest).map(|v| tok_sim::Param::Int(v.to_string()));
+    let res = tok_sim::simulate(&doc, param("cases"), param("seed")).and_then(|result| {
+        let log = p.value("log").filter(|v| !v.is_empty());
+        let cases_csv = p.value("cases_csv").filter(|v| !v.is_empty());
+        if log.is_some() || cases_csv.is_some() {
+            result.write_csv(p.value("log"), p.value("cases_csv"))?;
+        }
+        if a.json {
+            Ok(result.to_json(false)?
+                + "
+")
+        } else {
+            Ok(result.kpi().format(&a.lang))
+        }
+    });
+    match res {
+        Ok(text) => {
+            out!("{text}");
+            Ok(EXIT_OK)
         }
         Err(err) => {
             // an exception the reference implementation does not catch: its traceback

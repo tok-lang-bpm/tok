@@ -1,0 +1,21 @@
+tok 0.1 "Przygotowanie wystawy (z błędami)"
+
+start decyzja "Decyzja o wystawie"
+and przygotowania
+user wybor "Wybór obiektów"
+user opisy "Przygotowanie opisów"
+xor gotowe
+xor zgoda "Czy dyrektor zatwierdził?"
+user montaz "Montaż wystawy"
+user poprawki "Poprawki scenariusza"
+end otwarta "Wystawa otwarta"
+
+flow decyzja -> przygotowania
+flow przygotowania -> wybor "obiekty" when="obiekty = true"
+flow przygotowania -> opisy
+flow wybor -> gotowe
+flow opisy -> gotowe
+flow gotowe -> zgoda
+flow zgoda -> montaz "tak"
+flow zgoda -> poprawki
+flow montaz -> otwarta

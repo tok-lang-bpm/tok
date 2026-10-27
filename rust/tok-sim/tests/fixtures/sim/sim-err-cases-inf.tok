@@ -1,0 +1,8 @@
+tok 0.1 "Nieskończona liczba spraw"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate cases=inf

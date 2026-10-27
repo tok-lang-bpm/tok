@@ -1,0 +1,8 @@
+tok 0.1 "Ziarno ułamkowe"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate seed=-7.9 cases=1e1

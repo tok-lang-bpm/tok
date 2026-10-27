@@ -2,7 +2,8 @@
 
 Compared: diagnostics, canonical text, BPMN, SVG and exported files of every document; BPMN
 import; decision table evaluation over a grid of typed input values; FEEL evaluation of the
-expression corpus of the Rust fixtures (``rust/tok-core/tests/fixtures/eval/feel.json``).
+expression corpus of the Rust fixtures (``rust/tok-core/tests/fixtures/eval/feel.json``); simulation
+of every document and of the synthetic models of ``rust/tok-sim/tests/fixtures/sim``.
 
 The tests are skipped when ``tok_engine`` is not installed; see ``rust/tok-py/README.md``.
 The pure-Python reference runs in a fresh interpreter for every input, so that the global
@@ -112,6 +113,52 @@ for keep in (True, False):
     out[str(keep)] = [fmt(doc), list(warnings)]
 sys.stdout.buffer.write(json.dumps(out, ensure_ascii=False).encode("utf-8"))
 '''
+
+
+REFERENCE_SIM = r'''
+import json, sys
+from tok import sim
+from tok.check import check
+from tok.parser import parse
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    doc, diags = parse(f.read())
+runs = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+out = []
+for cases, seed in runs:
+    try:
+        r = sim.simulate(doc, cases=cases, seed=seed)
+        kpi = r.kpi()
+        res = {"kpi": kpi, "log": r.log, "cases": r.cases, "warnings": r.warnings,
+               "seed": r.seed, "horizon": r.horizon, "json": r.to_json(include_log=True),
+               "text_en": sim.format_kpi(kpi, "en"), "text_pl": sim.format_kpi(kpi, "pl")}
+        out.append(["ok", res])
+    except Exception as ex:
+        out.append(["error", type(ex).__name__, str(ex)])
+sys.stdout.buffer.write(json.dumps(out, ensure_ascii=False, default=str).encode("utf-8"))
+'''
+
+# synthetic simulation models of the Rust fixtures (every distribution, event, gateway and
+# activity kind the simulator handles, and invalid parameters)
+SIM_MODELS = sorted(glob.glob(os.path.join(REPO, "rust", "tok-sim", "tests", "fixtures", "sim",
+                                           "sim-*.tok")))
+# (cases, seed) of the simulation runs of a document with a simulate statement; documents
+# without one run with three cases
+SIM_RUNS = [[None, None], [5, 3], [12, -7], ["4", "11"], [2.9, 1e3]]
+
+
+def engine_simulation(text, cases, seed):
+    """The outcome of tok_engine.simulate in the form of REFERENCE_SIM."""
+    try:
+        r = tok_engine.simulate(text, cases, seed)
+        kpi = r.kpi()
+        res = {"kpi": kpi, "log": r.log, "cases": r.cases, "warnings": r.warnings,
+               "seed": r.seed, "horizon": r.horizon, "json": r.to_json(include_log=True),
+               "text_en": tok_engine.format_kpi(kpi, "en"), "text_pl": r.format_kpi("pl")}
+        out = ["ok", res]
+    except Exception as ex:
+        out = ["error", type(ex).__name__, str(ex)]
+    return json.loads(json.dumps(out, ensure_ascii=False, default=str))
 
 
 EVAL_FIXTURES = os.path.join(REPO, "rust", "tok-core", "tests", "fixtures", "eval")
@@ -317,6 +364,29 @@ class EngineParity(unittest.TestCase):
             with self.subTest(expr=expr):
                 self.assertEqual(outcome(tok_engine.feel_eval, expr, ctx), expected)
         self.assertGreater(len(ref), 10000)
+
+    def test_simulation(self):
+        sys.path.insert(0, SRC)
+        from tok.check import check
+        from tok.parser import parse
+        compared = 0
+        for path in DOCUMENTS + SIM_MODELS:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+            doc, diags = parse(text)
+            if any(d.severity == "error" for d in diags):
+                continue
+            if any(d.severity == "error" for d in diags + check(doc, level="full", bpmn=True)):
+                with self.assertRaises(ValueError):
+                    tok_engine.simulate(text)
+                continue
+            runs = SIM_RUNS if doc.simulate is not None else [[3, None]]
+            ref = reference(REFERENCE_SIM, path, stdin=runs)
+            for (cases, seed), expected in zip(runs, ref):
+                with self.subTest(document=os.path.basename(path), cases=cases, seed=seed):
+                    self.assertEqual(engine_simulation(text, cases, seed), expected)
+                compared += 1
+        self.assertGreater(compared, 100)
 
     def test_errors_raise(self):
         with self.assertRaises(ValueError):

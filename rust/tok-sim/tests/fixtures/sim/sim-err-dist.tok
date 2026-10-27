@@ -1,0 +1,8 @@
+tok 0.1 "Błędny rozkład"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate arrival="exp(0)"

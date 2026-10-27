@@ -1,0 +1,52 @@
+tok 0.1 "Udostępnienie zbiorów specjalnych" executable
+
+pool biblioteka "Biblioteka uczelniana" process=udostepnienie-zbiorow
+  lane czytelnik "Czytelnik"
+    start wniosek "Wniosek złożony" form=f-wniosek
+  lane system "System biblioteczny"
+    rule tryb "Ustalenie trybu udostępnienia" decision=tryb-udostepnienia result=tryb
+    xor jaki "Jaki tryb udostępnienia?"
+    end odmowa-auto "Odmowa udostępnienia"
+    xor scalenie
+    script termin "Wyznaczenie terminu w czytelni" expr="if pilne = true then 2 else 7" result=dni
+  lane kierownik "Kierownik Oddziału Zbiorów Specjalnych"
+    user decyzja "Decyzja kierownika" form=f-decyzja
+    boundary brak "Minęło 5 dni" on=decyzja timer=P5D
+    xor zgoda "Czy kierownik się zgodził?"
+    end odmowa "Wniosek odrzucony"
+    end wygasl "Wniosek wygasł"
+  lane czytelnia "Czytelnia zbiorów specjalnych"
+    user przygotowanie "Przygotowanie materiałów" form=f-przygotowanie
+    end udostepnione "Materiały udostępnione"
+
+flow wniosek -> tryb -> jaki
+flow jaki -> scalenie "czytelnia" when="tryb = \"czytelnia\""
+flow jaki -> decyzja "zgoda kierownika" when="tryb = \"zgoda kierownika\""
+flow jaki -> odmowa-auto "odmowa" default
+flow decyzja -> zgoda
+flow zgoda -> scalenie "tak" when="zgoda = true"
+flow zgoda -> odmowa "nie" default
+flow brak -> wygasl
+flow scalenie -> termin -> przygotowanie -> udostepnione
+
+decision tryb-udostepnienia "Tryb udostępnienia" hit=first
+  | cel: string | wiek: number | dane: boolean || tryb: string       || uwagi                                     |
+  | "prywatny"  | < 30         | true          || "odmowa"           || ochrona danych osobowych                  |
+  | -           | < 30         | true          || "zgoda kierownika" || dane osobowe, materiał młodszy niż 30 lat |
+  | -           | -            | -             || "czytelnia"        || pozostałe wnioski                         |
+
+form f-wniosek "Wniosek o udostępnienie"
+  field sygnatura "Sygnatura" required type=textfield
+  field wiek "Wiek materiału (lata)" required type=number min=0
+  field cel "Cel" required type=select options="naukowy:naukowy, urzędowy:urzędowy, prywatny:prywatny"
+  field dane "Materiał zawiera dane osobowe" type=checkbox
+  field pilne "Sprawa pilna" type=checkbox
+
+form f-decyzja "Decyzja kierownika"
+  text "## Wniosek: {{sygnatura}}\nCel: {{cel}} · wiek materiału: {{wiek}} lat"
+  field zgoda "Decyzja" required type=radio options="true:zgoda, false:odmowa"
+  field uzasadnienie "Uzasadnienie" type=textarea
+
+form f-przygotowanie "Przygotowanie materiałów"
+  text "## {{sygnatura}}\nMateriały mają być gotowe w ciągu {{dni}} dni."
+  field stanowisko "Stanowisko w czytelni" required type=textfield

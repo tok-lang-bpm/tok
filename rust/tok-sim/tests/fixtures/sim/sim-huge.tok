@@ -1,0 +1,9 @@
+tok 0.1 "Bardzo długi czas"
+
+start s
+task a "Praca" duration="100000000000000d"
+end e
+
+flow s -> a -> e
+
+simulate cases=2

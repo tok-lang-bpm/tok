@@ -229,6 +229,34 @@ impl Duration {
         s
     }
 
+    /// `total_seconds()`: the microseconds divided by 10**6, correctly rounded.
+    pub fn total_seconds(&self) -> f64 {
+        let us = self.total_micros();
+        let sign = if us < 0 { "-" } else { "" };
+        let a = us.unsigned_abs();
+        format!("{sign}{}.{:06}", a / 1_000_000, a % 1_000_000)
+            .parse::<f64>()
+            .unwrap_or(0.0)
+    }
+
+    /// `timedelta(seconds=x)` for a float: Python's rounding of the fraction (half to
+    /// even) and its exceptions for infinities, NaN and values beyond the day limit.
+    pub fn from_seconds(x: f64) -> Result<Duration, PyError> {
+        if x.is_nan() {
+            return Err(PyError::new(
+                "ValueError",
+                "cannot convert float NaN to integer",
+            ));
+        }
+        if x.is_infinite() {
+            return Err(PyError::new(
+                "OverflowError",
+                "cannot convert float infinity to integer",
+            ));
+        }
+        Duration::from_parts(0.0, 0.0, 0.0, x)
+    }
+
     /// `repr(timedelta)`.
     pub fn repr(&self) -> String {
         let mut args = Vec::new();
@@ -320,6 +348,105 @@ impl DateTime {
         DateTime::from_local_micros(self.local_micros() - delta.total_micros(), self.offset)
     }
 
+    /// `self - other` of two datetimes; mixing naive and aware values raises `TypeError`.
+    pub fn sub_datetime(&self, other: &DateTime) -> Result<Duration, PyError> {
+        let us = match (self.offset, other.offset) {
+            (None, None) => self.local_micros() - other.local_micros(),
+            (Some(_), Some(_)) => self.utc_micros() - other.utc_micros(),
+            _ => {
+                return Err(PyError::new(
+                    "TypeError",
+                    "can't subtract offset-naive and offset-aware datetimes",
+                ));
+            }
+        };
+        Duration::from_micros(us)
+    }
+
+    /// `datetime.fromisoformat(text)` of CPython 3.11 to 3.13: the date as `YYYY-MM-DD`,
+    /// `YYYYMMDD`, `YYYY-Www[-D]` or `YYYYWww[D]`, then any one separator character and
+    /// the time `HH[:MM[:SS[.ffffff]]]` (or without colons, `,` for `.`), with `Z` or a
+    /// `±HH[:MM[:SS[.ffffff]]]` offset. Field values out of range raise the `ValueError`
+    /// of the datetime constructor, anything else `Invalid isoformat string`.
+    pub fn fromisoformat(text: &str) -> Result<DateTime, PyError> {
+        let invalid = || {
+            PyError::new(
+                "ValueError",
+                format!(
+                    "Invalid isoformat string: {}",
+                    crate::pyutil::repr_str(text)
+                ),
+            )
+        };
+        if text.chars().count() < 7 {
+            return Err(invalid());
+        }
+        let bytes = text.as_bytes();
+        let at = |i: usize| bytes.get(i).copied().unwrap_or(0);
+        let len = bytes.len();
+        let sep = iso_separator(&at, len);
+        let Some(sep) = sep else {
+            return Err(invalid());
+        };
+        let (year, month, day) = iso_date(&at, sep).ok_or_else(invalid)?;
+        let mut t = IsoTime::default();
+        if len > sep {
+            t = iso_time(&bytes[sep + 1..]).ok_or_else(invalid)?;
+        }
+        let offset = match t.offset {
+            None => None,
+            Some((0, _)) => Some(Duration::default()),
+            Some((secs, us)) => {
+                let d = Duration::from_micros(secs as i128 * 1_000_000 + us as i128)?;
+                if d.total_micros().abs() >= US_PER_DAY {
+                    return Err(PyError::new(
+                        "ValueError",
+                        format!(
+                            "offset must be a timedelta strictly between -timedelta(hours=24) \
+                             and timedelta(hours=24), not {}.",
+                            d.repr()
+                        ),
+                    ));
+                }
+                Some(d)
+            }
+        };
+        let date = Date::new(year as i128, month as i128, day as i128)?;
+        let check = |v: u32, hi: u32, what: &str| {
+            if v > hi {
+                Err(PyError::new(
+                    "ValueError",
+                    format!("{what} must be in 0..{hi}"),
+                ))
+            } else {
+                Ok(())
+            }
+        };
+        check(t.hour, 23, "hour")?;
+        check(t.minute, 59, "minute")?;
+        check(t.second, 59, "second")?;
+        Ok(DateTime {
+            date,
+            hour: t.hour,
+            minute: t.minute,
+            second: t.second,
+            microsecond: t.microsecond,
+            offset,
+        })
+    }
+
+    /// `isoformat(timespec="seconds")`: `2027-01-04T08:00:00`, with the offset if any.
+    pub fn isoformat_seconds(&self) -> String {
+        format!(
+            "{}T{:02}:{:02}:{:02}{}",
+            self.date.isoformat(),
+            self.hour,
+            self.minute,
+            self.second,
+            self.offset_text(":")
+        )
+    }
+
     /// `==`: naive and aware values are never equal.
     pub fn py_eq(&self, other: &DateTime) -> bool {
         match (self.offset, other.offset) {
@@ -403,9 +530,260 @@ impl DateTime {
     }
 }
 
+/// Fields of the time part of an ISO string; `offset` is (seconds, microseconds).
+#[derive(Debug, Default)]
+struct IsoTime {
+    hour: u32,
+    minute: u32,
+    second: u32,
+    microsecond: u32,
+    offset: Option<(i64, i64)>,
+}
+
+/// `parse_digits`: `n` ASCII digits starting at `p`; `None` at any other byte.
+fn iso_digits(at: &dyn Fn(usize) -> u8, p: usize, n: usize) -> Option<(usize, u32)> {
+    let mut v = 0u32;
+    for i in 0..n {
+        let c = at(p + i);
+        if !c.is_ascii_digit() {
+            return None;
+        }
+        v = v * 10 + u32::from(c - b'0');
+    }
+    Some((p + n, v))
+}
+
+/// `_find_isoformat_datetime_separator`: where the date part ends.
+fn iso_separator(at: &dyn Fn(usize) -> u8, len: usize) -> Option<usize> {
+    if len == 7 {
+        return Some(7);
+    }
+    if at(4) == b'-' {
+        if at(5) == b'W' {
+            if len < 8 {
+                return None;
+            }
+            if len > 8 && at(8) == b'-' {
+                if len == 9 {
+                    return None;
+                }
+                if len > 10 && at(10).is_ascii_digit() {
+                    return Some(8);
+                }
+                return Some(10);
+            }
+            return Some(8);
+        }
+        return Some(10);
+    }
+    if at(4) == b'W' {
+        let mut idx = 7;
+        while idx < len && at(idx).is_ascii_digit() {
+            idx += 1;
+        }
+        if idx < 9 {
+            return Some(idx);
+        }
+        return Some(if idx % 2 == 0 { 7 } else { 8 });
+    }
+    Some(8)
+}
+
+/// `parse_isoformat_date`: (year, month, day), unchecked except for ISO weeks.
+fn iso_date(at: &dyn Fn(usize) -> u8, len: usize) -> Option<(i64, u32, u32)> {
+    let (mut p, year) = iso_digits(at, 0, 4)?;
+    let uses_separator = at(p) == b'-';
+    if uses_separator {
+        p += 1;
+    }
+    if at(p) == b'W' {
+        let (q, week) = iso_digits(at, p + 1, 2)?;
+        p = q;
+        let mut day = 1;
+        if p < len {
+            if uses_separator {
+                if at(p) != b'-' {
+                    return None;
+                }
+                p += 1;
+            }
+            day = iso_digits(at, p, 1)?.1;
+        }
+        return iso_week_date(i64::from(year), week, day);
+    }
+    let (q, month) = iso_digits(at, p, 2)?;
+    p = q;
+    if uses_separator {
+        if at(p) != b'-' {
+            return None;
+        }
+        p += 1;
+    }
+    let (_, day) = iso_digits(at, p, 2)?;
+    Some((i64::from(year), month, day))
+}
+
+/// `iso_to_ymd`: the calendar date of an ISO year, week and weekday.
+fn iso_week_date(year: i64, week: u32, day: u32) -> Option<(i64, u32, u32)> {
+    if !(1..=9999).contains(&year) {
+        return None;
+    }
+    if week == 0 || week >= 53 {
+        let first_weekday = (days_before_year(year) + 1 + 6) % 7; // 0 = Monday
+        let has_53 = first_weekday == 3 || (first_weekday == 2 && is_leap(year));
+        if !(week == 53 && has_53) {
+            return None;
+        }
+    }
+    if day == 0 || day >= 8 {
+        return None;
+    }
+    // ordinal of the Monday of ISO week 1
+    let first = days_before_year(year) + 1;
+    let first_weekday = (first + 6) % 7;
+    let mut week1_monday = first - first_weekday;
+    if first_weekday > 3 {
+        week1_monday += 7;
+    }
+    let ordinal = week1_monday + (i64::from(week) - 1) * 7 + i64::from(day) - 1;
+    if ordinal < 1 {
+        return Some((0, 1, 1));
+    }
+    if ordinal > MAX_ORDINAL {
+        return Some((10_000, 1, 1));
+    }
+    let d = Date::from_ordinal(ordinal).ok()?;
+    Some((d.year, d.month, d.day))
+}
+
+/// `parse_hh_mm_ss_ff` over `s[..end]` (bytes past `end` are still visible, as in C):
+/// the fields and 0 at the end of the text, 1 when text follows, `None` on errors.
+fn iso_hms(s: &[u8], start: usize, end: usize) -> Option<([u32; 4], bool)> {
+    let at = |i: usize| s.get(i).copied().unwrap_or(0);
+    let mut vals = [0u32; 4];
+    let mut p = start;
+    let mut has_separator = true;
+    for i in 0..3 {
+        let (q, v) = iso_digits(&at, p, 2)?;
+        vals[i] = v;
+        let c = at(q);
+        p = q + 1;
+        if i == 0 {
+            has_separator = c == b':';
+        }
+        if p >= end {
+            return Some((vals, c != 0));
+        } else if has_separator && c == b':' {
+            continue;
+        } else if c == b'.' || c == b',' {
+            break;
+        } else if !has_separator {
+            p -= 1;
+        } else {
+            return None;
+        }
+    }
+    // the fraction (also after a third `:` or two more digits); here p < end
+    let to_parse = (end - p).min(6);
+    let (q, us) = iso_digits(&at, p, to_parse)?;
+    let scale = [100_000, 10_000, 1_000, 100, 10, 1][to_parse.max(1) - 1];
+    vals[3] = us * scale;
+    p = q;
+    while at(p).is_ascii_digit() {
+        p += 1;
+    }
+    Some((vals, at(p) != 0))
+}
+
+/// `parse_isoformat_time` of the text after the separator.
+fn iso_time(s: &[u8]) -> Option<IsoTime> {
+    let end = s.len();
+    let tz = s
+        .iter()
+        .position(|c| matches!(c, b'Z' | b'+' | b'-'))
+        .unwrap_or(end);
+    let (vals, more) = iso_hms(s, 0, tz)?;
+    let mut t = IsoTime {
+        hour: vals[0],
+        minute: vals[1],
+        second: vals[2],
+        microsecond: vals[3],
+        offset: None,
+    };
+    if tz == end {
+        return if more { None } else { Some(t) };
+    }
+    if s[tz] == b'Z' {
+        if tz + 1 != end {
+            return None;
+        }
+        t.offset = Some((0, 0));
+        return Some(t);
+    }
+    let sign: i64 = if s[tz] == b'-' { -1 } else { 1 };
+    let (z, more) = iso_hms(s, tz + 1, end)?;
+    if more {
+        return None;
+    }
+    let secs = i64::from(z[0]) * 3600 + i64::from(z[1]) * 60 + i64::from(z[2]);
+    t.offset = Some((sign * secs, sign * i64::from(z[3])));
+    Some(t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fromisoformat() {
+        let ok = |s: &str| {
+            DateTime::fromisoformat(s)
+                .map(|d| d.isoformat())
+                .unwrap_or_else(|e| e.to_string())
+        };
+        for (s, want) in [
+            ("2027-01-04T08:00", "2027-01-04T08:00:00"),
+            ("2027-01-04", "2027-01-04T00:00:00"),
+            ("20270104", "2027-01-04T00:00:00"),
+            ("2027-01-04T0800", "2027-01-04T08:00:00"),
+            (
+                "2027-01-04T08:00:00,123456789",
+                "2027-01-04T08:00:00.123456",
+            ),
+            ("2027-01-04T08:00Z", "2027-01-04T08:00:00+00:00"),
+            ("2027-01-04T08:00-0530", "2027-01-04T08:00:00-05:30"),
+            ("2027W013", "2027-01-06T00:00:00"),
+            ("2026-W53-1", "2026-12-28T00:00:00"),
+            (
+                "2027-W53-1",
+                "ValueError: Invalid isoformat string: '2027-W53-1'",
+            ),
+            ("2027-13-01", "ValueError: month must be in 1..12"),
+            ("2027-01-04T24:00", "ValueError: hour must be in 0..23"),
+            ("2027-01-04X08:00", "2027-01-04T08:00:00"),
+            (
+                "2027-01-04T08:00 ",
+                "ValueError: Invalid isoformat string: '2027-01-04T08:00 '",
+            ),
+            (
+                "2027-01-04T08:00:00.",
+                "ValueError: Invalid isoformat string: '2027-01-04T08:00:00.'",
+            ),
+            ("2027-01-04T08:00+01", "2027-01-04T08:00:00+01:00"),
+            ("2027-01-04T08.5", "2027-01-04T08:00:00.500000"),
+            (
+                "2027-01-04T08:00:00+00:00:00.000001",
+                "2027-01-04T08:00:00+00:00",
+            ),
+            (
+                "2027-01-04T08:00:00+01:00:30.5",
+                "2027-01-04T08:00:00+01:00:30.500000",
+            ),
+            ("0000-01-01", "ValueError: year 0 is out of range"),
+        ] {
+            assert_eq!(ok(s), want, "{s}");
+        }
+    }
 
     #[test]
     fn dates_and_durations() {

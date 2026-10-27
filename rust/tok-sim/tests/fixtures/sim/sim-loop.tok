@@ -1,0 +1,12 @@
+tok 0.1 "Pętla"
+
+start s
+task a "Poprawka"
+xor g "Jeszcze raz?"
+end e
+
+flow s -> a -> g
+flow g -> a "again" p=1
+flow g -> e "done" p=0
+
+simulate cases=2

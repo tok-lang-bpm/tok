@@ -1,0 +1,48 @@
+tok 0.3 "Podprocesy i zakończenia"
+
+start s "Start"
+sub p "Kwerenda"
+  start ps
+  and pf
+  task pa "Inwentarz" duration="tri(1h, 2h, 4h)"
+  task pb "Akta" duration="exp(3h)"
+  and pj
+  xor px "Znaleziono?"
+  end pe "Znaleziono"
+  end pt "Przerwano" terminate
+  flow ps -> pf
+  flow pf -> pa
+  flow pf -> pb
+  flow pa -> pj
+  flow pb -> pj
+  flow pj -> px
+  flow px -> pe "tak" p=0.7
+  flow px -> pt "nie" p=0.3
+sub pusty "Podproces bez startu" duration="20m"
+  task pu "Wewnątrz"
+xor g "Dalej?"
+and f
+task a "Krótka" duration="1h"
+task b "Długa" duration="5h"
+end stop "Przerwanie" terminate
+end e "Koniec"
+eventsub w "Wycofanie"
+  start ws "Wycofano" message="Wycofanie"
+  task wt "Zamknięcie"
+  end we
+  flow ws -> wt -> we
+xor zly "Zła ścieżka"
+and dj
+end ed "Zakleszczenie"
+
+flow s -> p -> pusty -> g
+flow g -> f "równolegle" p=0.6
+flow g -> zly "zła" p=0.4
+flow f -> a
+flow f -> b
+flow a -> stop
+flow b -> e
+flow zly -> dj
+flow dj -> ed
+
+simulate cases=30 seed=6 arrival="exp(4h)"

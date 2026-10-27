@@ -250,6 +250,7 @@ dependencies = [
  "serde_json",
  "tok-bpmn",
  "tok-core",
+ "tok-sim",
 ]
 
 [[package]]
@@ -269,12 +270,15 @@ dependencies = [
  "pyo3",
  "tok-bpmn",
  "tok-core",
+ "tok-sim",
 ]
 
 [[package]]
 name = "tok-sim"
 version = "0.3.0"
 dependencies = [
+ "indexmap",
+ "serde_json",
  "thiserror",
  "tok-core",
 ]

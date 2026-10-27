@@ -1,0 +1,8 @@
+tok 0.1 "Ziarno NaN"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate seed=nan

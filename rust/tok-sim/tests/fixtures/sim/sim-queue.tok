@@ -1,0 +1,22 @@
+tok 0.1 "Kolejki"
+
+start s "Wniosek"
+and f
+user a "Przyjęcie, rejestracja" by=r1 duration="exp(20m)"
+user b "Analiza \"wstępna\"" by=r2 duration="tri(10m, 30m, 1h)"
+and j
+user c "Decyzja" by=r1 duration="10m"
+service d "Archiwizacja" by=r3 duration="1m"
+end e "Załatwiony"
+
+flow s -> f
+flow f -> a
+flow f -> b
+flow a -> j
+flow b -> j
+flow j -> c -> d -> e
+
+simulate cases=40 seed=5 arrival="exp(15m)"
+resource r1 "Referent" count=1
+resource r2 "Analitycy" count=2.7
+resource r3 count=1e1

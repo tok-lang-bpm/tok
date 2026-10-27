@@ -22,10 +22,8 @@ target/release/tok check examples/wypozyczenie.tok --lang pl
 | `import FILE.bpmn` | `-o PATH`, `--no-flow-ids` | available |
 | `cheatsheet` |  | available |
 | `--version` |  | available |
-| `sim FILE` |  | planned for tok 0.4; use the Python implementation |
-| `eval FILE DECISION name=value …` |  | planned for tok 0.4; use the Python implementation |
-
-`sim` and `eval` print a short message and exit with status 2 in this build.
+| `sim FILE` | `--cases N`, `--seed N`, `--log PATH`, `--cases-csv PATH`, `--lang en\|pl`, `--json` | available |
+| `eval FILE DECISION name=value …` | `--lang en\|pl` | available |
 
 Exit status: 0 when there are no errors, 1 when the document has errors (or a file
 cannot be produced), 2 for a usage error.
@@ -37,6 +35,8 @@ cannot be produced), 2 for a usage error.
   importer.
 - `tok-bpmn`: BPMN 2.0 rules, automatic layout and SVG rendering (the course
   validator `bpmn.py`).
+- `tok-sim`: the discrete-event simulator (`sim.py`), with a bit-exact port of
+  Python's `random.Random`.
 - `tok-cli`: this command.
 
 ## How parity is verified
@@ -53,6 +53,11 @@ cannot be produced), 2 for a usage error.
   PYTHONPATH=python/src python rust/tok-core/tests/gen_python_expected.py ../tok-course/przyklady
   ```
 
+- `tok-cli/tests/sim_parity.rs` runs `tok sim` with the arguments of the fixtures
+  produced by `python -m tok sim` (`tok-sim/tests/gen_python_sim.py`, one file per
+  platform because the C library's `log`, `exp`, `sin` and `cos` differ in the last
+  bit) and compares standard output, standard error, the exit code and the CSV files.
+
 ## Known differences
 
 - `--version` prints the version of the Rust build.
@@ -62,3 +67,14 @@ cannot be produced), 2 for a usage error.
 - Identifiers derived from labels fold accented letters with a built-in table that
   covers Latin-1, Latin Extended-A, common ligatures and full-width forms; letters
   of other scripts become `_`.
+- An exception that the Python command does not catch (for example `sim` on a process
+  without a start event) is printed as the last line of Python's traceback, with exit
+  status 1.
+- `sim` follows Python 3.12 and newer, whose `sum()` adds floats with compensated
+  summation (the mean cycle time); Python 3.11 can differ in the last digit of a
+  rounded mean in rare cases. Python stops with `RecursionError` when a token passes
+  several hundred gateways or events that take no time in one step; `tok sim`
+  continues up to the loop limit of 10,000 elements per case.
+- Argument errors follow Python 3.11's `argparse`; later versions word a few of them
+  differently (for example `invalid choice: 'de' (choose from en, pl)` without quotes
+  around the choices).

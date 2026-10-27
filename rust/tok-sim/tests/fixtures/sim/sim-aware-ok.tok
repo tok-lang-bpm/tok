@@ -1,0 +1,13 @@
+tok 0.1 "Strefy czasowe zgodne"
+
+start s
+catch t "Termin" timer="2027-01-05T12:00+02:00"
+task a "Praca" duration="1h"
+boundary b "Limit" on=a timer="2027-01-04T08:30:00.5-01:00"
+end e
+end eb
+
+flow s -> t -> a -> e
+flow b -> eb
+
+simulate start="2027-01-04T08:00Z" cases=3 arrival="30m"

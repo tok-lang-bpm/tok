@@ -1,8 +1,9 @@
-//! Simulation parameter checks (S-codes): the validation half of `sim.py`
-//! (`parse_dist`, `parse_assign`, `check_sim`). The simulator itself comes later.
+//! Distributions of the simulation statements and the simulation parameter checks
+//! (S-codes): `parse_dist`, `parse_assign` and `check_sim` of `sim.py`. The simulator
+//! (crate `tok-sim`) samples the distributions parsed here.
 
 use crate::model::Document;
-use crate::pyutil::{fmt_g, parse_float, round6_repr, strip};
+use crate::pyutil::{decimal_value, fmt_g, parse_float, round6_repr, strip};
 
 /// (code, line, element id, arguments)
 pub type SimCheck = (
@@ -12,8 +13,31 @@ pub type SimCheck = (
     Vec<(&'static str, String)>,
 );
 
+/// A label of `cat()`: text, a boolean (`true`, `false`) or a number.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Label {
+    Str(String),
+    Bool(bool),
+    Num(f64),
+}
+
+/// A parsed distribution (`sim.Dist`). `kind` is `duration`, `number`, `bool` or `cat`;
+/// `args` are the parameters in seconds or as numbers (the probabilities for `cat`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Dist {
+    pub name: &'static str,
+    pub kind: &'static str,
+    pub args: Vec<f64>,
+    pub labels: Vec<Label>,
+}
+
 fn is_dur_unit(c: char) -> bool {
     matches!(c, 's' | 'm' | 'h' | 'd')
+}
+
+/// A digit of Python's regular expressions (`\d`: any Unicode decimal digit).
+fn is_digit(c: char) -> bool {
+    decimal_value(c).is_some()
 }
 
 /// `\d+(?:\.\d+)?`
@@ -23,10 +47,27 @@ fn is_plain_number(t: &str) -> bool {
         None => (t, None),
     };
     !int.is_empty()
-        && int.chars().all(|c| c.is_ascii_digit())
+        && int.chars().all(is_digit)
         && frac
-            .map(|f| !f.is_empty() && f.chars().all(|c| c.is_ascii_digit()))
+            .map(|f| !f.is_empty() && f.chars().all(is_digit))
             .unwrap_or(true)
+}
+
+/// Python `float()` of a text matched by `-?\d+(?:\.\d+)?`: digits of any script.
+fn plain_float(t: &str) -> f64 {
+    let ascii: String = t
+        .chars()
+        .map(|c| match decimal_value(c) {
+            Some(d) => char::from(b'0' + d as u8),
+            None => c,
+        })
+        .collect();
+    ascii.parse::<f64>().unwrap_or(0.0)
+}
+
+/// `_NUM_RE`: `^-?\d+(?:\.\d+)?$`
+fn is_signed_number(t: &str) -> bool {
+    is_plain_number(t.strip_prefix('-').unwrap_or(t))
 }
 
 /// ('duration' | 'number', value) or an error detail.
@@ -48,17 +89,32 @@ fn scalar(text: &str) -> Result<(&'static str, f64), String> {
                 'h' => 3600.0,
                 _ => 86400.0,
             };
-            return Ok(("duration", num.parse::<f64>().unwrap_or(0.0) * mult));
+            return Ok(("duration", plain_float(num) * mult));
         }
     }
-    let body = t.strip_prefix('-').unwrap_or(t);
-    if is_plain_number(body) {
-        return Ok(("number", t.parse::<f64>().unwrap_or(0.0)));
+    if is_signed_number(t) {
+        return Ok(("number", plain_float(t)));
     }
     Err(format!("'{t}' is neither a number nor a duration like 30m"))
 }
 
-fn split_args(text: &str) -> Vec<String> {
+/// `_label_value`: a quoted text, `true`, `false`, a number or the bare text.
+fn label_value(text: &str) -> Label {
+    let t = strip(text);
+    let chars: Vec<char> = t.chars().collect();
+    if chars.len() >= 2 && chars[0] == '"' && chars[chars.len() - 1] == '"' {
+        return Label::Str(chars[1..chars.len() - 1].iter().collect());
+    }
+    match t {
+        "true" => Label::Bool(true),
+        "false" => Label::Bool(false),
+        _ if is_signed_number(t) => Label::Num(plain_float(t)),
+        _ => Label::Str(t.to_string()),
+    }
+}
+
+/// `_split_args`: split at commas outside parentheses; the parts are stripped.
+pub fn split_args(text: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut depth = 0i64;
     let mut buf = String::new();
@@ -93,31 +149,43 @@ fn call(t: &str) -> Option<(&str, &str)> {
     Some((&t[..name_end], body))
 }
 
-fn arity(name: &str) -> Option<usize> {
-    match name {
-        "fixed" | "exp" | "bern" => Some(1),
-        "unif" | "norm" | "lnorm" => Some(2),
-        "tri" => Some(3),
-        _ => None,
-    }
+/// The name of a distribution with its number of arguments.
+fn arity(name: &str) -> Option<(&'static str, usize)> {
+    Some(match name {
+        "fixed" => ("fixed", 1),
+        "exp" => ("exp", 1),
+        "bern" => ("bern", 1),
+        "unif" => ("unif", 2),
+        "norm" => ("norm", 2),
+        "lnorm" => ("lnorm", 2),
+        "tri" => ("tri", 3),
+        _ => return None,
+    })
 }
 
-/// Validate a distribution text (`sim.parse_dist`); the error is the detail text.
-pub fn parse_dist(text: &str) -> Result<(), String> {
+/// Parse a distribution (`sim.parse_dist`): a duration (`30m`), a number, or a call such
+/// as `tri(5m, 10m, 20m)`. The error is the detail text of `DistError`.
+pub fn parse_dist(text: &str) -> Result<Dist, String> {
     if strip(text).is_empty() {
         return Err("empty distribution".into());
     }
     let t = strip(text);
     let Some((name, body)) = call(t) else {
-        scalar(t)?;
-        return Ok(());
+        let (kind, v) = scalar(t)?;
+        return Ok(Dist {
+            name: "fixed",
+            kind,
+            args: vec![v],
+            labels: Vec::new(),
+        });
     };
     let args = split_args(body);
     if name == "cat" {
         if args.is_empty() {
             return Err("cat() needs at least one label=probability".into());
         }
-        let mut total = 0.0;
+        let mut labels = Vec::new();
+        let mut probs = Vec::new();
         for a in &args {
             let Some((label, p)) = a.rsplit_once('=') else {
                 return Err(format!(
@@ -131,17 +199,24 @@ pub fn parse_dist(text: &str) -> Result<(), String> {
                     strip(label)
                 ));
             }
-            total += pv;
+            labels.push(label_value(label));
+            probs.push(pv);
         }
+        let total = probs.iter().fold(0.0, |acc, p| acc + p);
         if (total - 1.0).abs() > 1e-6 {
             return Err(format!(
                 "cat() probabilities sum to {}, not 1",
                 fmt_g(total)
             ));
         }
-        return Ok(());
+        return Ok(Dist {
+            name: "cat",
+            kind: "cat",
+            args: probs,
+            labels,
+        });
     }
-    let Some(n) = arity(name) else {
+    let Some((name, n)) = arity(name) else {
         return Err(format!("unknown distribution '{name}'"));
     };
     if args.len() != n {
@@ -163,7 +238,12 @@ pub fn parse_dist(text: &str) -> Result<(), String> {
         if kind != "number" || !(0.0..=1.0).contains(&v[0]) {
             return Err("bern(p) needs a probability between 0 and 1".into());
         }
-        return Ok(());
+        return Ok(Dist {
+            name,
+            kind: "bool",
+            args: v,
+            labels: Vec::new(),
+        });
     }
     if name == "unif" && v[0] > v[1] {
         return Err("unif(a, b) needs a <= b".into());
@@ -177,7 +257,12 @@ pub fn parse_dist(text: &str) -> Result<(), String> {
     if (name == "lnorm" || name == "exp") && v[0] <= 0.0 {
         return Err(format!("{name}() needs a positive mean"));
     }
-    Ok(())
+    Ok(Dist {
+        name,
+        kind,
+        args: v,
+        labels: Vec::new(),
+    })
 }
 
 fn is_var_name(s: &str) -> bool {
@@ -186,8 +271,9 @@ fn is_var_name(s: &str) -> bool {
         && ch.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
-/// Validate `assign="a=bern(0.8); b=cat(x=0.5, y=0.5)"`.
-pub fn parse_assign(text: &str) -> Result<(), String> {
+/// Parse `assign="a=bern(0.8); b=cat(x=0.5, y=0.5)"` into (name, distribution) pairs.
+pub fn parse_assign(text: &str) -> Result<Vec<(String, Dist)>, String> {
+    let mut out = Vec::new();
     for part in text.split(';') {
         let part = strip(part);
         if part.is_empty() {
@@ -200,16 +286,16 @@ pub fn parse_assign(text: &str) -> Result<(), String> {
         if !is_var_name(name) {
             return Err(format!("'{name}' is not a variable name"));
         }
-        parse_dist(dist)?;
+        out.push((name.to_string(), parse_dist(dist)?));
     }
-    Ok(())
+    Ok(out)
 }
 
 fn dist_check(out: &mut Vec<SimCheck>, text: &str, line: usize, id: Option<&str>, assign: bool) {
     let res = if assign {
-        parse_assign(text)
+        parse_assign(text).map(|_| ())
     } else {
-        parse_dist(text)
+        parse_dist(text).map(|_| ())
     };
     if let Err(detail) = res {
         out.push((

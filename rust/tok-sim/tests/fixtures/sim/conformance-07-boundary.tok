@@ -1,0 +1,22 @@
+tok 0.1 "Wyjątki"
+
+start s
+user o "Odbiór książki" by=bibliotekarz duration="tri(1d, 3d, 7d)"
+boundary b1 "Minęło 7 dni" on=o timer=P7D
+boundary b2 "Przypomnienie" on=o timer="R3/P2D" noninterrupting
+service r "Rejestracja wypożyczenia" type="rejestracja"
+boundary b3 "Błąd zapisu" on=r error="Błąd zapisu" code="ZAPIS"
+boundary b4 "Eskalacja" on=r escalation="Termin" code="T1" noninterrupting
+throw x "Sygnał" signal="Zamknięcie czytelni"
+end e
+end e2 "Zwrot" message="Zwrot"
+end e3 "Błąd" error="Błąd zapisu"
+end e4 escalation="Termin"
+end e5 signal="Zamknięcie czytelni"
+catch d "Data" timer=2027-01-15T09:00
+
+flow s -> o -> r -> x -> e
+flow b1 -> e2
+flow b2 -> e4
+flow b3 -> e3
+flow b4 -> e5

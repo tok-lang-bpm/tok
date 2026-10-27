@@ -54,7 +54,7 @@ cd rust
 cargo build --release -p tok-cli      # target/release/tok
 ```
 
-It gives the same output as the Python command; `sim` and `eval` follow in version 0.4.
+It gives the same output as the Python command.
 
 ## Use
 
@@ -89,7 +89,7 @@ tok eval model.tok DECISION a=1  # evaluate a decision table
 | Folder | Contents |
 |---|---|
 | `python/` | reference implementation (package `tok-lang`, command `tok`) and its tests |
-| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-cli` (native `tok`), `tok-py` (Python bindings) |
+| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-sim` (simulator), `tok-cli` (native `tok`), `tok-py` (Python bindings) |
 | `r/tokr` | R package `tokr` on the Rust engine: diagnostics as data frames, diagrams in the viewer, knitr engine `{tok}` |
 | `julia/Tok.jl` | Julia implementation of the core |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |

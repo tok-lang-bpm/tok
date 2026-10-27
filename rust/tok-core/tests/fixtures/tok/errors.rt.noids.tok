@@ -1,0 +1,10 @@
+tok 0.3 "Błędy" executable process=bledy
+
+start s "Start"
+service praca "Praca" type="praca"
+boundary blad "Dowolny błąd" error on=praca outputs="powod = powod"
+end e "Koniec"
+end e2 "Błąd obsłużony"
+
+flow s -> praca -> e
+flow blad -> e2

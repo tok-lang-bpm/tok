@@ -1,0 +1,7 @@
+tok 0.1 "Formularze i symulacja"
+
+start s
+user a "Akceptacja"
+end e
+
+flow s -> a -> e

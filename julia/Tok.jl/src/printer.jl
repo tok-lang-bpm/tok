@@ -5,11 +5,34 @@ const BARE = r"^(?:[A-Za-z_][A-Za-z0-9_.:/+-]*|-?[0-9]+(?:\.[0-9]+)?|[0-9][A-Za-
 # values of these keys are free text and always printed in quotes
 const QUOTED_KEYS = Set(["when", "expr", "condition", "correlation", "duration", "assign", "delay", "arrival",
                          "options", "members", "message", "signal", "error", "escalation", "link", "code",
-                         "start"])
+                         "start",
+                         # language 0.3: expressions, lists and values of the executable layer
+                         "collection", "output-item", "until", "active", "inputs", "outputs", "headers",
+                         "listeners", "events", "url", "body", "query", "headers-in", "assignee",
+                         "candidate-users", "candidate-groups", "due", "follow-up", "business-id", "version",
+                         "version-tag"])
+
+const EXECUTION_LISTENER_EVENTS = ("start", "end")
+
+"Execution listeners first, then task listeners, each group in written order (canonical form)."
+function normalize_listeners(text::AbstractString)
+    items = String[]
+    for x in split(text, ";")
+        s = pystrip(x)
+        isempty(s) || push!(items, s)
+    end
+    event(x) = pystrip(split(x, ":"; limit=2)[1])
+    first = [x for x in items if event(x) in EXECUTION_LISTENER_EVENTS]
+    rest = [x for x in items if !(x in first)]
+    return join(vcat(first, rest), "; ")
+end
 
 q(text::AbstractString) = "\"" * replace(text, "\\" => "\\\\", "\"" => "\\\"", "\n" => "\\n") * "\""
 
 function value(key, v::AbstractString)
+    if key == "listeners"
+        v = normalize_listeners(v)
+    end
     if key in QUOTED_KEYS || !occursin(BARE, v) || occursin("->", v)
         return q(v)
     end

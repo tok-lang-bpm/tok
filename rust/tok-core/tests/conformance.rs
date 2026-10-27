@@ -4,6 +4,31 @@
 use std::fs;
 use std::path::PathBuf;
 
+use tok_core::check::{BpmnIssue, BpmnRules};
+
+/// The BPMN rules of `tok-bpmn`, as `tok check` uses them.
+struct Rules;
+
+impl BpmnRules for Rules {
+    fn validate(&self, xml: &str) -> Vec<BpmnIssue> {
+        tok_bpmn::validate(xml)
+            .expect("exported XML is well formed")
+            .into_iter()
+            .map(|i| BpmnIssue {
+                level: match i.level {
+                    tok_bpmn::Level::Error => "błąd",
+                    tok_bpmn::Level::Warning => "ostrzeżenie",
+                    tok_bpmn::Level::Note => "uwaga",
+                }
+                .to_string(),
+                code: i.code,
+                id: i.id,
+                message: i.message,
+            })
+            .collect()
+    }
+}
+
 const CORE_CODES: &[&str] = &[
     "T001", "T002", "T003", "P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008", "P009",
     "P010", "R001", "R004", "R020", "D002", "D004",
@@ -49,6 +74,32 @@ fn conformance_corpus() {
             failures.push(format!(
                 "{stem}.tok differs:\n--- got\n{got_tok}\n--- expected\n{exp_tok}"
             ));
+        }
+        let levels_path = expected.join(format!("{stem}.levels"));
+        if levels_path.exists() {
+            let exp = fs::read_to_string(&levels_path).expect("levels");
+            let mut got = String::new();
+            for level in ["basic", "analytic", "full"] {
+                let (mut doc_l, _) = tok_core::parse(&text);
+                let mut codes: Vec<String> = tok_core::check(&mut doc_l, level, Some(&Rules))
+                    .into_iter()
+                    .map(|d| d.code)
+                    .collect();
+                codes.sort();
+                got.push_str(&format!(
+                    "{level}: {}
+",
+                    codes.join(" ")
+                ));
+            }
+            if got != exp {
+                failures.push(format!(
+                    "{stem}.levels differs:
+--- got
+{got}--- expected
+{exp}"
+                ));
+            }
         }
         let bpmn_path = expected.join(format!("{stem}.bpmn"));
         if bpmn_path.exists() {

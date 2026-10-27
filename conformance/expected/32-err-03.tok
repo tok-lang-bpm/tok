@@ -1,0 +1,14 @@
+tok 0.3 "Errors of language 0.3" executable
+
+start s "Start" events="create"
+adhoc pusty "Pusty"
+  start s2
+  end e2
+service rez "Rezerwacja" type="r" compensate=zwykle
+service zwykle "Zwykłe" type="z"
+service handler "Handler" compensation type="h"
+user ocena "Ocena" collection="lista" output=wyniki due="jutro" priority=150 headers="bez dwukropka" inputs="bez wyrazenia" listeners="nieznane: typ"
+throw komunikat "Komunikat" message="M"
+end e "Koniec"
+
+flow s -> pusty -> rez -> zwykle -> handler -> ocena -> komunikat -> e

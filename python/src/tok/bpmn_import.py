@@ -27,12 +27,16 @@ KINDS = {
     "intermediateThrowEvent": "throw", "boundaryEvent": "boundary",
     "task": "task", "userTask": "user", "serviceTask": "service", "manualTask": "manual",
     "scriptTask": "script", "businessRuleTask": "rule", "sendTask": "send", "receiveTask": "receive",
-    "callActivity": "call", "subProcess": "sub",
+    "callActivity": "call", "subProcess": "sub", "adHocSubProcess": "adhoc",
     "exclusiveGateway": "xor", "parallelGateway": "and", "inclusiveGateway": "or",
     "eventBasedGateway": "eventgw",
 }
 # tok has no counterpart; imported as the nearest kind with a warning
-APPROXIMATE = {"transaction": "sub", "adHocSubProcess": "sub"}
+APPROXIMATE = {"transaction": "sub"}
+REST_CONNECTOR_TYPE = "io.camunda:http-json:1"
+BINDINGS = {"latest": "latest", "deployment": "deployment", "versionTag": "version-tag"}
+CONNECTOR_INPUTS = {"method": "method", "url": "url", "headers": "headers-in", "queryParameters": "query",
+                    "body": "body"}
 UNSUPPORTED_NODES = {"complexGateway", "choreographyTask", "subChoreography", "callChoreography"}
 DEFINITIONS = {
     "messageEventDefinition": "message", "timerEventDefinition": "timer",
@@ -43,7 +47,8 @@ DEFINITIONS = {
 }
 IGNORED_CHILDREN = {"incoming", "outgoing", "documentation", "extensionElements", "property",
                     "dataInputAssociation", "dataOutputAssociation", "standardLoopCharacteristics",
-                    "multiInstanceLoopCharacteristics", "script", "laneSet", "ioSpecification"}
+                    "multiInstanceLoopCharacteristics", "script", "laneSet", "ioSpecification",
+                    "completionCondition"}
 
 
 def local(tag):
@@ -136,8 +141,25 @@ class Importer:
         return clean_label(e.get("name")) or e.get("id")
 
     # ------------------------------------------------------------------ main
+    def uses_03(self):
+        self.doc.version = "0.3"
+
+    def compensation_boundaries(self):
+        """Compensation boundary events with an association to a handler: tok writes them as compensate=."""
+        handlers = {}
+        for a in self.root.iter(B + "association"):
+            src, tgt = self.by_id.get(a.get("sourceRef")), self.by_id.get(a.get("targetRef"))
+            if src is None or tgt is None:
+                continue
+            if local(src.tag) == "boundaryEvent" and src.find(B + "compensateEventDefinition") is not None \
+                    and tgt.get("isForCompensation") == "true" and src.get("attachedToRef"):
+                handlers[src.get("id")] = (src.get("attachedToRef"), tgt.get("id"), a.get("id"))
+        return handlers
+
     def run(self):
         root, d = self.root, self.doc
+        self.compensation = self.compensation_boundaries()
+        self.skip_ids = set(self.compensation) | {v[2] for v in self.compensation.values()}
         if root.tag != B + "definitions":
             raise ValueError("not a BPMN 2.0 document: root element is %s" % root.tag)
         self.reserve_ids()
@@ -235,6 +257,13 @@ class Importer:
     # ------------------------------------------------------------- processes
     def process(self, p, pool):
         d = self.doc
+        vt = p.find(B + "extensionElements/" + Z + "versionTag")
+        if vt is not None and vt.get("value"):
+            if pool is not None:
+                pool.attrs["version-tag"] = vt.get("value")
+            else:
+                d.attrs["version-tag"] = vt.get("value")
+            self.uses_03()
         scope = pool.process_id if pool is not None else d.default_process_id
         lane_of = {}
         lanes = []
@@ -320,6 +349,8 @@ class Importer:
             if not is_bpmn(c):
                 continue
             t = local(c.tag)
+            if c.get("id") in getattr(self, "skip_ids", ()):
+                continue
             if t in KINDS or t in APPROXIMATE:
                 n = self.node(c, t, scope, pool)
                 children.append(n.id)
@@ -359,6 +390,19 @@ class Importer:
             n.flags.append("noninterrupting")
         if kind == "call" and e.get("calledElement"):
             a["process"] = e.get("calledElement")
+        if kind == "adhoc":
+            self.uses_03()
+            if e.get("ordering") == "Sequential":
+                n.flags.append("sequential")
+            if e.get("cancelRemainingInstances") == "false":
+                n.flags.append("wait")
+            cc = e.find(B + "completionCondition")
+            if cc is not None and (cc.text or "").strip():
+                a["until"] = strip_feel(cc.text)
+        for xml_id, (act, handler, _) in getattr(self, "compensation", {}).items():
+            if act == e.get("id"):
+                a["compensate"] = self.tid(handler)
+                self.uses_03()
         if e.get("isForCompensation") == "true":
             n.flags.append("compensation")
         if kind in ("send", "receive") and e.get("messageRef"):
@@ -379,6 +423,21 @@ class Importer:
         mi = e.find(B + "multiInstanceLoopCharacteristics")
         if mi is not None:
             n.flags.append("sequential" if mi.get("isSequential") == "true" else "parallel")
+            lc = mi.find(B + "extensionElements/" + Z + "loopCharacteristics")
+            if lc is not None:
+                self.uses_03()
+                if lc.get("inputCollection"):
+                    a["collection"] = strip_feel(lc.get("inputCollection"))
+                if lc.get("inputElement"):
+                    a["item"] = lc.get("inputElement")
+                if lc.get("outputCollection"):
+                    a["output"] = lc.get("outputCollection")
+                if lc.get("outputElement"):
+                    a["output-item"] = strip_feel(lc.get("outputElement"))
+            cc = mi.find(B + "completionCondition")
+            if cc is not None and (cc.text or "").strip():
+                a["until"] = strip_feel(cc.text)
+                self.uses_03()
         self.extensions(e, n)
         if e.find(B + "ioSpecification") is not None and kind != "sub":
             self.warn(n.id, "input/output specification was skipped", once="io-" + n.id)
@@ -386,6 +445,19 @@ class Importer:
         d.ids[n.id] = n
         self.kind_of[n.id] = kind
         return n
+
+    @staticmethod
+    def is_rest(ext):
+        td = ext.find(Z + "taskDefinition")
+        return td is not None and td.get("type") == REST_CONNECTOR_TYPE
+
+    def read_binding(self, z, a):
+        if z.get("bindingType"):
+            a["binding"] = BINDINGS.get(z.get("bindingType"), z.get("bindingType"))
+            self.uses_03()
+        if z.get("versionTag"):
+            a["version"] = z.get("versionTag")
+            self.uses_03()
 
     def correlation(self, msg_ref):
         msg = self.by_id.get(msg_ref)
@@ -411,7 +483,8 @@ class Importer:
         if key in M.TRIGGER_FLAGS:
             n.flags.append(key)
             if key == "compensate" and c.get("activityRef"):
-                self.warn(n.id, "activityRef of a compensation event was skipped")
+                a["activity"] = self.tid(c.get("activityRef"))
+                self.uses_03()
         elif key == "message":
             ref = c.get("messageRef")
             a["message"] = self.named(ref, "message") if ref else (n.label or n.id)
@@ -428,9 +501,13 @@ class Importer:
                 code = decl.get(key + "Code") if decl is not None else None
                 if code:
                     a["code"] = code
+            elif key in M.CATCH_ALL_FLAGS and n.kind in ("boundary", "start"):
+                n.flags.append(key)
+                self.uses_03()
             else:
                 a[key] = n.label or n.id
                 self.warn(n.id, "%s event without a reference; the event label was used as name" % key)
+
         elif key == "timer":
             value = None
             for part in ("timeDuration", "timeCycle", "timeDate"):
@@ -463,6 +540,7 @@ class Importer:
             if t == "formDefinition" and n.kind in ("user", "start"):
                 if z.get("formId"):
                     a["form"] = z.get("formId")
+                    self.read_binding(z, a)
                 else:
                     self.warn(n.id, "form reference without formId (formKey or external form) was skipped")
             elif t == "calledDecision" and n.kind == "rule":
@@ -470,14 +548,102 @@ class Importer:
                     a["decision"] = z.get("decisionId")
                 if z.get("resultVariable"):
                     a["result"] = z.get("resultVariable")
+                self.read_binding(z, a)
+            elif t == "calledElement" and n.kind == "call":
+                if z.get("processId"):
+                    a["process"] = z.get("processId")
+                self.read_binding(z, a)
+                if z.get("propagateAllChildVariables") == "false":
+                    a["child-vars"] = "none"
+                if z.get("propagateAllParentVariables") == "false":
+                    a["parent-vars"] = "none"
+                if z.get("businessId"):
+                    a["business-id"] = z.get("businessId")
+                if len(z.attrib) > 1:
+                    self.uses_03()
+            elif t == "adHoc" and n.kind == "adhoc":
+                if z.get("activeElementsCollection"):
+                    a["active"] = strip_feel(z.get("activeElementsCollection"))
+            elif t == "assignmentDefinition" and n.kind == "user":
+                for attr, key in (("assignee", "assignee"), ("candidateUsers", "candidate-users"),
+                                  ("candidateGroups", "candidate-groups")):
+                    if z.get(attr):
+                        a[key] = z.get(attr)
+                self.uses_03()
+            elif t == "taskSchedule" and n.kind == "user":
+                for attr, key in (("dueDate", "due"), ("followUpDate", "follow-up")):
+                    if z.get(attr):
+                        a[key] = z.get(attr)
+                self.uses_03()
+            elif t == "priorityDefinition" and n.kind == "user":
+                if z.get("priority"):
+                    a["priority"] = z.get("priority")
+                self.uses_03()
+            elif t == "ioMapping":
+                ins = [(i.get("target"), i.get("source") or "") for i in z.findall(Z + "input")]
+                outs = [(o.get("target"), o.get("source") or "") for o in z.findall(Z + "output")]
+                if a.get("connector") == "rest" or a.get("type") == REST_CONNECTOR_TYPE:
+                    rest = []
+                    for target, source in ins:
+                        if target in CONNECTOR_INPUTS:
+                            a[CONNECTOR_INPUTS[target]] = source
+                        elif target == "authentication.type" and source == "noAuth":
+                            continue
+                        else:
+                            rest.append((target, source))
+                    ins = rest
+                    a["connector"] = "rest"
+                    a.pop("type", None)
+                if ins:
+                    a["inputs"] = "; ".join("%s = %s" % (tg, strip_feel(src)) for tg, src in ins)
+                if outs:
+                    a["outputs"] = "; ".join("%s = %s" % (tg, strip_feel(src)) for tg, src in outs)
+                self.uses_03()
+            elif t == "taskHeaders":
+                hs = [(h.get("key"), h.get("value") or "") for h in z.findall(Z + "header")]
+                if a.get("connector") == "rest" or self.is_rest(x):
+                    keep = []
+                    for k, v in hs:
+                        if k == "resultVariable":
+                            a["result"] = v
+                        else:
+                            keep.append((k, v))
+                    hs = keep
+                if hs:
+                    a["headers"] = "; ".join("%s: %s" % (k, v) for k, v in hs)
+                self.uses_03()
+            elif t == "conditionalFilter":
+                if z.get("variableEvents"):
+                    a["events"] = z.get("variableEvents")
+                    self.uses_03()
+            elif t in ("executionListeners", "taskListeners"):
+                items = []
+                for li in z:
+                    ev, typ = li.get("eventType"), li.get("type")
+                    if ev and typ:
+                        items.append("%s: %s%s" % (ev, typ, " (%s)" % li.get("retries") if li.get("retries") else ""))
+                if items:
+                    prev = a.get("listeners")
+                    a["listeners"] = "; ".join(([prev] if prev else []) + items)
+                    self.uses_03()
             elif t == "script" and n.kind == "script":
                 if z.get("expression"):
                     a["expr"] = strip_feel(z.get("expression"))
                 if z.get("resultVariable"):
                     a["result"] = z.get("resultVariable")
-            elif t == "taskDefinition" and n.kind in ("service", "send"):
+            elif t == "taskDefinition" and (n.kind in ("service", "send") or
+                                            (n.kind in ("throw", "end") and "message" in a)):
                 if z.get("type"):
-                    a["type"] = strip_feel(z.get("type")) if z.get("type").startswith("=") else z.get("type")
+                    a["type"] = z.get("type")
+                    if a["type"] == REST_CONNECTOR_TYPE and n.kind == "service":
+                        a["connector"] = "rest"
+                        del a["type"]
+                        self.uses_03()
+                if z.get("retries"):
+                    a["retries"] = z.get("retries")
+                    self.uses_03()
+                if n.kind in ("throw", "end"):
+                    self.uses_03()
             else:
                 self.warn(n.id, "Camunda extension zeebe:%s was skipped" % t, once="zeebe-%s-%s" % (t, n.kind))
 

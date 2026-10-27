@@ -7,17 +7,18 @@ The goal of the 0.x series is a language and a tool chain that cover BPMN 2.0.2 
 | Component | Language | Role |
 |---|---|---|
 | `tok-core` | Rust | reference engine from 0.2: lexer, parser, IR, checker, printer, BPMN/DMN/form readers and writers, layout and SVG, FEEL, simulation; C ABI and WebAssembly builds |
-| `tok-lang` (Python) | Rust core via PyO3, wheels built with maturin | command line `tok` and Python API; the pure-Python implementation is the installed package until prebuilt wheels exist (0.4) and stays the executable specification |
+| `tok-lang` (Python) | Rust core via PyO3, wheels built with maturin | command line `tok` and Python API; from 0.4 a thin layer over the Rust engine. The pure-Python implementation is frozen at language 0.3 and kept as the test oracle for what it covers |
 | `tok` (R) | Rust core via extendr | R API, knitr engine `{tok}`, event logs as data frames |
-| `Tok.jl` | Julia, standalone | an independent second implementation of the specification, no bindings to the Rust core |
+| `Tok.jl` | Julia: binding to the Rust engine + independent core + native simulation | the language through the Rust engine (C ABI); an independent core (parser, printer, BPMN export) kept as a check of the specification; native high-performance simulation and calibration |
 | conformance corpus | text files | the contract between implementations: every implementation passes it before a release |
 
-Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (extendr, with an established CRAN policy for Rust packages); one code base compiled for Windows, macOS, Linux and WebAssembly (the browser playground); established XML, random-number and property-testing libraries; compile-time memory safety for a large stateful simulator. Julia stays standalone on purpose: two independent implementations of one specification are the strongest test that the specification is unambiguous.
+Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (extendr, with an established CRAN policy for Rust packages); one code base compiled for Windows, macOS, Linux and WebAssembly (the browser playground); established XML, random-number and property-testing libraries; compile-time memory safety for a large stateful simulator. Julia gets the language through the Rust engine, so no feature is implemented twice. Its own independent core (text layer and BPMN export) stays, because a second implementation of one specification is the strongest test that the specification is unambiguous. Native Julia code is written only where Julia adds something: large-scale simulation and Bayesian calibration.
 
 ## Released
 
 - **0.1.0, 0.1.1** — language 0.1 with the Python reference implementation and the Julia core.
 - **0.2.0** — Rust engine at parity with Python: `tok-core`, `tok-bpmn`, native `tok`, Python bindings for parity testing.
+- **0.3.0** — language 0.3: complete Camunda 8 coverage as an optional executable layer (multi-instance, ad-hoc sub-processes, call activities, variable mappings, user task assignment and scheduling, jobs and REST connector, compensation, catch-all errors and escalations, conditional filters, listeners, version tags); Python, Rust and the Julia core at parity; executable conformance on Camunda 8 Run.
 
 ## State at 0.1
 
@@ -59,14 +60,19 @@ Language additions (each with checker rules, export, import, conformance cases a
 - **Forms:** all Camunda form components used in practice (groups, dynamic lists, tables, validation rules, conditional visibility).
 - `tok check --target camunda`: every construct Camunda 8 does not execute is reported (C-codes), with the version of Camunda the rule refers to.
 - Executable conformance: a script deploys every executable case to Camunda 8 Run and drives instances to their expected end events through the REST API.
-- Simulation of every construct above (Python reference and Rust).
+- Simulation of every construct above (Python reference and Rust); `sim` and `eval` in the Rust engine.
 
-## 0.4 — R package, simulation and layout in Rust
+## 0.4 — Rust as the only engine; R package, simulation and layout in Rust
+
+From 0.4 every new feature is written once, in Rust. Python, R and Julia call the Rust engine; the Julia core stays as an independent check of the specification.
+
+- **Build infrastructure first:** continuous integration that builds and tests the Rust workspace and produces Python wheels (abi3) for Windows, macOS and Linux on every release (Woodpecker CI on Codeberg, or a GitHub mirror with Actions); the Windows wheel can also be built locally. Wheels are attached to the release archives on Codeberg; registry releases remain for 1.0.
+- **Python on Rust:** `tok-lang` becomes a thin layer over `tok-py` with the same command line and API. Where no wheel exists for a platform yet, the archive installs the frozen pure-Python implementation (language 0.3).
+- **Pure Python frozen:** no new features after 0.3; it stays in the repository as the test oracle for language 0.3 (parity tests keep running against it).
 
 - R package `tok` on the Rust core: `tok_read()`, `tok_check()` (diagnostics as a data frame), `tok_fmt()`, `tok_export()`, `tok_plot()` (SVG in the RStudio viewer and documents), `tok_sim()` (event log and cases as data frames, compatible with process-mining packages), `tok_eval()`; knitr engine `{tok}`; vendored crates for offline CRAN builds.
 - Simulation engine in Rust with identical semantics to the Python reference; statistical comparison of indicators on fixed seeds; XES event-log export.
 - Layout engine in Rust: deterministic, faster, with better routing of message flows and boundary paths.
-- Prebuilt Python wheels on the Rust core produced for every release archive (abi3, Windows/macOS/Linux); the pure-Python implementation becomes the specification test oracle only.
 
 ## 0.5 — BPMN 2.0.2 process modelling conformance
 
@@ -97,11 +103,12 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 - FEEL extended towards conformance level 3: temporal types and arithmetic, the standard function library, decimal semantics; DMN TCK subset as a conformance gate.
 - `tok eval` for decision requirements graphs; DMN import.
 
-## 0.8 — Julia to full parity
+## 0.8 — Julia: Rust engine, independent core, native simulation and calibration
 
-- Tok.jl as a complete standalone implementation: checker of all layers, FEEL, decisions, forms, BPMN import, layout and SVG, simulation.
-- Full conformance level passed by Julia and Rust; simulation compared statistically.
-- Precompiled `tok` application for Julia users; registration in the Julia General registry.
+- `Tok.jl` calls the Rust engine through its C ABI (`ccall`), distributed as a prebuilt binary package (JLL, built with BinaryBuilder in the 0.4 CI): the whole language — checker of all layers, FEEL, decisions, forms, BPMN import, layout and SVG — is available in Julia without a second implementation.
+- The independent Julia core (lexer, parser, printer, semantic BPMN export) keeps passing the core conformance level with every language change.
+- Native simulation in Julia for large experiments (many scenarios, many replications, parallel runs), checked statistically against the Rust simulator; calibration of simulation parameters on event logs (the `fit` layer) with Turing.jl.
+- Precompiled `tok` application for Julia users; registration in the Julia General registry at 1.0.
 
 ## 0.9 — tooling and release candidates
 

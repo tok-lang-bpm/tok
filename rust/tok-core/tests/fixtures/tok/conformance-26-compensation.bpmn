@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Compensation" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3">
+  <bpmn:process id="process" name="Compensation" isExecutable="false">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="rezerwacja" name="Rezerwacja środków" />
+    <bpmn:boundaryEvent id="rezerwacja-compensate" attachedToRef="rezerwacja">
+      <bpmn:compensateEventDefinition id="rezerwacja-compensate-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="zwolnienie" name="Zwolnienie rezerwacji" isForCompensation="true" />
+    <bpmn:userTask id="wyslanie" name="Wysłanie zamówienia" />
+    <bpmn:boundaryEvent id="wyslanie-compensate" attachedToRef="wyslanie">
+      <bpmn:compensateEventDefinition id="wyslanie-compensate-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:manualTask id="anulowanie" name="Anulowanie zamówienia" isForCompensation="true" />
+    <bpmn:exclusiveGateway id="ok" name="Czy dostawa potwierdzona?" />
+    <bpmn:intermediateThrowEvent id="cofniecie" name="Cofnięcie rezerwacji">
+      <bpmn:compensateEventDefinition id="cofniecie-def" activityRef="rezerwacja" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" name="Zrealizowano" />
+    <bpmn:endEvent id="e2" name="Wycofano">
+      <bpmn:compensateEventDefinition id="e2-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-rezerwacja" sourceRef="s" targetRef="rezerwacja" />
+    <bpmn:sequenceFlow id="f-rezerwacja-wyslanie" sourceRef="rezerwacja" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-ok" sourceRef="wyslanie" targetRef="ok" />
+    <bpmn:sequenceFlow id="f-ok-e" name="tak" sourceRef="ok" targetRef="e" />
+    <bpmn:sequenceFlow id="f-ok-cofniecie" name="nie" sourceRef="ok" targetRef="cofniecie" />
+    <bpmn:sequenceFlow id="f-cofniecie-e2" sourceRef="cofniecie" targetRef="e2" />
+    <bpmn:association id="rezerwacja-compensate-assoc" associationDirection="One" sourceRef="rezerwacja-compensate" targetRef="zwolnienie" />
+    <bpmn:association id="wyslanie-compensate-assoc" associationDirection="One" sourceRef="wyslanie-compensate" targetRef="anulowanie" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="62" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rezerwacja_di" bpmnElement="rezerwacja">
+        <dc:Bounds x="180" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zwolnienie_di" bpmnElement="zwolnienie">
+        <dc:Bounds x="30" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslanie_di" bpmnElement="wyslanie">
+        <dc:Bounds x="330" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="anulowanie_di" bpmnElement="anulowanie">
+        <dc:Bounds x="30" y="290" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ok_di" bpmnElement="ok" isMarkerVisible="true">
+        <dc:Bounds x="480" y="45" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cofniecie_di" bpmnElement="cofniecie">
+        <dc:Bounds x="580" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="580" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="666" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="rezerwacja-compensate_di" bpmnElement="rezerwacja-compensate">
+        <dc:Bounds x="232" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslanie-compensate_di" bpmnElement="wyslanie-compensate">
+        <dc:Bounds x="382" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-rezerwacja_di" bpmnElement="f-s-rezerwacja">
+        <di:waypoint x="98" y="70" />
+        <di:waypoint x="180" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-rezerwacja-wyslanie_di" bpmnElement="f-rezerwacja-wyslanie">
+        <di:waypoint x="280" y="70" />
+        <di:waypoint x="330" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyslanie-ok_di" bpmnElement="f-wyslanie-ok">
+        <di:waypoint x="430" y="70" />
+        <di:waypoint x="480" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ok-e_di" bpmnElement="f-ok-e">
+        <di:waypoint x="530" y="70" />
+        <di:waypoint x="580" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ok-cofniecie_di" bpmnElement="f-ok-cofniecie">
+        <di:waypoint x="505" y="95" />
+        <di:waypoint x="505" y="200" />
+        <di:waypoint x="580" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-cofniecie-e2_di" bpmnElement="f-cofniecie-e2">
+        <di:waypoint x="616" y="200" />
+        <di:waypoint x="666" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="rezerwacja-compensate-assoc_di" bpmnElement="rezerwacja-compensate-assoc">
+        <di:waypoint x="232" y="120" />
+        <di:waypoint x="130" y="174" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="wyslanie-compensate-assoc_di" bpmnElement="wyslanie-compensate-assoc">
+        <di:waypoint x="382" y="122" />
+        <di:waypoint x="130" y="296" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

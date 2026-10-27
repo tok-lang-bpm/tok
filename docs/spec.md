@@ -1,4 +1,4 @@
-# tok — Language Specification, version 0.1
+# tok — Language Specification, version 0.3
 
 tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decision tables it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
@@ -59,16 +59,17 @@ Attributes may appear in any order; the formatter prints them in the order of th
 The first statement is the header:
 
 ```
-tok 0.1 "Interlibrary loan" executable
+tok 0.3 "Interlibrary loan" executable
 ```
 
 | Part | Meaning |
 |---|---|
-| `tok 0.1` | language version (required) |
+| `tok 0.3` | language version (required). Accepted versions: `0.1` and `0.3`; a document written for 0.1 means the same under 0.3. The language version follows the minor version of the release that changed the language. |
 | label | document title; becomes `definitions/@name` and the default process name |
 | `id=` | identifier of the definitions element (default: `definitions`) |
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
 | `target=camunda` | the execution platform for export; see §10 |
+| `version-tag="v1"` | version tag of the process (executable layer, §10.3) |
 
 After the header come top-level statements in any order:
 
@@ -156,7 +157,14 @@ eventsub ID ["Label"]
   ...
 ```
 
-`sub` is an embedded sub-process; its block is a separate scope for sequence flows (§6). `eventsub` is an event sub-process: it has no incoming or outgoing sequence flows and its block starts with exactly one start event with a trigger.
+`sub` is an embedded sub-process; its block is a separate scope for sequence flows (§6).
+
+```
+adhoc ID ["Label"] [active="EXPR"] [until="EXPR"] [wait] [sequential]
+  ...activities (no start or end events)...
+```
+
+`adhoc` is an ad-hoc sub-process: its activities are performed in any order and as often as needed, without sequence flows from a start event (flows between inner activities are allowed). It contains at least one activity and no start or end events (`R050`). `active`, `until` and `wait` belong to the executable layer (§10.3); `sequential` sets the BPMN ordering attribute. `eventsub` is an event sub-process: it has no incoming or outgoing sequence flows and its block starts with exactly one start event with a trigger.
 
 ### 5.4 Gateways
 
@@ -250,6 +258,8 @@ decision ID ["Label"] [hit=first]
 
 ## 10. Execution
 
+The execution statements and attributes form an **optional layer**. Descriptive and analytic models never need them, and the levels `basic` and `analytic` of `tok check` reject them (§13). Outside this layer, compatibility with Camunda means the set of elements available in Camunda Modeler and the rules for connecting and organizing them (pools, lanes, flows).
+
 ### 10.1 Executable profile
 
 A document with the header flag `executable` (or a pool with `executable`) describes a process for a process engine. The reference implementation exports it for **Camunda 8** (`target=camunda`, the default):
@@ -275,6 +285,53 @@ form ID ["Title"]
 ```
 
 Field types: `textfield`, `textarea`, `number`, `checkbox`, `select`, `radio`, `datetime`. The field key becomes a process variable. For `select` and `radio`, `options` lists `value:Label` pairs separated by commas; the values `true` and `false` become booleans, numbers become numbers. A form exports to a Camunda form file `ID.form`.
+
+### 10.3 Executable layer (language 0.3)
+
+The attributes below complete the coverage of what Camunda 8 executes. They are meaningful in executable documents; elsewhere `tok check` reports them as warnings (`R055`) and the exporter ignores them.
+
+**Value kinds.** Two kinds of attribute values exist:
+
+| Kind | Attributes | Written as |
+|---|---|---|
+| always an expression | `when`, `expr`, `condition`, `correlation`, `collection`, `output-item`, `until`, `active`, right-hand sides in `inputs`/`outputs` | FEEL without `=`: `until="gotowe = true"` |
+| static value or expression | `assignee`, `candidate-users`, `candidate-groups`, `due`, `follow-up`, `priority`, `process`, `type`, `timer`, `business-id`, `version` | as is (`assignee="kierownik"`); an expression computed at run time starts with `=` (`assignee="=wniosek.przelozony"`) |
+
+The second kind follows the convention of Camunda Modeler. A document that is not executable never contains `=`.
+
+**Multi-instance.**
+
+| tok | Camunda 8 / BPMN |
+|---|---|
+| `parallel` / `sequential` | `multiInstanceLoopCharacteristics isSequential` |
+| `collection="expr"` | `zeebe:loopCharacteristics inputCollection` |
+| `item=name` | `inputElement` |
+| `output=name`, `output-item="expr"` | `outputCollection`, `outputElement` (both or neither, `R054`) |
+| `until="expr"` | `completionCondition` |
+
+`collection` requires `parallel` or `sequential` (`R054`).
+
+**Ad-hoc sub-process.** `active="expr"` (list of inner element ids) → `zeebe:adHoc activeElementsCollection`; `until="expr"` → `completionCondition`; `wait` → `cancelRemainingInstances="false"` (by default the remaining elements are cancelled).
+
+**Call activity.** `process=` (static or `=expr`) → `zeebe:calledElement processId`; `binding=latest|deployment|version-tag` and `version="tag"` → `bindingType`, `versionTag`; `child-vars=all|none`, `parent-vars=all|none` → `propagateAllChildVariables`, `propagateAllParentVariables` (default `all`); `business-id=` → `businessId`. `binding=` and `version=` are also accepted on `rule` tasks (decision binding) and on elements with `form=` (form binding).
+
+**Variable mappings.** `inputs="target = expr; …"` and `outputs="target = expr; …"` on activities, sub-processes and call activities; `outputs` also on catch, boundary and start events. The target is a variable or a nested property (`nadawca.iban`). Exported as `zeebe:ioMapping`. A malformed pair list is `R053`.
+
+**User tasks.** `assignee`, `candidate-users`, `candidate-groups` (comma-separated when static) → `zeebe:assignmentDefinition`; `due`, `follow-up` (ISO 8601 with a zone when static, `C090`) → `zeebe:taskSchedule`; `priority` (0–100, `C091`) → `zeebe:priorityDefinition`.
+
+**Jobs.** `type`, `retries`, `headers="key: value; …"` → `zeebe:taskDefinition`, `zeebe:taskHeaders` on service and send tasks and on message throw and end events; in executable documents a message throw or end event needs `type=` (`C022`), because Camunda executes it as a job.
+
+**Connectors.** `connector=rest` with `method=`, `url=`, `result=` (and optional `body=`, `query=`, `headers-in=`) expands to the Camunda REST outbound connector; other connectors are reachable through `type=`, `inputs=` and `headers=`.
+
+**Compensation.** `compensate=HANDLER` on an activity attaches a compensation boundary event associated with the handler; the handler carries the flag `compensation` and has no sequence flows (`R051`). `throw … compensate [activity=ID]` and `end … compensate [activity=ID]` set `activityRef`.
+
+**Errors and escalations.** The flags `error` and `escalation` without a name on boundary events and event sub-process starts catch every error or escalation. Camunda 8 passes to the catching event only the variables sent together with the error; they are merged into the process with `outputs=` on the catching event. The code and message of the error are not available as variables.
+
+**Conditional events.** `events="create, update"` → `zeebe:conditionalFilter variableEvents` on intermediate, boundary and event sub-process start events; not on root-level start events (`R052`).
+
+**Listeners.** `listeners="start: type; end: type"` on any element (execution listeners); on user tasks the events `creating`, `assigning`, `updating`, `completing`, `canceling` define task listeners; an entry may give retries as `start: type (5)`.
+
+**Process version.** `version-tag="v1"` on the header (document without pools) or on a pool → `zeebe:versionTag`.
 
 ## 11. Simulation
 
@@ -343,8 +400,8 @@ The full list is in `diagnostics.md`. The `--level` option restricts the accepte
 
 | Level | Accepts |
 |---|---|
-| `basic` | `start`, `end`, `task`, `user`, `service`, `manual`, `xor`, `and`, pools, lanes, message flows, data, notes |
-| `analytic` | everything except the executable profile, forms and decisions |
+| `basic` | `start`, `end`, `task`, `user`, `service`, `manual`, `xor`, `and`, pools, lanes, message flows, data, notes; no attributes of the executable layer |
+| `analytic` | everything except the executable profile and layer (§10.1, §10.3), forms and decisions |
 | `full` (default) | everything |
 
 ## 14. Canonical form

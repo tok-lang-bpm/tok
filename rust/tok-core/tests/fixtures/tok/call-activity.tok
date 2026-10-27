@@ -1,0 +1,14 @@
+tok 0.3 "Wywołanie procesu" executable
+
+pool p-glowny "Proces główny" process=glowny
+  start s "Start"
+  call wywolanie "Wysyłka" process=wysylka binding=deployment child-vars=none inputs="numer = zamowienie" outputs="przesylka = numerPrzesylki"
+  end e "Koniec"
+
+pool p-wysylka "Wysyłka" process=wysylka
+  start s2 "Start"
+  script nadanie "Nadanie numeru" expr="\"P-\" + numer" result=numerPrzesylki
+  end e2 "Koniec"
+
+flow s -> wywolanie -> e
+flow s2 -> nadanie -> e2

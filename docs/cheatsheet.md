@@ -1,11 +1,11 @@
-# tok 0.1 — cheat sheet
+# tok 0.3 — cheat sheet
 
 One statement per line. Blocks by indentation (spaces). `#` starts a comment.
 Every statement starts with a keyword. Identifiers: `[A-Za-z_][A-Za-z0-9_-]*`, unique. Labels: "quoted text".
 Attributes: `key=value` (value: word, number or "text") and bare flags.
 
 ```
-tok 0.1 "Title" [executable]                       # header, first line
+tok 0.3 "Title" [executable]                       # header, first line (0.1 documents stay valid)
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
 end ID "Label" [message="M" | error="E" | escalation="X" | signal="S" | terminate]
@@ -18,6 +18,7 @@ task | user | manual | service | script | rule | send | receive | call   ID "Lab
     user … form=F        rule … decision=D result=var        script … expr="feel" result=var
     service … type="job"  send/receive … message="M"          call … process=P
 sub ID "Label"           # embedded sub-process: indented block with its own start and end
+adhoc ID "Label"         # ad-hoc sub-process: activities in any order, no start or end events
 eventsub ID "Label"      # event sub-process: block starts with a start event with a trigger
 
 xor | and | or | eventgw   ID ["Question?"]
@@ -53,6 +54,24 @@ variable NAME "unif(20, 300)"               # fixed unif tri norm lnorm exp bern
 ```
 
 FEEL in `when`, `expr`, `condition`, `correlation` and decision cells is written **without** a leading `=`.
+
+Compensation and catch-all events (any document):
+`service a … compensate=h` + `service h … compensation` · `throw c … compensate [activity=a]` ·
+`boundary b on=a error` (any error) · `boundary b on=a escalation` (any escalation)
+
+Executable layer (only with `executable`; values computed at run time start with `=`):
+
+```
+user t … assignee="kierownik" candidate-groups="a, b" due="=now() + duration(\"P3D\")" priority=70
+user t … parallel collection="items" item=x output=results output-item="x.result" until="numberOfCompletedInstances >= 2"
+adhoc a … active="chosen" until="done = true" wait
+call c … process=child binding=deployment|latest|version-tag version="v2" child-vars=none parent-vars=none
+service s … type="job" retries=5 headers="key: value; …" inputs="target = expr; …" outputs="target = expr; …"
+service r … connector=rest method=GET url="https://…" result=response [body= query= headers-in=]
+end e … message="M" type="job"          catch|boundary … condition="x > 1" events="create, update"
+any … listeners="start: job-type; end: job-type (5)"   (user tasks also: creating, assigning, updating, completing, canceling)
+tok 0.3 "T" executable version-tag="v1"   pool p … version-tag="v1"
+```
 
 Commands: `tok check F` · `tok fmt F [-w]` · `tok bpmn F` · `tok svg F` · `tok export F [-o DIR]` ·
 `tok import F.bpmn` · `tok sim F` · `tok eval F DECISION name=value …` · `--lang pl` · `--json`

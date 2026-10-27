@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Błędy" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="bledy" name="Błędy" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="praca" name="Praca">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="praca" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="blad" name="Dowolny błąd" attachedToRef="praca">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=powod" target="powod" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:errorEventDefinition id="blad-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e2" name="Błąd obsłużony" />
+    <bpmn:sequenceFlow id="f-s-praca" sourceRef="s" targetRef="praca" />
+    <bpmn:sequenceFlow id="f-praca-e" sourceRef="praca" targetRef="e" />
+    <bpmn:sequenceFlow id="f-blad-e2" sourceRef="blad" targetRef="e2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="bledy">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="praca_di" bpmnElement="praca">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="266" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="266" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="blad_di" bpmnElement="blad">
+        <dc:Bounds x="168" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-praca_di" bpmnElement="f-s-praca">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-praca-e_di" bpmnElement="f-praca-e">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-blad-e2_di" bpmnElement="f-blad-e2">
+        <di:waypoint x="186" y="128" />
+        <di:waypoint x="186" y="178" />
+        <di:waypoint x="266" y="178" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

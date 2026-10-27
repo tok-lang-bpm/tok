@@ -7,20 +7,43 @@ the structure is easy to port to languages without object references.
 
 EVENT_KINDS = ("start", "end", "catch", "throw", "boundary")
 TASK_KINDS = ("task", "user", "service", "manual", "script", "rule", "send", "receive", "call")
-SUB_KINDS = ("sub", "eventsub")
+SUB_KINDS = ("sub", "eventsub", "adhoc")
 GATEWAY_KINDS = ("xor", "and", "or", "eventgw")
 NODE_KINDS = EVENT_KINDS + TASK_KINDS + SUB_KINDS + GATEWAY_KINDS
 ACTIVITY_KINDS = TASK_KINDS + SUB_KINDS
 
 TRIGGERS = ("message", "timer", "signal", "error", "escalation", "condition", "link")
 TRIGGER_FLAGS = ("terminate", "compensate")
+# catch-all flags (no name): catch every error or escalation (language 0.3)
+CATCH_ALL_FLAGS = ("error", "escalation")
 
 # attribute keys and flags per statement kind, in canonical print order
 EVENT_KEYS = ("on", "message", "timer", "signal", "error", "escalation", "code", "condition", "link",
-              "correlation", "form", "delay", "assign")
-EVENT_FLAGS = ("noninterrupting", "terminate", "compensate")
-TASK_KEYS = ("message", "process", "form", "decision", "expr", "result", "type", "by", "duration", "assign")
-TASK_FLAGS = ("loop", "parallel", "sequential", "compensation")
+              "correlation", "form", "binding", "version", "activity", "events",
+              "type", "retries", "headers", "outputs", "listeners", "delay", "assign")
+EVENT_FLAGS = ("noninterrupting", "terminate", "compensate", "error", "escalation")
+TASK_KEYS = ("message", "process", "form", "decision", "expr", "result", "type",
+             "binding", "version", "child-vars", "parent-vars", "business-id",
+             "collection", "item", "output", "output-item", "until", "active",
+             "assignee", "candidate-users", "candidate-groups", "due", "follow-up", "priority",
+             "retries", "headers", "connector", "method", "url", "query", "headers-in", "body",
+             "inputs", "outputs", "compensate", "listeners",
+             "by", "duration", "assign")
+TASK_FLAGS = ("loop", "parallel", "sequential", "compensation", "wait")
+
+# The executable layer of language 0.3 (spec §10.3): meaningful only in executable documents,
+# rejected at the levels basic and analytic.
+EXEC_KEYS = ("binding", "version", "child-vars", "parent-vars", "business-id",
+             "collection", "item", "output", "output-item", "until", "active",
+             "assignee", "candidate-users", "candidate-groups", "due", "follow-up", "priority",
+             "retries", "headers", "connector", "method", "url", "query", "headers-in", "body",
+             "inputs", "outputs", "listeners", "events", "version-tag")
+EXEC_FLAGS = ("wait",)
+USER_TASK_KEYS = ("assignee", "candidate-users", "candidate-groups", "due", "follow-up", "priority")
+CONNECTOR_KEYS = ("method", "url", "query", "headers-in", "body")
+# attributes whose value is always a FEEL expression (written without "=")
+EXPR_KEYS = ("when", "expr", "condition", "correlation", "collection", "output-item", "until", "active")
+LANGUAGE_VERSIONS = ("0.1", "0.3")
 GATEWAY_KEYS = ()
 GATEWAY_FLAGS = ()
 
@@ -33,9 +56,9 @@ for _k in TASK_KINDS + SUB_KINDS:
 for _k in GATEWAY_KINDS:
     NODE_KEYS[_k], NODE_FLAGS[_k] = GATEWAY_KEYS, GATEWAY_FLAGS
 
-HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration")
+HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration", "version-tag")
 HEADER_FLAGS = ("executable",)
-POOL_KEYS = ("process",)
+POOL_KEYS = ("process", "version-tag")
 POOL_FLAGS = ("executable",)
 FLOW_KEYS = ("id", "when", "p")
 FLOW_FLAGS = ("default",)

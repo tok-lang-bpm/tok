@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Ad-hoc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" name="Ad-hoc" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:adHocSubProcess id="opracowanie" name="Opracowanie spuścizny" cancelRemainingInstances="false">
+      <bpmn:extensionElements>
+        <zeebe:adHoc activeElementsCollection="=wybrane" />
+      </bpmn:extensionElements>
+      <bpmn:userTask id="inwentarz" name="Sporządzenie inwentarza">
+        <bpmn:extensionElements>
+          <zeebe:userTask />
+        </bpmn:extensionElements>
+      </bpmn:userTask>
+      <bpmn:userTask id="skany" name="Digitalizacja">
+        <bpmn:extensionElements>
+          <zeebe:userTask />
+        </bpmn:extensionElements>
+      </bpmn:userTask>
+      <bpmn:manualTask id="konserwacja" name="Konserwacja" />
+      <bpmn:sequenceFlow id="f-inwentarz-skany" sourceRef="inwentarz" targetRef="skany" />
+      <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=gotowe = true</bpmn:completionCondition>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="kolejno" name="Kolejne kroki" ordering="Sequential">
+      <bpmn:task id="a" name="Krok A" />
+      <bpmn:task id="b" name="Krok B" />
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-opracowanie" sourceRef="s" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-kolejno" sourceRef="opracowanie" targetRef="kolejno" />
+    <bpmn:sequenceFlow id="f-kolejno-e" sourceRef="kolejno" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="opracowanie_di" bpmnElement="opracowanie" isExpanded="true">
+        <dc:Bounds x="116" y="30" width="310" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inwentarz_di" bpmnElement="inwentarz">
+        <dc:Bounds x="146" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skany_di" bpmnElement="skany">
+        <dc:Bounds x="296" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="konserwacja_di" bpmnElement="konserwacja">
+        <dc:Bounds x="146" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="kolejno_di" bpmnElement="kolejno" isExpanded="true">
+        <dc:Bounds x="476" y="30" width="160" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a">
+        <dc:Bounds x="506" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b_di" bpmnElement="b">
+        <dc:Bounds x="506" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="686" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-inwentarz-skany_di" bpmnElement="f-inwentarz-skany">
+        <di:waypoint x="246" y="110" />
+        <di:waypoint x="296" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-opracowanie_di" bpmnElement="f-s-opracowanie">
+        <di:waypoint x="66" y="170" />
+        <di:waypoint x="116" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-opracowanie-kolejno_di" bpmnElement="f-opracowanie-kolejno">
+        <di:waypoint x="426" y="170" />
+        <di:waypoint x="476" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-kolejno-e_di" bpmnElement="f-kolejno-e">
+        <di:waypoint x="636" y="170" />
+        <di:waypoint x="686" y="170" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

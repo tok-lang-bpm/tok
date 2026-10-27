@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Call activity and bindings" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Call activity and bindings">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition bindingType="versionTag" formId="f-start" versionTag="v3" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:callActivity calledElement="wysylka" id="wysylka" name="Wysyłka">
+      <bpmn:extensionElements>
+        <zeebe:calledElement bindingType="versionTag" businessId="=numer" processId="wysylka" propagateAllChildVariables="false" propagateAllParentVariables="false" versionTag="v2" />
+      </bpmn:extensionElements>
+    </bpmn:callActivity>
+    <bpmn:callActivity id="dynamiczne" name="Wywołanie dynamiczne">
+      <bpmn:extensionElements>
+        <zeebe:calledElement bindingType="deployment" processId="=nazwaProcesu" />
+      </bpmn:extensionElements>
+    </bpmn:callActivity>
+    <bpmn:businessRuleTask id="ustalenie" name="Ustalenie trybu">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision bindingType="deployment" decisionId="tryb" resultVariable="tryb" />
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+    <bpmn:userTask id="akcept" name="Akceptacja">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition bindingType="latest" formId="f-start" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-wysylka" sourceRef="s" targetRef="wysylka" />
+    <bpmn:sequenceFlow id="f-wysylka-dynamiczne" sourceRef="wysylka" targetRef="dynamiczne" />
+    <bpmn:sequenceFlow id="f-dynamiczne-ustalenie" sourceRef="dynamiczne" targetRef="ustalenie" />
+    <bpmn:sequenceFlow id="f-ustalenie-akcept" sourceRef="ustalenie" targetRef="akcept" />
+    <bpmn:sequenceFlow id="f-akcept-e" sourceRef="akcept" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

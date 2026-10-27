@@ -1,0 +1,9 @@
+tok 0.3 "Podproces ad hoc" executable process=adhoc
+
+start s "Start"
+adhoc opracowanie "Opracowanie spuścizny" wait active="wybrane"
+  script inwentarz "Sporządzenie inwentarza" expr="\"gotowy\"" result=inwentarz
+  script skany "Digitalizacja" expr="\"zrobione\"" result=skany
+end e "Koniec"
+
+flow s -> opracowanie -> e

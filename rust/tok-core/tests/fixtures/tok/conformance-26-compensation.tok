@@ -1,0 +1,16 @@
+tok 0.3 "Compensation"
+
+start s "Start"
+service rezerwacja "Rezerwacja środków" compensate=zwolnienie
+service zwolnienie "Zwolnienie rezerwacji" compensation
+user wyslanie "Wysłanie zamówienia" compensate=anulowanie
+manual anulowanie "Anulowanie zamówienia" compensation
+xor ok "Czy dostawa potwierdzona?"
+throw cofniecie "Cofnięcie rezerwacji" compensate activity=rezerwacja
+end e "Zrealizowano"
+end e2 "Wycofano" compensate
+
+flow s -> rezerwacja -> wyslanie -> ok
+flow ok -> e "tak"
+flow ok -> cofniecie "nie"
+flow cofniecie -> e2

@@ -1,0 +1,51 @@
+[
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "„assignee” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "„priority” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "„inputs” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 5,
+    "id": "wysylka",
+    "message": "„retries” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 6,
+    "id": "opracowanie",
+    "message": "„active” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 6,
+    "id": "opracowanie",
+    "message": "„wait” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 8,
+    "id": "e",
+    "message": "„type” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny"
+  }
+]

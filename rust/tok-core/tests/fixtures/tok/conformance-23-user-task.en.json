@@ -1,0 +1,16 @@
+[
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 4,
+    "id": "akceptacja",
+    "message": "user task 'akceptacja' has no form (form=)"
+  },
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 5,
+    "id": "sprawdzenie",
+    "message": "user task 'sprawdzenie' has no form (form=)"
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "code": "R052",
+    "severity": "error",
+    "line": 3,
+    "id": "s",
+    "message": "events= is not allowed on the root-level start event 's'"
+  },
+  {
+    "code": "R050",
+    "severity": "error",
+    "line": 4,
+    "id": "pusty",
+    "message": "ad-hoc sub-process 'pusty' must contain at least one activity and no start or end events"
+  },
+  {
+    "code": "R051",
+    "severity": "error",
+    "line": 7,
+    "id": "rez",
+    "message": "compensation handler 'zwykle' needs the flag compensation"
+  },
+  {
+    "code": "R051",
+    "severity": "error",
+    "line": 9,
+    "id": "handler",
+    "message": "compensation handler 'handler' must not have sequence flows"
+  },
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 10,
+    "id": "ocena",
+    "message": "user task 'ocena' has no form (form=)"
+  },
+  {
+    "code": "C090",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "due=\"jutro\" must be an ISO 8601 date-time with a zone (e.g. 2027-01-15T12:00:00+01:00) or an expression starting with ="
+  },
+  {
+    "code": "C091",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "priority must be an integer from 0 to 100 or an expression starting with =, not '150'"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "malformed inputs=\"…\" list: 'bez wyrazenia' (expected target = expression)"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "malformed headers=\"…\" list: 'bez dwukropka' (expected key: value)"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "malformed listeners=\"…\" list: 'nieznane: typ' (expected event: type with event one of start, end, creating, assigning, updating, completing, canceling)"
+  },
+  {
+    "code": "R054",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "collection= on 'ocena' needs the flag parallel or sequential"
+  },
+  {
+    "code": "R054",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "'ocena' needs both output= and output-item="
+  },
+  {
+    "code": "C022",
+    "severity": "error",
+    "line": 11,
+    "id": "komunikat",
+    "message": "message throw event 'komunikat' needs type=\"…\" (Camunda executes it as a job)"
+  }
+]

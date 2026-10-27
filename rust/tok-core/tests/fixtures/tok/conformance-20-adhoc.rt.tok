@@ -1,0 +1,14 @@
+tok 0.3 "Ad-hoc" executable
+
+start s "Start"
+adhoc opracowanie "Opracowanie spuścizny" wait until="gotowe = true" active="wybrane"
+  user inwentarz "Sporządzenie inwentarza"
+  user skany "Digitalizacja"
+  manual konserwacja "Konserwacja"
+adhoc kolejno "Kolejne kroki" sequential
+  task a "Krok A"
+  task b "Krok B"
+end e "Koniec"
+
+flow inwentarz -> skany
+flow s -> opracowanie -> kolejno -> e

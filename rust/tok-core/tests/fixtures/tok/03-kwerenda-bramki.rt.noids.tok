@@ -1,0 +1,30 @@
+tok 0.1 "Kwerenda w archiwum"
+
+start wplynela "Wniosek o kwerendę wpłynął"
+user ocena "Ocena wniosku"
+xor kompletny "Czy wniosek kompletny?"
+user wezwanie "Wezwanie do uzupełnienia"
+and poszukiwania
+user inwentarz "Przeszukanie inwentarzy"
+user ewidencja "Przeszukanie ewidencji kwerend"
+and wyniki
+user odpowiedz "Opracowanie odpowiedzi"
+or forma "Jak przekazać odpowiedź?"
+send email "Wysłanie odpowiedzi e-mailem" message="Odpowiedź"
+send list "Wysłanie odpowiedzi listem" message="Odpowiedź"
+manual osobiscie "Wydanie odpowiedzi w kancelarii"
+or przekazano
+end zakonczona "Kwerenda zakończona"
+
+flow wplynela -> ocena -> kompletny
+flow kompletny -> poszukiwania "tak" when="kompletny = true"
+flow kompletny -> wezwanie "nie" default
+flow wezwanie -> ocena
+flow poszukiwania -> inwentarz -> wyniki
+flow poszukiwania -> ewidencja -> wyniki -> odpowiedz -> forma
+flow forma -> email "e-mail" when="email != null"
+flow forma -> list "list" when="adres != null and kopie = true"
+flow forma -> osobiscie "osobiście" default
+flow email -> przekazano
+flow list -> przekazano
+flow osobiscie -> przekazano -> zakonczona

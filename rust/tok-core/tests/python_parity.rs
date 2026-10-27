@@ -80,7 +80,10 @@ fn compare(failures: &mut Vec<String>, what: String, expected: &str, actual: &st
 #[test]
 fn check_and_exports_match_python() {
     let dir = fixtures("tok");
-    let files = inputs(&dir, "tok", "");
+    let files: Vec<PathBuf> = inputs(&dir, "tok", "")
+        .into_iter()
+        .filter(|p| !p.to_string_lossy().contains(".rt."))
+        .collect();
     assert!(
         files.len() >= 18,
         "fixtures missing; run gen_python_expected.py"
@@ -130,6 +133,28 @@ fn check_and_exports_match_python() {
             }
         }
         compared += 2;
+        let (rt, rt_warnings) = import::import_bpmn(&bpmn, true).expect("round-trip import");
+        compare(
+            &mut failures,
+            format!("{name}.rt.tok"),
+            &read(&dir.join(format!("{name}.rt.tok"))),
+            &printer::fmt(&rt),
+        );
+        let warn: String = rt_warnings.iter().map(|w| format!("{w}\n")).collect();
+        compare(
+            &mut failures,
+            format!("{name}.rt.warn"),
+            &read(&dir.join(format!("{name}.rt.warn"))),
+            &warn,
+        );
+        let (rt, _) = import::import_bpmn(&bpmn, false).expect("round-trip import");
+        compare(
+            &mut failures,
+            format!("{name}.rt.noids.tok"),
+            &read(&dir.join(format!("{name}.rt.noids.tok"))),
+            &printer::fmt(&rt),
+        );
+        compared += 3;
         for dec in doc.decisions.values() {
             let f = format!("{name}.{}.dmn", dec.base.id());
             compare(

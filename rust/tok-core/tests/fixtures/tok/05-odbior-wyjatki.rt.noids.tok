@@ -1,0 +1,24 @@
+tok 0.1 "Odbiór książki z wypożyczalni międzybibliotecznej"
+
+pool biblioteka "Biblioteka uczelniana"
+  lane bibliotekarz "Bibliotekarz wypożyczalni międzybibliotecznej"
+    start dotarla "Książka dotarła"
+    service rejestracja "Rejestracja egzemplarza w systemie"
+    boundary blad-zapisu "Błąd zapisu" on=rejestracja error="Błąd zapisu"
+    user reczna "Rejestracja ręczna"
+    user powiadomienie "Powiadomienie czytelnika"
+    user odeslanie "Odesłanie książki"
+    end zwrocona "Książka zwrócona bibliotece udostępniającej"
+  lane czytelnik "Czytelnik"
+    user odbior "Odbiór książki"
+    boundary przypomnienie-czas "Minęły 3 dni" noninterrupting on=odbior timer=P3D
+    boundary termin "Minęło 7 dni" on=odbior timer=P7D
+    end odebrana "Książka odebrana"
+  lane system "System biblioteczny"
+    service przypomnienie "Wysłanie przypomnienia"
+    end przypomniano "Przypomnienie wysłane"
+
+flow dotarla -> rejestracja -> powiadomienie -> odbior -> odebrana
+flow blad-zapisu -> reczna -> powiadomienie
+flow przypomnienie-czas -> przypomnienie -> przypomniano
+flow termin -> odeslanie -> zwrocona

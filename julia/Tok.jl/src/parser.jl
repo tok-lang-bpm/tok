@@ -9,6 +9,7 @@ const ALLOWED = Dict{String,Set{String}}(
     "lane" => union(NODE_LIKE, Set(["lane"])),
     "sub" => NODE_LIKE,
     "eventsub" => NODE_LIKE,
+    "adhoc" => NODE_LIKE,
     "decision" => Set{String}(),
     "form" => Set(["text", "field"]),
 )
@@ -174,7 +175,7 @@ function header!(p::Parser, line::Line)
         return
     end
     d.version = toks[2].value
-    d.version != "0.1" && err!(p, "P006", line.number; version=d.version)
+    d.version in LANGUAGE_VERSIONS || err!(p, "P006", line.number; version=d.version)
     d.title, d.attrs, d.flags, _ = parse_tail(p, toks, 3, line.number)
 end
 
@@ -236,7 +237,7 @@ end
 function add_child!(p::Parser, ctx::Ctx, id::String)
     if ctx.kind == "top"
         push!(p.doc.top, id)
-    elseif ctx.kind in ("pool", "lane", "sub", "eventsub") && ctx.owner !== nothing
+    elseif ctx.kind in ("pool", "lane", "sub", "eventsub", "adhoc") && ctx.owner !== nothing
         push!(ctx.owner.children, id)
     end
 end

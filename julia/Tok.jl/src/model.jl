@@ -3,25 +3,36 @@
 
 const EVENT_KINDS = ("start", "end", "catch", "throw", "boundary")
 const TASK_KINDS = ("task", "user", "service", "manual", "script", "rule", "send", "receive", "call")
-const SUB_KINDS = ("sub", "eventsub")
+const SUB_KINDS = ("sub", "eventsub", "adhoc")
 const GATEWAY_KINDS = ("xor", "and", "or", "eventgw")
 const NODE_KINDS = (EVENT_KINDS..., TASK_KINDS..., SUB_KINDS..., GATEWAY_KINDS...)
 
 const TRIGGERS = ("message", "timer", "signal", "error", "escalation", "condition", "link")
 const TRIGGER_FLAGS = ("terminate", "compensate")
+# catch-all flags (no name): catch every error or escalation (language 0.3)
+const CATCH_ALL_FLAGS = ("error", "escalation")
 
 const EVENT_KEYS = ("on", "message", "timer", "signal", "error", "escalation", "code", "condition", "link",
-                    "correlation", "form", "delay", "assign")
-const EVENT_FLAGS = ("noninterrupting", "terminate", "compensate")
-const TASK_KEYS = ("message", "process", "form", "decision", "expr", "result", "type", "by", "duration", "assign")
-const TASK_FLAGS = ("loop", "parallel", "sequential", "compensation")
+                    "correlation", "form", "binding", "version", "activity", "events",
+                    "type", "retries", "headers", "outputs", "listeners", "delay", "assign")
+const EVENT_FLAGS = ("noninterrupting", "terminate", "compensate", "error", "escalation")
+const TASK_KEYS = ("message", "process", "form", "decision", "expr", "result", "type",
+                   "binding", "version", "child-vars", "parent-vars", "business-id",
+                   "collection", "item", "output", "output-item", "until", "active",
+                   "assignee", "candidate-users", "candidate-groups", "due", "follow-up", "priority",
+                   "retries", "headers", "connector", "method", "url", "query", "headers-in", "body",
+                   "inputs", "outputs", "compensate", "listeners",
+                   "by", "duration", "assign")
+const TASK_FLAGS = ("loop", "parallel", "sequential", "compensation", "wait")
+
+const LANGUAGE_VERSIONS = ("0.1", "0.3")
 
 node_keys(kind) = kind in EVENT_KINDS ? EVENT_KEYS : (kind in TASK_KINDS || kind in SUB_KINDS) ? TASK_KEYS : ()
 node_flags(kind) = kind in EVENT_KINDS ? EVENT_FLAGS : (kind in TASK_KINDS || kind in SUB_KINDS) ? TASK_FLAGS : ()
 
-const HEADER_KEYS = ("id", "process", "target")
+const HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration", "version-tag")
 const HEADER_FLAGS = ("executable",)
-const POOL_KEYS = ("process",)
+const POOL_KEYS = ("process", "version-tag")
 const POOL_FLAGS = ("executable",)
 const FLOW_KEYS = ("id", "when", "p")
 const FLOW_FLAGS = ("default",)

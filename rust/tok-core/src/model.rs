@@ -7,7 +7,7 @@ pub const EVENT_KINDS: &[&str] = &["start", "end", "catch", "throw", "boundary"]
 pub const TASK_KINDS: &[&str] = &[
     "task", "user", "service", "manual", "script", "rule", "send", "receive", "call",
 ];
-pub const SUB_KINDS: &[&str] = &["sub", "eventsub"];
+pub const SUB_KINDS: &[&str] = &["sub", "eventsub", "adhoc"];
 pub const GATEWAY_KINDS: &[&str] = &["xor", "and", "or", "eventgw"];
 
 pub const TRIGGERS: &[&str] = &[
@@ -20,6 +20,8 @@ pub const TRIGGERS: &[&str] = &[
     "link",
 ];
 pub const TRIGGER_FLAGS: &[&str] = &["terminate", "compensate"];
+/// Catch-all flags (no name): catch every error or escalation (language 0.3).
+pub const CATCH_ALL_FLAGS: &[&str] = &["error", "escalation"];
 
 pub const EVENT_KEYS: &[&str] = &[
     "on",
@@ -33,18 +35,136 @@ pub const EVENT_KEYS: &[&str] = &[
     "link",
     "correlation",
     "form",
+    "binding",
+    "version",
+    "activity",
+    "events",
+    "type",
+    "retries",
+    "headers",
+    "outputs",
+    "listeners",
     "delay",
     "assign",
 ];
-pub const EVENT_FLAGS: &[&str] = &["noninterrupting", "terminate", "compensate"];
-pub const TASK_KEYS: &[&str] = &[
-    "message", "process", "form", "decision", "expr", "result", "type", "by", "duration", "assign",
+pub const EVENT_FLAGS: &[&str] = &[
+    "noninterrupting",
+    "terminate",
+    "compensate",
+    "error",
+    "escalation",
 ];
-pub const TASK_FLAGS: &[&str] = &["loop", "parallel", "sequential", "compensation"];
+pub const TASK_KEYS: &[&str] = &[
+    "message",
+    "process",
+    "form",
+    "decision",
+    "expr",
+    "result",
+    "type",
+    "binding",
+    "version",
+    "child-vars",
+    "parent-vars",
+    "business-id",
+    "collection",
+    "item",
+    "output",
+    "output-item",
+    "until",
+    "active",
+    "assignee",
+    "candidate-users",
+    "candidate-groups",
+    "due",
+    "follow-up",
+    "priority",
+    "retries",
+    "headers",
+    "connector",
+    "method",
+    "url",
+    "query",
+    "headers-in",
+    "body",
+    "inputs",
+    "outputs",
+    "compensate",
+    "listeners",
+    "by",
+    "duration",
+    "assign",
+];
+pub const TASK_FLAGS: &[&str] = &["loop", "parallel", "sequential", "compensation", "wait"];
 
-pub const HEADER_KEYS: &[&str] = &["id", "process", "target", "namespace", "collaboration"];
+/// The executable layer of language 0.3 (spec §10.3): meaningful only in executable
+/// documents, rejected at the levels basic and analytic.
+pub const EXEC_KEYS: &[&str] = &[
+    "binding",
+    "version",
+    "child-vars",
+    "parent-vars",
+    "business-id",
+    "collection",
+    "item",
+    "output",
+    "output-item",
+    "until",
+    "active",
+    "assignee",
+    "candidate-users",
+    "candidate-groups",
+    "due",
+    "follow-up",
+    "priority",
+    "retries",
+    "headers",
+    "connector",
+    "method",
+    "url",
+    "query",
+    "headers-in",
+    "body",
+    "inputs",
+    "outputs",
+    "listeners",
+    "events",
+    "version-tag",
+];
+pub const EXEC_FLAGS: &[&str] = &["wait"];
+pub const USER_TASK_KEYS: &[&str] = &[
+    "assignee",
+    "candidate-users",
+    "candidate-groups",
+    "due",
+    "follow-up",
+    "priority",
+];
+pub const CONNECTOR_KEYS: &[&str] = &["method", "url", "query", "headers-in", "body"];
+/// Attributes whose value is always a FEEL expression (written without `=`).
+pub const EXPR_KEYS: &[&str] = &[
+    "when",
+    "expr",
+    "condition",
+    "correlation",
+    "collection",
+    "output-item",
+    "until",
+    "active",
+];
+/// Language versions accepted in the header.
+pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3"];
+
+pub const HEADER_KEYS: &[&str] = &[
+    "id",
+    "process",
+    "target",
+    "namespace",
+    "collaboration",
+    "version-tag",
+];
 pub const HEADER_FLAGS: &[&str] = &["executable"];
-pub const POOL_KEYS: &[&str] = &["process"];
+pub const POOL_KEYS: &[&str] = &["process", "version-tag"];
 pub const POOL_FLAGS: &[&str] = &["executable"];
 pub const FLOW_KEYS: &[&str] = &["id", "when", "p"];
 pub const FLOW_FLAGS: &[&str] = &["default"];

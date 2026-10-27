@@ -1,0 +1,9 @@
+tok 0.3 "Kompensacja" executable process=kompensacja
+
+start s "Start"
+service rezerwacja "Rezerwacja środków" type="rezerwacja" compensate=zwolnienie
+service zwolnienie "Zwolnienie rezerwacji" compensation type="zwolnienie"
+throw cofniecie "Cofnięcie rezerwacji" compensate activity=rezerwacja
+end e "Koniec"
+
+flow s -> rezerwacja -> cofniecie -> e

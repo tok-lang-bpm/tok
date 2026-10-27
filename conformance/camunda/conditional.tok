@@ -1,0 +1,7 @@
+tok 0.3 "Zdarzenie warunkowe" executable process=warunek
+
+start s "Start"
+catch czekanie "Kompletne dane" condition="kompletne = true" events="create, update"
+end e "Koniec"
+
+flow s -> czekanie -> e

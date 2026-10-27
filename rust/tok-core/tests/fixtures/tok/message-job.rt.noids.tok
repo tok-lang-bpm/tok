@@ -1,0 +1,7 @@
+tok 0.3 "Wiadomości jako zadania" executable process=wiadomosci
+
+start s "Start"
+throw zawiadomienie "Zawiadomienie" message="Zawiadomienie" type="zawiadomienie"
+end e "Odpowiedź wysłana" message="Odpowiedź" type="odpowiedz"
+
+flow s -> zawiadomienie -> e

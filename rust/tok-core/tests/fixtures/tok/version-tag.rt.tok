@@ -1,0 +1,6 @@
+tok 0.3 "Wersja procesu" executable process=wersja version-tag="v1"
+
+start s "Start"
+end e "Koniec"
+
+flow s -> e

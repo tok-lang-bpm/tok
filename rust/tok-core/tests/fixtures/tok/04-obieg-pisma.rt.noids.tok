@@ -1,0 +1,21 @@
+tok 0.1 "Obieg pisma na wydziale"
+
+pool uczelnia "Uczelnia" process=obieg-pisma
+  lane kancelaria "Kancelaria ogólna"
+    start wplyw "Pismo wpłynęło"
+    user rejestracja "Rejestracja pisma w EZD"
+  lane wydzial "Wydział"
+    lane dziekanat "Dziekanat"
+      user dekretacja "Dekretacja pisma"
+      user odpowiedz "Przygotowanie odpowiedzi"
+    lane dziekan "Dziekan"
+      user podpis "Podpisanie odpowiedzi"
+      end wyslana "Odpowiedź wysłana"
+  store ezd "System EZD"
+
+flow wplyw -> rejestracja -> dekretacja -> odpowiedz -> podpis -> wyslana
+
+writes rejestracja ezd
+reads dekretacja ezd
+
+group obsluga "Obsługa merytoryczna"

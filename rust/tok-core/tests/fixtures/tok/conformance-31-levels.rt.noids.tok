@@ -1,0 +1,10 @@
+tok 0.3 "Executable layer in a descriptive model"
+
+start s "Start"
+user ocena "Ocena"
+service wysylka "Wysyłka"
+adhoc opracowanie "Opracowanie"
+  task a "A"
+end e "Koniec" message="Odpowiedź"
+
+flow s -> ocena -> wysylka -> opracowanie -> e

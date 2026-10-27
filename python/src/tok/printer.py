@@ -9,7 +9,21 @@ _BARE = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_.:/+-]*|-?[0-9]+(?:\.[0-9]+)?|[0-9]
 # values of these keys are free text and always printed in quotes
 QUOTED_KEYS = {"when", "expr", "condition", "correlation", "duration", "assign", "delay", "arrival",
                "options", "members", "message", "signal", "error", "escalation", "link", "code",
-               "start"}
+               "start",
+               # language 0.3: expressions, lists and values of the executable layer
+               "collection", "output-item", "until", "active", "inputs", "outputs", "headers", "listeners",
+               "events", "url", "body", "query", "headers-in", "assignee", "candidate-users",
+               "candidate-groups", "due", "follow-up", "business-id", "version", "version-tag"}
+
+EXECUTION_LISTENER_EVENTS = ("start", "end")
+
+
+def normalize_listeners(text):
+    """Execution listeners first, then task listeners, each group in written order (canonical form)."""
+    items = [x.strip() for x in text.split(";") if x.strip()]
+    first = [x for x in items if x.split(":", 1)[0].strip() in EXECUTION_LISTENER_EVENTS]
+    rest = [x for x in items if x not in first]
+    return "; ".join(first + rest)
 
 
 def q(text):
@@ -18,6 +32,8 @@ def q(text):
 
 def value(key, v):
     v = str(v)
+    if key == "listeners":
+        v = normalize_listeners(v)
     if key in QUOTED_KEYS or not _BARE.match(v) or "->" in v:
         return q(v)
     return v

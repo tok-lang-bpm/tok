@@ -1,0 +1,8 @@
+tok 0.3 "Wiele instancji" executable process=mi
+
+start s "Start"
+script podwojenie "Podwojenie wartości" parallel expr="x * 2" result=y collection="pozycje" item=x output=wyniki output-item="y"
+user ocena "Ocena recenzji" parallel collection="recenzje" item=recenzja until="numberOfCompletedInstances >= 2"
+end e "Koniec"
+
+flow s -> podwojenie -> ocena -> e

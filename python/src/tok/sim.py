@@ -509,6 +509,7 @@ class _Frame:
         self.waiters = []
         self.children = []
         self.last_end = None
+        self.until = None         # ad-hoc sub-process: (expression, wait flag)
 
 
 class _Case:
@@ -520,6 +521,7 @@ class _Case:
         self.vars = {}
         self.steps = 0
         self.top = None
+        self.compensable = []     # (activity id, handler id) of completed activities, in completion order
 
 
 class _AI:
@@ -532,6 +534,10 @@ class _AI:
         self.alive = True
         self.timers = []
         self.child = None
+        self.local = None         # multi-instance: variables of one instance
+        self.body = None          # multi-instance: the body this instance belongs to
+        self.instances = None     # multi-instance body: list of instance AIs
+        self.silent = False       # not written to the event log (compensation throw)
 
 
 class _Waiter:
@@ -628,6 +634,12 @@ class Simulator:
     # --------------------------------------------------------------- tokens
     def consume(self, frame):
         frame.active -= 1
+        if frame.until is not None and frame.alive and frame.active > 0:
+            expr, wait = frame.until
+            if not wait and self.truth(expr, frame.case.vars, "until of '%s'" % frame.scope):
+                self.kill(frame)
+                frame.alive = True
+                frame.active = 0
         if frame.active <= 0 and frame.alive:
             self.frame_done(frame)
 
@@ -669,6 +681,8 @@ class Simulator:
             return
         n = self.doc.nodes[node_id]
         k = n.kind
+        if k in ("throw", "end") and n.has("compensate") and self.start_compensation(frame, n):
+            return
         if k == "end":
             frame.last_end = n.id
             if n.has("terminate"):
@@ -692,8 +706,12 @@ class Simulator:
             self.gateway(frame, n)
         elif k == "sub":
             self.start_sub(frame, n)
+        elif k == "adhoc":
+            self.start_adhoc(frame, n)
         elif k == "eventsub":
             self.consume(frame)
+        elif (n.has("parallel") or n.has("sequential")) and "collection" in n.attrs:
+            self.start_multi(frame, n)
         else:
             self.start_activity(frame, n)
 
@@ -877,22 +895,31 @@ class Simulator:
         for w in ai.timers:
             w.alive = False
         a = n.attrs
+        # an instance of a multi-instance activity writes into its own variables
+        target = ai.local if ai.local is not None else case.vars
+        ctx = dict(case.vars, **ai.local) if ai.local is not None else case.vars
         if "assign" in a:
             for name, d in parse_assign(a["assign"]):
-                case.vars[name] = d.sample(self.rng)
+                target[name] = d.sample(self.rng)
         if n.kind == "rule" and "decision" in a:
             dec = self.doc.decisions.get(a["decision"])
             res = a.get("result") or (dec.outputs[0][0] if dec is not None and len(dec.outputs) == 1 else "result")
             try:
-                case.vars[res] = eval_decision(self.doc, a["decision"], case.vars)
+                target[res] = eval_decision(self.doc, a["decision"], ctx)
             except Exception as ex:
                 self.warnings.append("decision '%s' could not be evaluated: %s" % (a["decision"], ex))
         if n.kind == "script" and "expr" in a:
             try:
-                case.vars[a.get("result", "result")] = eval_expr(a["expr"], case.vars)
+                target[a.get("result", "result")] = eval_expr(a["expr"], ctx)
             except Exception as ex:
                 self.warnings.append("expression of '%s' could not be evaluated: %s" % (n.id, ex))
-        self.log(ai, "completed")
+        if not ai.silent:
+            self.log(ai, "completed")
+        if ai.body is not None:
+            self.instance_done(ai)
+            return
+        if "compensate" in a and ai.instances is None:
+            case.compensable.append((n.id, a["compensate"]))
         self.leave(ai.frame, n.id)
 
     def release(self, ai):
@@ -966,6 +993,164 @@ class Simulator:
     def finish_ai(self, ai):
         if ai.alive and ai.frame.alive:
             self.complete(ai)
+
+    # ------------------------------------------------------ language 0.3
+    def truth(self, expr, ctx, what):
+        try:
+            return bool(eval_expr(expr, ctx))
+        except Exception as ex:
+            self.warnings.append("%s could not be evaluated: %s" % (what, ex))
+            return False
+
+    def start_multi(self, frame, n):
+        """Multi-instance activity with an input collection: one instance per element."""
+        a = n.attrs
+        try:
+            items = eval_expr(a["collection"], frame.case.vars)
+        except Exception as ex:
+            self.warnings.append("collection of '%s' could not be evaluated: %s" % (n.id, ex))
+            items = None
+        if not isinstance(items, list):
+            self.start_activity(frame, n)
+            return
+        body = _AI(frame, n, self.t)
+        body.start = self.t
+        body.instances = []
+        body.items = items
+        body.results = [None] * len(items)
+        body.completed = 0
+        body.next = 0
+        frame.ais.append(body)
+        self.arm_boundaries(body)
+        if not items:
+            self.finish_body(body)
+            return
+        k = len(items) if n.has("parallel") else 1
+        for _ in range(k):
+            self.next_instance(body)
+
+    def next_instance(self, body):
+        n = body.node
+        i = body.next
+        body.next += 1
+        inst = _AI(body.frame, n, self.t)
+        inst.body = body
+        inst.index = i
+        inst.local = {}
+        if "item" in n.attrs:
+            inst.local[n.attrs["item"]] = body.items[i]
+        inst.local["loopCounter"] = i + 1
+        body.instances.append(inst)
+        body.frame.ais.append(inst)
+        rid = n.attrs.get("by")
+        if rid and rid in self.resources:
+            res = self.resources[rid]
+            inst.resource = res
+            if res.busy < res.count:
+                self.begin(inst)
+            else:
+                res.queue.append(inst)
+        else:
+            self.begin(inst)
+
+    def instance_done(self, inst):
+        body = inst.body
+        if not body.alive or not body.frame.alive:
+            return
+        n = body.node
+        a = n.attrs
+        body.completed += 1
+        ctx = dict(body.frame.case.vars, **inst.local)
+        if "output-item" in a:
+            try:
+                body.results[inst.index] = eval_expr(a["output-item"], ctx)
+            except Exception as ex:
+                self.warnings.append("output-item of '%s' could not be evaluated: %s" % (n.id, ex))
+        total = len(body.items)
+        active = sum(1 for x in body.instances if x.alive)
+        if "until" in a:
+            uctx = dict(ctx, numberOfInstances=total, numberOfCompletedInstances=body.completed,
+                        numberOfActiveInstances=active, numberOfTerminatedInstances=0)
+            if self.truth(a["until"], uctx, "until of '%s'" % n.id):
+                for x in body.instances:
+                    if x.alive:
+                        x.alive = False
+                        self.release(x)
+                        for w in x.timers:
+                            w.alive = False
+                self.finish_body(body)
+                return
+        if body.completed >= total:
+            self.finish_body(body)
+        elif n.has("sequential") and body.next < total:
+            self.next_instance(body)
+
+    def finish_body(self, body):
+        n = body.node
+        a = n.attrs
+        body.alive = False
+        body.end = self.t
+        for w in body.timers:
+            w.alive = False
+        if "output" in a:
+            body.frame.case.vars[a["output"]] = body.results
+        if "compensate" in a:
+            body.frame.case.compensable.append((n.id, a["compensate"]))
+        self.leave(body.frame, n.id)
+
+    def start_adhoc(self, frame, n):
+        """Ad-hoc sub-process: the listed activities start at once (all inner activities without
+        incoming flows when no list is given); it completes when their paths have finished."""
+        inner = [self.doc.nodes[c] for c in n.children if c in self.doc.nodes]
+        chosen = None
+        if "active" in n.attrs:
+            try:
+                val = eval_expr(n.attrs["active"], frame.case.vars)
+                chosen = [x for x in val if isinstance(x, str)] if isinstance(val, list) else None
+            except Exception as ex:
+                self.warnings.append("active of '%s' could not be evaluated: %s" % (n.id, ex))
+        if chosen is None:
+            chosen = [x.id for x in inner if x.kind in M.ACTIVITY_KINDS and not self.inc.get(x.id)]
+        chosen = [c for c in chosen if c in {x.id for x in inner}]
+        ai = _AI(frame, n, self.t)
+        ai.start = self.t
+        frame.ais.append(ai)
+        self.arm_boundaries(ai)
+        if not chosen:
+            self.complete(ai)
+            return
+        child = _Frame(frame.case, n.id, frame, ai)
+        if "until" in n.attrs:
+            child.until = (n.attrs["until"], n.has("wait"))
+        ai.child = child
+        frame.children.append(child)
+        child.active = len(chosen)
+        for c in chosen:
+            self.enter(child, c)
+
+    def start_compensation(self, frame, n):
+        """Run the compensation handlers of completed activities; continue at n when they finish.
+        Returns False when there is nothing to compensate."""
+        case = frame.case
+        target = n.attrs.get("activity")
+        todo = [h for act, h in reversed(case.compensable) if target is None or act == target]
+        todo = [h for h in todo if h in self.doc.nodes]
+        if not todo:
+            return False
+        case.compensable = [x for x in case.compensable if not (target is None or x[0] == target)]
+        if n.kind == "end":
+            frame.last_end = n.id
+        ai = _AI(frame, n, self.t)
+        ai.start = self.t
+        ai.silent = True
+        frame.ais.append(ai)
+        child = _Frame(case, frame.scope, frame, ai)
+        ai.child = child
+        frame.children.append(child)
+        child.active = len(todo)
+        for h in todo:
+            self.start_activity(child, self.doc.nodes[h])
+        return True
 
 
 # --------------------------------------------------------------------- results

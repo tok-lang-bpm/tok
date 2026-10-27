@@ -1,0 +1,23 @@
+[
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "FEEL expression outside the supported subset: '{' (contexts, filters and temporal literals are not in the subset)"
+  },
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "FEEL expression outside the supported subset: '{' (contexts, filters and temporal literals are not in the subset)"
+  },
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "FEEL expression outside the supported subset: '{' (contexts, filters and temporal literals are not in the subset)"
+  }
+]

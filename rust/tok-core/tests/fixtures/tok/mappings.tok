@@ -1,0 +1,7 @@
+tok 0.3 "Mapowania i nagłówki" executable process=mapowania
+
+start s "Start"
+service rejestracja "Rejestracja zgłoszenia" type="rejestracja" retries=5 headers="szablon: odmowa; jezyk: pl" inputs="numer = zgloszenie.id; pilne = priorytet > 70" outputs="sygnatura = wynik.sygnatura"
+end e "Koniec"
+
+flow s -> rejestracja -> e

@@ -1,0 +1,93 @@
+[
+  {
+    "code": "R052",
+    "severity": "error",
+    "line": 3,
+    "id": "s",
+    "message": "events= nie może wystąpić na zdarzeniu początkowym procesu „s”"
+  },
+  {
+    "code": "R050",
+    "severity": "error",
+    "line": 4,
+    "id": "pusty",
+    "message": "podproces ad hoc „pusty” musi zawierać co najmniej jedną czynność i żadnych zdarzeń początkowych ani końcowych"
+  },
+  {
+    "code": "R051",
+    "severity": "error",
+    "line": 7,
+    "id": "rez",
+    "message": "procedura kompensacji „zwykle” wymaga flagi compensation"
+  },
+  {
+    "code": "R051",
+    "severity": "error",
+    "line": 9,
+    "id": "handler",
+    "message": "procedura kompensacji „handler” nie może mieć przepływów sekwencji"
+  },
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 10,
+    "id": "ocena",
+    "message": "Zadanie użytkownika „ocena” nie ma formularza (form=)."
+  },
+  {
+    "code": "C090",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "due=\"jutro\" musi być datą i godziną ISO 8601 ze strefą (np. 2027-01-15T12:00:00+01:00) albo wyrażeniem zaczynającym się od ="
+  },
+  {
+    "code": "C091",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "priority musi być liczbą całkowitą od 0 do 100 albo wyrażeniem zaczynającym się od =, a nie „150”"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "niepoprawna lista inputs=\"…\": „bez wyrazenia” (oczekiwano: cel = wyrażenie)"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "niepoprawna lista headers=\"…\": „bez dwukropka” (oczekiwano: klucz: wartość)"
+  },
+  {
+    "code": "R053",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "niepoprawna lista listeners=\"…\": „nieznane: typ” (oczekiwano: zdarzenie: typ, gdzie zdarzenie to start, end, creating, assigning, updating, completing, canceling)"
+  },
+  {
+    "code": "R054",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "collection= w „ocena” wymaga flagi parallel albo sequential"
+  },
+  {
+    "code": "R054",
+    "severity": "error",
+    "line": 10,
+    "id": "ocena",
+    "message": "„ocena” wymaga jednocześnie output= i output-item="
+  },
+  {
+    "code": "C022",
+    "severity": "error",
+    "line": 11,
+    "id": "komunikat",
+    "message": "zdarzenie rzucające wiadomości „komunikat” wymaga type=\"…\" (Camunda wykonuje je jako zadanie dla workera)"
+  }
+]

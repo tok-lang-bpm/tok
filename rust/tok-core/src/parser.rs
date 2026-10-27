@@ -20,7 +20,7 @@ fn allowed(ctx: &str, kw: &str) -> bool {
                 .contains(&kw)
         }
         "pool" | "lane" => node_like || kw == "lane",
-        "sub" | "eventsub" => node_like,
+        "sub" | "eventsub" | "adhoc" => node_like,
         "form" => kw == "text" || kw == "field",
         _ => false,
     }
@@ -307,7 +307,7 @@ impl Parser {
             return;
         }
         let version = toks[1].value.clone();
-        if version != "0.1" {
+        if !LANGUAGE_VERSIONS.contains(&version.as_str()) {
             self.err("P006", line.number, None, &[("version", version.clone())]);
         }
         self.doc.version = Some(version);
@@ -451,7 +451,11 @@ impl Parser {
         self.add_child(ctx, &nid);
         if sub {
             let child = Ctx {
-                kind: if kind == "sub" { "sub" } else { "eventsub" },
+                kind: match kind.as_str() {
+                    "sub" => "sub",
+                    "adhoc" => "adhoc",
+                    _ => "eventsub",
+                },
                 scope: Some(nid.clone()),
                 lane: None,
                 pool: ctx.pool.clone(),

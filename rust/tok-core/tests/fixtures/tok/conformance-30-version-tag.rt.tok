@@ -1,0 +1,14 @@
+tok 0.3 "Version tags" executable
+
+pool archiwum "Archiwum" process=kwerenda version-tag="v2.1"
+  start s "Start"
+  end e "Koniec"
+
+pool biblioteka "Biblioteka" process=zamowienie version-tag="2027-01"
+  start s2 "Start"
+  end e2 "Koniec"
+
+pool czytelnik "Czytelnik"
+
+flow s -> e
+flow s2 -> e2

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Podproces ad hoc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="adhoc" name="Podproces ad hoc" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:adHocSubProcess id="opracowanie" name="Opracowanie spuścizny" cancelRemainingInstances="false">
+      <bpmn:extensionElements>
+        <zeebe:adHoc activeElementsCollection="=wybrane" />
+      </bpmn:extensionElements>
+      <bpmn:scriptTask id="inwentarz" name="Sporządzenie inwentarza">
+        <bpmn:extensionElements>
+          <zeebe:script expression="=&quot;gotowy&quot;" resultVariable="inwentarz" />
+        </bpmn:extensionElements>
+      </bpmn:scriptTask>
+      <bpmn:scriptTask id="skany" name="Digitalizacja">
+        <bpmn:extensionElements>
+          <zeebe:script expression="=&quot;zrobione&quot;" resultVariable="skany" />
+        </bpmn:extensionElements>
+      </bpmn:scriptTask>
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-opracowanie" sourceRef="s" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-e" sourceRef="opracowanie" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="adhoc">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="opracowanie_di" bpmnElement="opracowanie" isExpanded="true">
+        <dc:Bounds x="116" y="30" width="160" height="280" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inwentarz_di" bpmnElement="inwentarz">
+        <dc:Bounds x="146" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="skany_di" bpmnElement="skany">
+        <dc:Bounds x="146" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="326" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-opracowanie_di" bpmnElement="f-s-opracowanie">
+        <di:waypoint x="66" y="170" />
+        <di:waypoint x="116" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-opracowanie-e_di" bpmnElement="f-opracowanie-e">
+        <di:waypoint x="276" y="170" />
+        <di:waypoint x="326" y="170" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

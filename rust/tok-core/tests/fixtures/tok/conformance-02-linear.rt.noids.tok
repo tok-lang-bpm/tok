@@ -1,0 +1,8 @@
+tok 0.1 "Wypożyczenie"
+
+start s "Potrzeba książki"
+user z "Złożenie zamówienia"
+task k "Sprawdzenie katalogów"
+end e "Zamówienie przyjęte"
+
+flow s -> z -> k -> e

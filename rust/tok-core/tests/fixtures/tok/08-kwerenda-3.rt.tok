@@ -1,0 +1,21 @@
+tok 0.1 "Kwerenda archiwalna: trzech archiwistów"
+
+pool archiwum "Archiwum Państwowe"
+  lane kancelaria "Kancelaria"
+    start wplyw "Wniosek o kwerendę wpłynął"
+    user rejestracja "Rejestracja wniosku"
+    send odmowa "Wysłanie odmowy"
+    end odrzucony "Wniosek odrzucony"
+    send odpowiedz "Wysłanie odpowiedzi"
+    end zakonczona "Kwerenda zakończona"
+  lane archiwista "Archiwista"
+    user ocena "Ocena wniosku"
+    xor mozliwa "Czy kwerenda jest możliwa?"
+    user poszukiwania "Poszukiwania w zasobie"
+    user opracowanie "Opracowanie odpowiedzi"
+
+flow wplyw -> rejestracja -> ocena -> mozliwa
+flow mozliwa -> poszukiwania "tak"
+flow mozliwa -> odmowa "nie"
+flow odmowa -> odrzucony
+flow poszukiwania -> opracowanie -> odpowiedz -> zakonczona

@@ -1,0 +1,8 @@
+tok 0.3 "Listeners" executable
+
+start s "Start" listeners="end: po-starcie"
+script wyliczenie "Wyliczenie" expr="1 + 1" result=wynik listeners="start: przed; end: po (5)"
+user decyzja "Decyzja" listeners="start: wejscie; creating: utworzenie (2); completing: zakonczenie"
+end e "Koniec"
+
+flow s -> wyliczenie -> decyzja -> e

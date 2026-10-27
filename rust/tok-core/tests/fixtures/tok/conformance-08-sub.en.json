@@ -1,9 +1,9 @@
 [
   {
-    "code": "E014",
+    "code": "R051",
     "severity": "error",
     "line": 10,
     "id": "c",
-    "message": "compensation activity with sequence flows (c)"
+    "message": "compensation handler 'c' must not have sequence flows"
   }
 ]

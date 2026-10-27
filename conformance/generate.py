@@ -7,6 +7,8 @@ For every cases/NAME.tok it writes:
     expected/NAME.tok   canonical text (tok fmt)
     expected/NAME.diag  diagnostic codes of the core level, sorted, one per line
     expected/NAME.bpmn  semantic BPMN XML (only when the document has no errors)
+    expected/NAME.levels  all diagnostic codes of `tok check` at the levels basic, analytic and full
+                          (full conformance level; only when the document has no parse errors)
 """
 
 import io
@@ -19,6 +21,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "python", "src"))
 from tok.bpmn_export import semantic_xml  # noqa: E402
 from tok.parser import parse  # noqa: E402
 from tok.printer import fmt  # noqa: E402
+from tok.check import check  # noqa: E402
 
 # diagnostic codes every core implementation must report
 CORE_CODES = {"T001", "T002", "T003", "P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008",
@@ -50,6 +53,16 @@ def main():
                 os.remove(bpmn_path)
         else:
             write(bpmn_path, semantic_xml(doc))
+        levels_path = os.path.join(expected, stem + ".levels")
+        if any(d.severity == "error" for d in diags):
+            if os.path.exists(levels_path):
+                os.remove(levels_path)
+        else:
+            out = []
+            for level in ("basic", "analytic", "full"):
+                doc_l, _ = parse(text)
+                out.append("%s: %s\n" % (level, " ".join(sorted(d.code for d in check(doc_l, level=level)))))
+            write(levels_path, "".join(out))
         print("%-24s diag=%-40s bpmn=%s" % (stem, ",".join(codes) or "-", os.path.exists(bpmn_path)))
 
 

@@ -1,0 +1,23 @@
+[
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "wyrażenie FEEL spoza obsługiwanego podzbioru: „{” (konteksty, filtry i literały czasowe nie należą do podzbioru)"
+  },
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "wyrażenie FEEL spoza obsługiwanego podzbioru: „{” (konteksty, filtry i literały czasowe nie należą do podzbioru)"
+  },
+  {
+    "code": "F001",
+    "severity": "warning",
+    "line": 5,
+    "id": "zapis",
+    "message": "wyrażenie FEEL spoza obsługiwanego podzbioru: „{” (konteksty, filtry i literały czasowe nie należą do podzbioru)"
+  }
+]

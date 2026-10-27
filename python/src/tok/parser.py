@@ -10,11 +10,11 @@ import re
 from . import lexer as L
 from .diagnostics import Diag
 from .model import (Association, Data, Decision, Document, Element, Field, Flow, Form, FormText, Lane,
-                    MessageFlow, Node, Pool, Rule, NODE_KINDS, SUB_KINDS)
+                    MessageFlow, Node, Pool, Rule, LANGUAGE_VERSIONS, NODE_KINDS, SUB_KINDS)
 
 ID_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
 
-BLOCK_KEYWORDS = ("pool", "lane", "sub", "eventsub", "decision", "form")
+BLOCK_KEYWORDS = ("pool", "lane", "sub", "eventsub", "adhoc", "decision", "form")
 
 # which statements may appear in which context
 _NODE_LIKE = set(NODE_KINDS) | {"flow", "message", "data", "store", "reads", "writes", "note"}
@@ -24,6 +24,7 @@ ALLOWED = {
     "lane": _NODE_LIKE | {"lane"},
     "sub": _NODE_LIKE,
     "eventsub": _NODE_LIKE,
+    "adhoc": _NODE_LIKE,
     "decision": set(),
     "form": {"text", "field"},
 }
@@ -164,7 +165,7 @@ class Parser:
             self.err("P005", line.number)
             return
         d.version = toks[1].value
-        if d.version != "0.1":
+        if d.version not in LANGUAGE_VERSIONS:
             self.err("P006", line.number, version=d.version)
         d.title, d.attrs, d.flags, _ = self.parse_tail(toks, 2, line.number)
 
@@ -222,7 +223,7 @@ class Parser:
     def add_child(self, ctx, id):
         if ctx.kind == "top":
             self.doc.top.append(id)
-        elif ctx.kind in ("pool", "lane", "sub", "eventsub"):
+        elif ctx.kind in ("pool", "lane", "sub", "eventsub", "adhoc"):
             ctx.owner.children.append(id)
 
     def st_pool(self, line, ctx):

@@ -27,8 +27,107 @@ pub trait BpmnRules {
 const BASIC_KINDS: &[&str] = &[
     "start", "end", "task", "user", "service", "manual", "xor", "and",
 ];
-const ANALYTIC_EXCLUDED_KEYS: &[&str] =
+const ANALYTIC_EXCLUDED_BASE: &[&str] =
     &["form", "decision", "expr", "result", "type", "correlation"];
+const EXECUTION_EVENTS: &[&str] = &["start", "end"];
+const TASK_EVENTS: &[&str] = &[
+    "creating",
+    "assigning",
+    "updating",
+    "completing",
+    "canceling",
+];
+
+/// Keys rejected at the level analytic: the executable profile and the executable layer.
+fn analytic_excluded(k: &str) -> bool {
+    ANALYTIC_EXCLUDED_BASE.contains(&k) || EXEC_KEYS.contains(&k)
+}
+
+/// `'a = x; b = y'` (sep `=`) or `'k: v; …'` (sep `:`) into pairs; an item without the
+/// separator gives `(item, None)` (Python `split_pairs` of `check.py`).
+fn split_pairs(text: &str, sep: char) -> Vec<(String, Option<String>)> {
+    let mut out = Vec::new();
+    for item in text.split(';') {
+        let item = crate::pyutil::strip(item);
+        if item.is_empty() {
+            continue;
+        }
+        match item.split_once(sep) {
+            None => out.push((item.to_string(), None)),
+            Some((l, r)) => out.push((
+                crate::pyutil::strip(l).to_string(),
+                Some(crate::pyutil::strip(r).to_string()),
+            )),
+        }
+    }
+    out
+}
+
+/// `^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$`
+fn is_target(s: &str) -> bool {
+    let s = s.strip_suffix('\n').unwrap_or(s);
+    !s.is_empty()
+        && s.split('.').all(|part| {
+            let mut ch = part.chars();
+            matches!(ch.next(), Some(c) if c.is_ascii_alphabetic() || c == '_')
+                && ch.all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+}
+
+/// `n` ASCII digits at `b[at..]`.
+fn digits_at(b: &[u8], at: usize, n: usize) -> bool {
+    b.len() >= at + n && b[at..at + n].iter().all(u8::is_ascii_digit)
+}
+
+/// `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})(\[[^\]]+\])?$`
+fn is_iso_zoned(v: &str) -> bool {
+    let v = v.strip_suffix('\n').unwrap_or(v);
+    let b = v.as_bytes();
+    if !(digits_at(b, 0, 4)
+        && b.get(4) == Some(&b'-')
+        && digits_at(b, 5, 2)
+        && b.get(7) == Some(&b'-')
+        && digits_at(b, 8, 2)
+        && b.get(10) == Some(&b'T')
+        && digits_at(b, 11, 2)
+        && b.get(13) == Some(&b':')
+        && digits_at(b, 14, 2))
+    {
+        return false;
+    }
+    let mut k = 16;
+    if b.get(k) == Some(&b':') && digits_at(b, k + 1, 2) {
+        k += 3;
+        if b.get(k) == Some(&b'.') {
+            let n = b[k + 1..].iter().take_while(|c| c.is_ascii_digit()).count();
+            if n > 0 {
+                k += 1 + n;
+            }
+        }
+    }
+    match b.get(k) {
+        Some(b'Z') => k += 1,
+        Some(b'+' | b'-')
+            if digits_at(b, k + 1, 2) && b.get(k + 3) == Some(&b':') && digits_at(b, k + 4, 2) =>
+        {
+            k += 6
+        }
+        _ => return false,
+    }
+    let rest = &b[k..];
+    if rest.is_empty() {
+        return true;
+    }
+    rest.len() >= 3
+        && rest[0] == b'['
+        && rest[rest.len() - 1] == b']'
+        && !rest[1..rest.len() - 1].contains(&b']')
+}
+
+/// `'start: type'` or `'start: type (5)'` as checked by `tok check` (None when malformed).
+fn parse_listener(item: &str) -> Option<(String, String, Option<String>)> {
+    crate::export::parse_listener(item).filter(|(_, t, _)| !t.is_empty())
+}
 
 fn kind_name(what: &str) -> (&'static str, &'static str) {
     match what {
@@ -67,6 +166,7 @@ pub fn check(doc: &mut Document, level: &str, bpmn: Option<&dyn BpmnRules>) -> V
     if c.doc.executable_any() {
         c.executable();
     }
+    c.layer_03();
     c.decisions_and_forms();
     c.feel();
     c.simulation();
@@ -157,7 +257,13 @@ impl Checker<'_> {
                     .copied()
                     .filter(|k| b.attrs.contains_key(*k))
                     .collect();
-                trig.extend(TRIGGER_FLAGS.iter().copied().filter(|f| b.has(f)));
+                trig.extend(
+                    TRIGGER_FLAGS
+                        .iter()
+                        .chain(CATCH_ALL_FLAGS)
+                        .copied()
+                        .filter(|f| b.has(f)),
+                );
                 if trig.len() > 1 {
                     found.push(Diag::new(
                         "R012",
@@ -363,6 +469,48 @@ impl Checker<'_> {
                     &[("key", s("process")), ("requirement", s("a call activity"))],
                 );
             }
+            if let Some(h) = a.get("compensate")
+                && self.reference(h, line, "activity", &is_act).is_some()
+            {
+                let has_flag = self
+                    .doc
+                    .nodes
+                    .get(h)
+                    .is_some_and(|x| x.base.has("compensation"));
+                if !has_flag {
+                    self.add(
+                        "R051",
+                        line,
+                        Some(&nid),
+                        &[
+                            (
+                                "detail",
+                                format!("compensation handler '{h}' needs the flag compensation"),
+                            ),
+                            (
+                                "detail_pl",
+                                format!("procedura kompensacji „{h}” wymaga flagi compensation"),
+                            ),
+                        ],
+                    );
+                }
+            }
+            if let Some(act) = a.get("activity") {
+                let kind = n.base.kind.as_str();
+                if !((kind == "throw" || kind == "end") && n.base.has("compensate")) {
+                    self.add(
+                        "R013",
+                        line,
+                        Some(&nid),
+                        &[
+                            ("key", s("activity")),
+                            ("requirement", s("a compensation throw or end event")),
+                        ],
+                    );
+                } else {
+                    self.reference(act, line, "activity", &is_act);
+                }
+            }
         }
         let assocs: Vec<(String, String, usize)> = self
             .doc
@@ -488,7 +636,10 @@ impl Checker<'_> {
                     format!("Zadanie użytkownika „{id}” nie ma formularza (form=)."),
                     Some(format!("user task '{id}' has no form (form=)")),
                 ));
-            } else if (kind == "service" || kind == "send") && !a.contains_key("type") {
+            } else if (kind == "service" || kind == "send")
+                && !a.contains_key("type")
+                && a.get("connector").map(String::as_str) != Some("rest")
+            {
                 let pl_kind = if kind == "service" {
                     "Zadanie usługowe"
                 } else {
@@ -565,6 +716,345 @@ impl Checker<'_> {
         self.diags.extend(found);
     }
 
+    fn node_executable(&self, n: &Node) -> bool {
+        let d = &*self.doc;
+        d.executable()
+            || d.pools
+                .iter()
+                .any(|p| p.base.id.as_deref() == n.pool.as_deref() && p.base.has("executable"))
+    }
+
+    fn process_ids(&self) -> Vec<String> {
+        let d = &*self.doc;
+        let mut ids = vec![d.default_process_id()];
+        ids.extend(d.pools.iter().map(Pool::process_id));
+        ids
+    }
+
+    /// Ad-hoc blocks, compensation handlers and the executable layer (spec §5.3, §10.3).
+    fn layer_03(&mut self) {
+        let mut incoming: std::collections::HashSet<String> = Default::default();
+        let mut outgoing: std::collections::HashSet<String> = Default::default();
+        for f in &self.doc.flows {
+            outgoing.insert(f.source.clone());
+            incoming.insert(f.target.clone());
+        }
+        let process_ids = self.process_ids();
+        let node_ids: Vec<String> = self.doc.nodes.keys().cloned().collect();
+        for nid in node_ids {
+            let n = self.doc.nodes[&nid].clone();
+            let a = &n.base.attrs;
+            let kind = n.base.kind.as_str();
+            let line = n.base.line;
+            let id = Some(nid.as_str());
+            if kind == "adhoc" {
+                let inner: Vec<&Node> = n
+                    .children
+                    .iter()
+                    .filter_map(|c| self.doc.nodes.get(c))
+                    .collect();
+                if !inner.iter().any(|x| is_activity(&x.base.kind))
+                    || inner
+                        .iter()
+                        .any(|x| x.base.kind == "start" || x.base.kind == "end")
+                {
+                    self.add("R050", line, id, &[("id", nid.clone())]);
+                }
+            }
+            if n.base.has("compensation") && (incoming.contains(&nid) || outgoing.contains(&nid)) {
+                self.add(
+                    "R051",
+                    line,
+                    id,
+                    &[
+                        (
+                            "detail",
+                            format!("compensation handler '{nid}' must not have sequence flows"),
+                        ),
+                        (
+                            "detail_pl",
+                            format!(
+                                "procedura kompensacji „{nid}” nie może mieć przepływów sekwencji"
+                            ),
+                        ),
+                    ],
+                );
+            }
+            if a.contains_key("events")
+                && kind == "start"
+                && n.scope.as_ref().is_some_and(|sc| process_ids.contains(sc))
+            {
+                self.add("R052", line, id, &[("id", nid.clone())]);
+            }
+            if a.contains_key("collection") && !(n.base.has("parallel") || n.base.has("sequential"))
+            {
+                self.add(
+                    "R054",
+                    line,
+                    id,
+                    &[
+                        (
+                            "detail",
+                            format!("collection= on '{nid}' needs the flag parallel or sequential"),
+                        ),
+                        (
+                            "detail_pl",
+                            format!("collection= w „{nid}” wymaga flagi parallel albo sequential"),
+                        ),
+                    ],
+                );
+            }
+            if a.contains_key("output") != a.contains_key("output-item") {
+                self.add(
+                    "R054",
+                    line,
+                    id,
+                    &[
+                        (
+                            "detail",
+                            format!("'{nid}' needs both output= and output-item="),
+                        ),
+                        (
+                            "detail_pl",
+                            format!("„{nid}” wymaga jednocześnie output= i output-item="),
+                        ),
+                    ],
+                );
+            }
+            for key in ["inputs", "outputs"] {
+                if let Some(text) = a.get(key) {
+                    for (left, right) in split_pairs(text, '=') {
+                        let bad = match &right {
+                            None => true,
+                            Some(r) => !is_target(&left) || r.is_empty(),
+                        };
+                        if bad {
+                            let item = match &right {
+                                None => left.clone(),
+                                Some(r) => format!("{left} = {r}"),
+                            };
+                            self.add(
+                                "R053",
+                                line,
+                                id,
+                                &[
+                                    ("key", s(key)),
+                                    ("item", item),
+                                    ("expected", s("target = expression")),
+                                    ("expected_pl", s("cel = wyrażenie")),
+                                ],
+                            );
+                        }
+                    }
+                }
+            }
+            if let Some(text) = a.get("headers") {
+                for (left, right) in split_pairs(text, ':') {
+                    if right.is_none() || left.is_empty() {
+                        self.add(
+                            "R053",
+                            line,
+                            id,
+                            &[
+                                ("key", s("headers")),
+                                ("item", left),
+                                ("expected", s("key: value")),
+                                ("expected_pl", s("klucz: wartość")),
+                            ],
+                        );
+                    }
+                }
+            }
+            if let Some(text) = a.get("listeners") {
+                let mut allowed: Vec<&str> = EXECUTION_EVENTS.to_vec();
+                if kind == "user" {
+                    allowed.extend(TASK_EVENTS);
+                }
+                for item in text.split(';') {
+                    let item_s = crate::pyutil::strip(item);
+                    if item_s.is_empty() {
+                        continue;
+                    }
+                    let ok = parse_listener(item)
+                        .is_some_and(|(ev, _, _)| allowed.contains(&ev.as_str()));
+                    if !ok {
+                        let joined = allowed.join(", ");
+                        self.add(
+                            "R053",
+                            line,
+                            id,
+                            &[
+                                ("key", s("listeners")),
+                                ("item", item_s.to_string()),
+                                (
+                                    "expected",
+                                    format!("event: type with event one of {joined}"),
+                                ),
+                                (
+                                    "expected_pl",
+                                    format!("zdarzenie: typ, gdzie zdarzenie to {joined}"),
+                                ),
+                            ],
+                        );
+                    }
+                }
+            }
+            for key in USER_TASK_KEYS {
+                if a.contains_key(*key) && kind != "user" {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[("key", s(key)), ("requirement", s("a user task"))],
+                    );
+                }
+            }
+            if let Some(conn) = a.get("connector") {
+                if kind != "service" {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[
+                            ("key", s("connector")),
+                            ("requirement", s("a service task")),
+                        ],
+                    );
+                } else if conn != "rest" {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[
+                            ("key", s("connector")),
+                            ("requirement", s("the value rest")),
+                        ],
+                    );
+                } else if !a.contains_key("url") || !a.contains_key("method") {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[
+                            ("key", s("connector=rest")),
+                            ("requirement", s("method= and url=")),
+                        ],
+                    );
+                }
+            }
+            for key in CONNECTOR_KEYS {
+                if a.contains_key(*key) && !a.contains_key("connector") {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[("key", s(key)), ("requirement", s("connector=rest"))],
+                    );
+                }
+            }
+            for key in ["active", "wait"] {
+                if (a.contains_key(key) || n.base.has(key)) && kind != "adhoc" {
+                    self.add(
+                        "R013",
+                        line,
+                        id,
+                        &[("key", s(key)), ("requirement", s("an ad-hoc sub-process"))],
+                    );
+                }
+            }
+            if !self.node_executable(&n) {
+                for key in EXEC_KEYS {
+                    if a.contains_key(*key) {
+                        self.add("R055", line, id, &[("key", s(key))]);
+                    }
+                }
+                for f in EXEC_FLAGS {
+                    if n.base.has(f) {
+                        self.add("R055", line, id, &[("key", s(f))]);
+                    }
+                }
+                if is_event(kind) && a.contains_key("type") {
+                    self.add("R055", line, id, &[("key", s("type"))]);
+                }
+            } else {
+                self.executable_03(&n);
+            }
+        }
+        let d = &*self.doc;
+        let mut found = Vec::new();
+        if d.attrs.contains_key("version-tag") && !d.executable() {
+            found.push(Diag::new(
+                "R055",
+                d.header_line,
+                None,
+                &[("key", s("version-tag"))],
+            ));
+        }
+        for p in &d.pools {
+            if p.base.attrs.contains_key("version-tag")
+                && !(p.base.has("executable") || d.executable())
+            {
+                found.push(Diag::new(
+                    "R055",
+                    p.base.line,
+                    p.base.id.as_deref(),
+                    &[("key", s("version-tag"))],
+                ));
+            }
+        }
+        self.diags.extend(found);
+    }
+
+    fn executable_03(&mut self, n: &Node) {
+        let a = &n.base.attrs;
+        let kind = n.base.kind.as_str();
+        let line = n.base.line;
+        let nid = n.base.id().to_string();
+        if (kind == "throw" || kind == "end")
+            && a.contains_key("message")
+            && !a.contains_key("type")
+        {
+            let kind_pl = if kind == "throw" {
+                "rzucające"
+            } else {
+                "końcowe"
+            };
+            self.add(
+                "C022",
+                line,
+                Some(&nid),
+                &[
+                    ("kind", s(kind)),
+                    ("id", nid.clone()),
+                    ("kind_pl", s(kind_pl)),
+                ],
+            );
+        }
+        for key in ["due", "follow-up"] {
+            if let Some(v) = a.get(key)
+                && !v.starts_with('=')
+                && !is_iso_zoned(v)
+            {
+                self.add(
+                    "C090",
+                    line,
+                    Some(&nid),
+                    &[("key", s(key)), ("value", v.clone())],
+                );
+            }
+        }
+        if let Some(v) = a.get("priority")
+            && !v.starts_with('=')
+        {
+            let ok = !v.is_empty()
+                && v.bytes().all(|b| b.is_ascii_digit())
+                && v.parse::<u64>().map(|x| x <= 100).unwrap_or(false);
+            if !ok {
+                self.add("C091", line, Some(&nid), &[("value", v.clone())]);
+            }
+        }
+    }
+
     fn decisions_and_forms(&mut self) {
         let mut found = Vec::new();
         let d = &*self.doc;
@@ -625,9 +1115,50 @@ impl Checker<'_> {
     fn feel(&mut self) {
         let mut exprs: Vec<(String, usize, Option<String>)> = Vec::new();
         for n in self.doc.nodes.values() {
-            for k in ["expr", "condition", "correlation"] {
-                if let Some(t) = n.base.attrs.get(k) {
+            let a = &n.base.attrs;
+            for k in [
+                "expr",
+                "condition",
+                "correlation",
+                "collection",
+                "output-item",
+                "until",
+                "active",
+            ] {
+                if let Some(t) = a.get(k) {
                     exprs.push((t.clone(), n.base.line, n.base.id.clone()));
+                }
+            }
+            for k in ["inputs", "outputs"] {
+                for (_, right) in split_pairs(a.get(k).map(String::as_str).unwrap_or(""), '=') {
+                    if let Some(r) = right.filter(|r| !r.is_empty()) {
+                        exprs.push((r, n.base.line, n.base.id.clone()));
+                    }
+                }
+            }
+            for k in [
+                "assignee",
+                "candidate-users",
+                "candidate-groups",
+                "due",
+                "follow-up",
+                "priority",
+                "process",
+                "type",
+                "timer",
+                "business-id",
+                "url",
+                "body",
+                "query",
+                "headers-in",
+            ] {
+                if let Some(v) = a.get(k)
+                    && let Some(rest) = v.strip_prefix('=')
+                {
+                    let rest = crate::pyutil::strip(rest);
+                    if !rest.is_empty() {
+                        exprs.push((rest.to_string(), n.base.line, n.base.id.clone()));
+                    }
                 }
             }
         }
@@ -683,17 +1214,21 @@ impl Checker<'_> {
         let d = &*self.doc;
         for n in d.nodes.values() {
             let b = &n.base;
+            let exec_layer = EXEC_KEYS.iter().any(|k| b.attrs.contains_key(*k))
+                || EXEC_FLAGS.iter().any(|f| b.has(f))
+                || (is_event(&b.kind) && b.attrs.contains_key("type"));
             let bad = if level == "basic" {
                 !BASIC_KINDS.contains(&b.kind.as_str())
                     || TRIGGERS.iter().any(|k| b.attrs.contains_key(*k))
                     || TRIGGER_FLAGS
                         .iter()
+                        .chain(CATCH_ALL_FLAGS)
                         .chain(TASK_FLAGS.iter())
                         .any(|f| b.has(f))
+                    || b.attrs.contains_key("compensate")
+                    || exec_layer
             } else {
-                ANALYTIC_EXCLUDED_KEYS
-                    .iter()
-                    .any(|k| b.attrs.contains_key(*k))
+                b.attrs.keys().any(|k| analytic_excluded(k)) || exec_layer
             };
             if bad {
                 found.push(Diag::new(
@@ -720,6 +1255,24 @@ impl Checker<'_> {
                 line,
                 None,
                 &[("keyword", kw), ("level", s(level))],
+            ));
+        }
+        for p in &d.pools {
+            if p.base.attrs.contains_key("version-tag") {
+                found.push(Diag::new(
+                    "R040",
+                    p.base.line,
+                    p.base.id.as_deref(),
+                    &[("keyword", s("version-tag")), ("level", s(level))],
+                ));
+            }
+        }
+        if d.attrs.contains_key("version-tag") {
+            found.push(Diag::new(
+                "R040",
+                d.header_line,
+                None,
+                &[("keyword", s("version-tag")), ("level", s(level))],
             ));
         }
         if level == "analytic"

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.3" id="definitions" name="Catch-all errors and escalations" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:error errorCode="E42" id="Error_Brak_danych" name="Brak danych" />
+  <bpmn:escalation id="Escalation_Opoznienie" name="Opóźnienie" />
+  <bpmn:process id="process" isExecutable="false" name="Catch-all errors and escalations">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:subProcess id="praca" name="Praca">
+      <bpmn:startEvent id="s2" />
+      <bpmn:intermediateThrowEvent id="zgloszenie" name="Zgłoszenie">
+        <bpmn:escalationEventDefinition escalationRef="Escalation_Opoznienie" id="zgloszenie-def" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:endEvent id="e2" name="Błąd">
+        <bpmn:errorEventDefinition errorRef="Error_Brak_danych" id="e2-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-s2-zgloszenie" sourceRef="s2" targetRef="zgloszenie" />
+      <bpmn:sequenceFlow id="f-zgloszenie-e2" sourceRef="zgloszenie" targetRef="e2" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent attachedToRef="praca" id="blad" name="Dowolny błąd">
+      <bpmn:errorEventDefinition id="blad-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent attachedToRef="praca" cancelActivity="false" id="eskal" name="Dowolna eskalacja">
+      <bpmn:escalationEventDefinition id="eskal-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:subProcess id="awaria" name="Awaria" triggeredByEvent="true">
+      <bpmn:startEvent id="s3" name="Dowolny błąd">
+        <bpmn:errorEventDefinition id="s3-def" />
+      </bpmn:startEvent>
+      <bpmn:endEvent id="e3" />
+      <bpmn:sequenceFlow id="f-s3-e3" sourceRef="s3" targetRef="e3" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e4" name="Obsłużono błąd" />
+    <bpmn:endEvent id="e5" name="Obsłużono eskalację" />
+    <bpmn:sequenceFlow id="f-s-praca" sourceRef="s" targetRef="praca" />
+    <bpmn:sequenceFlow id="f-praca-e" sourceRef="praca" targetRef="e" />
+    <bpmn:sequenceFlow id="f-blad-e4" sourceRef="blad" targetRef="e4" />
+    <bpmn:sequenceFlow id="f-eskal-e5" sourceRef="eskal" targetRef="e5" />
+  </bpmn:process>
+</bpmn:definitions>

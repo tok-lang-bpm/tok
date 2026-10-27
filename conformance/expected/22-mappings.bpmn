@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Variable mappings" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=numer" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:process id="process" isExecutable="true" name="Variable mappings">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=kto" target="inicjator" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="rejestracja" name="Rejestracja">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="rejestracja" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=zgloszenie.id" target="numer" />
+          <zeebe:input source="=priorytet &gt; 70" target="pilne" />
+          <zeebe:output source="=wynik.sygnatura" target="sygnatura" />
+          <zeebe:output source="=konto" target="nadawca.iban" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="odpowiedz" name="Odpowiedź">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:output source="=odpowiedz.tresc" target="tresc" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:messageEventDefinition id="odpowiedz-def" messageRef="Message_Odpowiedz" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:subProcess id="obsluga" name="Obsługa">
+      <bpmn:extensionElements>
+        <zeebe:ioMapping>
+          <zeebe:input source="=1" target="lokalna" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:startEvent id="s2" />
+      <bpmn:endEvent id="e2" />
+      <bpmn:sequenceFlow id="f-s2-e2" sourceRef="s2" targetRef="e2" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-rejestracja" sourceRef="s" targetRef="rejestracja" />
+    <bpmn:sequenceFlow id="f-rejestracja-odpowiedz" sourceRef="rejestracja" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-obsluga" sourceRef="odpowiedz" targetRef="obsluga" />
+    <bpmn:sequenceFlow id="f-obsluga-e" sourceRef="obsluga" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

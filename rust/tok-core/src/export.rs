@@ -23,6 +23,7 @@ fn tag(kind: &str) -> &'static str {
         "receive" => "receiveTask",
         "call" => "callActivity",
         "sub" | "eventsub" => "subProcess",
+        "adhoc" => "adHocSubProcess",
         "xor" => "exclusiveGateway",
         "and" => "parallelGateway",
         "or" => "inclusiveGateway",
@@ -68,13 +69,76 @@ pub fn slug(text: &str) -> String {
 
 fn timer_kind(v: &str) -> &'static str {
     let v = strip(v);
-    if v.starts_with('R') {
+    if v.starts_with('=') {
+        "timeDuration"
+    } else if v.starts_with('R') {
         "timeCycle"
     } else if v.starts_with('P') {
         "timeDuration"
     } else {
         "timeDate"
     }
+}
+
+const REST_CONNECTOR_TYPE: &str = "io.camunda:http-json:1";
+
+fn binding_type(v: &str) -> &str {
+    match v {
+        "latest" => "latest",
+        "deployment" => "deployment",
+        "version-tag" => "versionTag",
+        other => other,
+    }
+}
+
+/// `'a = x; b = y'` (sep `=`) or `'k: v; …'` (sep `:`) into stripped pairs; items without
+/// the separator are skipped (Python `split_pairs` of `bpmn_export.py`).
+pub fn split_pairs(text: &str, sep: char) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for item in text.split(';') {
+        let item = strip(item);
+        if item.is_empty() {
+            continue;
+        }
+        if let Some((l, r)) = item.split_once(sep) {
+            out.push((strip(l).to_string(), strip(r).to_string()));
+        }
+    }
+    out
+}
+
+/// One listener entry `event: type` or `event: type (retries)` (Python regex
+/// `^([a-z]+)\s*:\s*(.+?)(?:\s*\((\d+)\))?$` on the stripped item).
+pub fn parse_listener(item: &str) -> Option<(String, String, Option<String>)> {
+    let item = strip(item);
+    let ev_len = item.bytes().take_while(u8::is_ascii_lowercase).count();
+    if ev_len == 0 {
+        return None;
+    }
+    let event = &item[..ev_len];
+    let rest = item[ev_len..].trim_start_matches(crate::pyutil::is_space);
+    let rest = rest.strip_prefix(':')?;
+    let rest = rest.trim_start_matches(crate::pyutil::is_space);
+    if rest.is_empty() || rest.contains('\n') {
+        return None;
+    }
+    // optional "(digits)" suffix, preceded by optional whitespace; the type keeps at least one char
+    if let Some(body) = rest.strip_suffix(')')
+        && let Some(open) = body.rfind('(')
+    {
+        let digits = &body[open + 1..];
+        if !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()) {
+            let before = body[..open].trim_end_matches(crate::pyutil::is_space);
+            if !before.is_empty() {
+                return Some((
+                    event.to_string(),
+                    strip(before).to_string(),
+                    Some(digits.to_string()),
+                ));
+            }
+        }
+    }
+    Some((event.to_string(), strip(rest).to_string(), None))
 }
 
 #[derive(Debug, Clone)]
@@ -291,6 +355,7 @@ impl<'a> Exporter<'a> {
             ));
         }
 
+        let n_processes = processes.len();
         for (pid, name, executable, pool) in processes {
             let pi = bsub(
                 &mut self.root,
@@ -305,6 +370,28 @@ impl<'a> Exporter<'a> {
                 ],
             );
             self.containers.insert(pid.clone(), vec![pi]);
+            let tag = pool
+                .and_then(|px| d.pools[px].base.attrs.get("version-tag").cloned())
+                .filter(|t| !t.is_empty())
+                .or_else(|| {
+                    if pool.is_none() || n_processes == 1 {
+                        d.attrs.get("version-tag").cloned()
+                    } else {
+                        None
+                    }
+                })
+                .filter(|t| !t.is_empty());
+            if self.camunda
+                && executable
+                && let Some(tag) = tag
+            {
+                let x = ext_index(&mut self.root.children[pi]);
+                zsub(
+                    &mut self.root.children[pi].children[x],
+                    "versionTag",
+                    &[("value", &tag)],
+                );
+            }
             match pool {
                 Some(px) => {
                     let pool = &d.pools[px];
@@ -334,6 +421,8 @@ impl<'a> Exporter<'a> {
         self.flows();
         self.data();
         self.artifacts();
+        self.compensation_links();
+        self.order_adhoc();
 
         let mut decl = Vec::new();
         for (k, kind) in DECL_KINDS.iter().enumerate() {
@@ -401,10 +490,15 @@ impl<'a> Exporter<'a> {
             e.set("name", l.clone());
         }
         for c in &lane.children {
-            if d.nodes.contains_key(c) {
+            if let Some(node) = d.nodes.get(c) {
                 let mut r = XElem::new(BPMN_NS, "flowNodeRef");
                 r.text = Some(c.clone());
                 e.push(r);
+                if node.base.attrs.contains_key("compensate") {
+                    let mut r = XElem::new(BPMN_NS, "flowNodeRef");
+                    r.text = Some(compensation_id(c));
+                    e.push(r);
+                }
             }
         }
         let sublanes: Vec<&Lane> = lane
@@ -455,8 +549,17 @@ impl<'a> Exporter<'a> {
         }
         if kind == "call"
             && let Some(p) = a.get("process")
+            && !p.starts_with('=')
         {
             e.set("calledElement", p.clone());
+        }
+        if kind == "adhoc" {
+            if n.base.has("sequential") {
+                e.set("ordering", "Sequential");
+            }
+            if self.camunda && n.base.has("wait") {
+                e.set("cancelRemainingInstances", "false");
+            }
         }
         if n.base.has("compensation") {
             e.set("isForCompensation", "true");
@@ -484,7 +587,7 @@ impl<'a> Exporter<'a> {
         }
         if n.base.has("loop") {
             e.push(XElem::new(BPMN_NS, "standardLoopCharacteristics"));
-        } else if n.base.has("parallel") || n.base.has("sequential") {
+        } else if kind != "adhoc" && (n.base.has("parallel") || n.base.has("sequential")) {
             let mut mi = XElem::new(BPMN_NS, "multiInstanceLoopCharacteristics");
             mi.set(
                 "isSequential",
@@ -494,20 +597,370 @@ impl<'a> Exporter<'a> {
                     "false"
                 },
             );
+            if self.camunda
+                && let Some(coll) = a.get("collection")
+            {
+                let mut lc: Vec<(&str, String)> = vec![("inputCollection", self.feel(coll))];
+                if let Some(v) = a.get("item") {
+                    lc.push(("inputElement", v.clone()));
+                }
+                if let Some(v) = a.get("output") {
+                    lc.push(("outputCollection", v.clone()));
+                }
+                if let Some(v) = a.get("output-item") {
+                    lc.push(("outputElement", self.feel(v)));
+                }
+                let x = ext_index(&mut mi);
+                let pairs: Vec<(&str, &str)> = lc.iter().map(|(k, v)| (*k, v.as_str())).collect();
+                zsub(&mut mi.children[x], "loopCharacteristics", &pairs);
+            }
+            if self.camunda
+                && let Some(u) = a.get("until")
+            {
+                mi.push(self.formal("completionCondition", u));
+            }
             e.push(mi);
         }
         let idx = self.at(&container).push(e);
         if is_sub(kind) {
-            let mut path = container;
+            let mut path = container.clone();
             path.push(idx);
             self.containers
                 .insert(n.base.id().to_string(), path.clone());
             let children = n.children.clone();
-            self.block(path, &children);
+            self.block(path.clone(), &children);
+            if kind == "adhoc"
+                && self.camunda
+                && let Some(u) = a.get("until")
+            {
+                let cc = self.formal("completionCondition", u);
+                self.at(&path).push(cc);
+            }
+        }
+        if a.contains_key("compensate") {
+            let bid = compensation_id(n.base.id());
+            let mut b = XElem::new(BPMN_NS, "boundaryEvent");
+            b.set("id", bid.clone());
+            b.set("attachedToRef", n.base.id().to_string());
+            let mut df = XElem::new(BPMN_NS, "compensateEventDefinition");
+            df.set("id", format!("{bid}-def"));
+            b.push(df);
+            self.at(&container).push(b);
         }
     }
 
+    /// `<bpmn:NAME xsi:type="bpmn:tFormalExpression">=expr</bpmn:NAME>`
+    fn formal(&self, name: &str, expr: &str) -> XElem {
+        let mut c = XElem::new(BPMN_NS, name);
+        c.set_ns(XSI_NS, "type", "bpmn:tFormalExpression");
+        c.text = Some(self.feel(expr));
+        c
+    }
+
+    fn node_executable(&self, n: &Node) -> bool {
+        let d = self.doc;
+        if d.executable() {
+            return true;
+        }
+        d.pools
+            .iter()
+            .any(|p| p.base.id.as_deref() == n.pool.as_deref() && p.base.has("executable"))
+    }
+
+    /// Associations from generated compensation boundary events to their handlers.
+    fn compensation_links(&mut self) {
+        let d = self.doc;
+        for n in d.nodes.values() {
+            let Some(h) = n.base.attrs.get("compensate") else {
+                continue;
+            };
+            if !d.nodes.contains_key(h) {
+                continue;
+            }
+            let Some(path) = n
+                .scope
+                .as_ref()
+                .and_then(|s| self.containers.get(s))
+                .cloned()
+            else {
+                continue;
+            };
+            let bid = compensation_id(n.base.id());
+            let mut a = XElem::new(BPMN_NS, "association");
+            a.set("id", format!("{bid}-assoc"));
+            a.set("associationDirection", "One");
+            a.set("sourceRef", bid);
+            a.set("targetRef", h.clone());
+            self.at(&path).push(a);
+        }
+    }
+
+    /// `completionCondition` is the last child of an ad-hoc sub-process (BPMN schema order).
+    fn order_adhoc(&mut self) {
+        fn walk(e: &mut XElem) {
+            if e.ns == BPMN_NS && e.name == "adHocSubProcess" {
+                let mut moved = Vec::new();
+                let mut k = 0;
+                while k < e.children.len() {
+                    if e.children[k].ns == BPMN_NS && e.children[k].name == "completionCondition" {
+                        moved.push(e.children.remove(k));
+                    } else {
+                        k += 1;
+                    }
+                }
+                e.children.extend(moved);
+            }
+            for c in &mut e.children {
+                walk(c);
+            }
+        }
+        walk(&mut self.root);
+    }
+
+    fn binding_attrs(attrs: &mut Vec<(&'static str, String)>, a: &Attrs) {
+        if let Some(b) = a.get("binding") {
+            attrs.push(("bindingType", binding_type(b).to_string()));
+        }
+        if let Some(v) = a.get("version") {
+            attrs.push(("versionTag", v.clone()));
+        }
+    }
+
+    fn zsub_owned(parent: &mut XElem, name: &str, attrs: &[(&'static str, String)]) {
+        let pairs: Vec<(&str, &str)> = attrs.iter().map(|(k, v)| (*k, v.as_str())).collect();
+        zsub(parent, name, &pairs);
+    }
+
     fn zeebe(&mut self, e: &mut XElem, n: &Node) {
+        if !self.node_executable(n) {
+            // only the 0.1 executable profile applies to processes that are not executable
+            self.zeebe_01(e, n);
+            return;
+        }
+        let a = &n.base.attrs;
+        let kind = n.base.kind.as_str();
+        if kind == "user" {
+            let x = ext_index(e);
+            zsub(&mut e.children[x], "userTask", &[]);
+            if let Some(f) = a.get("form") {
+                let mut at = vec![("formId", f.clone())];
+                Self::binding_attrs(&mut at, a);
+                Self::zsub_owned(&mut e.children[x], "formDefinition", &at);
+            }
+            let mut assign = Vec::new();
+            for (key, attr) in [
+                ("assignee", "assignee"),
+                ("candidate-users", "candidateUsers"),
+                ("candidate-groups", "candidateGroups"),
+            ] {
+                if let Some(v) = a.get(key) {
+                    assign.push((attr, v.clone()));
+                }
+            }
+            if !assign.is_empty() {
+                Self::zsub_owned(&mut e.children[x], "assignmentDefinition", &assign);
+            }
+            let mut sched = Vec::new();
+            for (key, attr) in [("due", "dueDate"), ("follow-up", "followUpDate")] {
+                if let Some(v) = a.get(key) {
+                    sched.push((attr, v.clone()));
+                }
+            }
+            if !sched.is_empty() {
+                Self::zsub_owned(&mut e.children[x], "taskSchedule", &sched);
+            }
+            if let Some(p) = a.get("priority") {
+                zsub(&mut e.children[x], "priorityDefinition", &[("priority", p)]);
+            }
+        } else if kind == "start" && a.contains_key("form") {
+            let mut at = vec![("formId", a["form"].clone())];
+            Self::binding_attrs(&mut at, a);
+            let x = ext_index(e);
+            Self::zsub_owned(&mut e.children[x], "formDefinition", &at);
+        } else if kind == "rule" && a.contains_key("decision") {
+            let res = match nonempty(a.get("result").map(String::as_str)) {
+                Some(r) => r.to_string(),
+                None => self.default_result(&a["decision"]),
+            };
+            let mut at = vec![
+                ("decisionId", a["decision"].clone()),
+                ("resultVariable", res),
+            ];
+            Self::binding_attrs(&mut at, a);
+            let x = ext_index(e);
+            Self::zsub_owned(&mut e.children[x], "calledDecision", &at);
+        } else if kind == "script" && a.contains_key("expr") {
+            let expr = self.feel(&a["expr"]);
+            let res = a.get("result").cloned().unwrap_or_else(|| "result".into());
+            let x = ext_index(e);
+            zsub(
+                &mut e.children[x],
+                "script",
+                &[("expression", &expr), ("resultVariable", &res)],
+            );
+        } else if kind == "call" && a.contains_key("process") {
+            let mut ce = vec![("processId", a["process"].clone())];
+            Self::binding_attrs(&mut ce, a);
+            if a.get("child-vars").map(String::as_str) == Some("none") {
+                ce.push(("propagateAllChildVariables", "false".into()));
+            }
+            if a.get("parent-vars").map(String::as_str) == Some("none") {
+                ce.push(("propagateAllParentVariables", "false".into()));
+            }
+            if let Some(b) = a.get("business-id") {
+                ce.push(("businessId", b.clone()));
+            }
+            let x = ext_index(e);
+            Self::zsub_owned(&mut e.children[x], "calledElement", &ce);
+        } else if kind == "adhoc" && a.contains_key("active") {
+            let v = self.feel(&a["active"]);
+            let x = ext_index(e);
+            zsub(
+                &mut e.children[x],
+                "adHoc",
+                &[("activeElementsCollection", &v)],
+            );
+        }
+        let job_kind = kind == "service"
+            || kind == "send"
+            || ((kind == "throw" || kind == "end") && a.contains_key("message"));
+        let inputs = split_pairs(a.get("inputs").map(String::as_str).unwrap_or(""), '=');
+        let mut headers = split_pairs(a.get("headers").map(String::as_str).unwrap_or(""), ':');
+        if kind == "service" && a.get("connector").map(String::as_str) == Some("rest") {
+            let mut td = vec![("type", REST_CONNECTOR_TYPE.to_string())];
+            if let Some(r) = a.get("retries") {
+                td.push(("retries", r.clone()));
+            }
+            let x = ext_index(e);
+            Self::zsub_owned(&mut e.children[x], "taskDefinition", &td);
+            let mut conn: Vec<(String, String)> = vec![
+                ("authentication.type".into(), "noAuth".into()),
+                (
+                    "method".into(),
+                    a.get("method").cloned().unwrap_or_else(|| "GET".into()),
+                ),
+                ("url".into(), a.get("url").cloned().unwrap_or_default()),
+            ];
+            for (key, target) in [
+                ("headers-in", "headers"),
+                ("query", "queryParameters"),
+                ("body", "body"),
+            ] {
+                if let Some(v) = a.get(key) {
+                    conn.push((target.into(), v.clone()));
+                }
+            }
+            Self::io_mapping(e, &conn, &[]);
+            if let Some(r) = a.get("result") {
+                headers.insert(0, ("resultVariable".into(), r.clone()));
+            }
+        } else if job_kind && a.contains_key("type") {
+            let mut td = vec![("type", a["type"].clone())];
+            if let Some(r) = a.get("retries") {
+                td.push(("retries", r.clone()));
+            }
+            let x = ext_index(e);
+            Self::zsub_owned(&mut e.children[x], "taskDefinition", &td);
+        }
+        if !inputs.is_empty() || a.contains_key("outputs") {
+            let ins: Vec<(String, String)> = inputs
+                .iter()
+                .map(|(t, s)| (t.clone(), self.feel(s)))
+                .collect();
+            let outs: Vec<(String, String)> =
+                split_pairs(a.get("outputs").map(String::as_str).unwrap_or(""), '=')
+                    .iter()
+                    .map(|(t, s)| (t.clone(), self.feel(s)))
+                    .collect();
+            Self::io_mapping(e, &ins, &outs);
+        }
+        if !headers.is_empty() {
+            let x = ext_index(e);
+            let mut th = XElem::new(ZEEBE_NS, "taskHeaders");
+            for (k, v) in &headers {
+                let mut h = XElem::new(ZEEBE_NS, "header");
+                h.set("key", k.clone());
+                h.set("value", v.clone());
+                th.push(h);
+            }
+            e.children[x].push(th);
+        }
+        if let Some(ev) = a.get("events")
+            && matches!(kind, "start" | "catch" | "boundary")
+        {
+            let x = ext_index(e);
+            zsub(
+                &mut e.children[x],
+                "conditionalFilter",
+                &[("variableEvents", ev)],
+            );
+        }
+        if let Some(text) = a.get("listeners") {
+            let mut execl = Vec::new();
+            let mut taskl = Vec::new();
+            for item in text.split(';') {
+                if let Some((ev, typ, retries)) = parse_listener(item) {
+                    let mut li: Vec<(&'static str, String)> =
+                        vec![("eventType", ev.clone()), ("type", typ)];
+                    if let Some(r) = retries {
+                        li.push(("retries", r));
+                    }
+                    if ev == "start" || ev == "end" {
+                        execl.push(li);
+                    } else {
+                        taskl.push(li);
+                    }
+                }
+            }
+            for (box_name, item_name, items) in [
+                ("executionListeners", "executionListener", execl),
+                ("taskListeners", "taskListener", taskl),
+            ] {
+                if items.is_empty() {
+                    continue;
+                }
+                let x = ext_index(e);
+                let mut bx = XElem::new(ZEEBE_NS, box_name);
+                for li in &items {
+                    let mut it = XElem::new(ZEEBE_NS, item_name);
+                    for (k, v) in li {
+                        it.set(k, v.clone());
+                    }
+                    bx.push(it);
+                }
+                e.children[x].push(bx);
+            }
+        }
+    }
+
+    fn io_mapping(e: &mut XElem, inputs: &[(String, String)], outputs: &[(String, String)]) {
+        let x = ext_index(e);
+        let ext = &mut e.children[x];
+        let k = match ext
+            .children
+            .iter()
+            .position(|c| c.ns == ZEEBE_NS && c.name == "ioMapping")
+        {
+            Some(k) => k,
+            None => ext.push(XElem::new(ZEEBE_NS, "ioMapping")),
+        };
+        let bx = &mut ext.children[k];
+        for (target, source) in inputs {
+            let mut i = XElem::new(ZEEBE_NS, "input");
+            i.set("source", source.clone());
+            i.set("target", target.clone());
+            bx.push(i);
+        }
+        for (target, source) in outputs {
+            let mut o = XElem::new(ZEEBE_NS, "output");
+            o.set("source", source.clone());
+            o.set("target", target.clone());
+            bx.push(o);
+        }
+    }
+
+    /// The executable profile of language 0.1 (used where the process itself is not executable).
+    fn zeebe_01(&mut self, e: &mut XElem, n: &Node) {
         let a = &n.base.attrs;
         let kind = n.base.kind.as_str();
         if kind == "user" {
@@ -607,10 +1060,15 @@ impl<'a> Exporter<'a> {
             e.push(df);
             return;
         }
-        for flag in TRIGGER_FLAGS {
+        for flag in TRIGGER_FLAGS.iter().chain(CATCH_ALL_FLAGS) {
             if n.base.has(flag) {
                 let mut df = XElem::new(BPMN_NS, definition(flag));
                 df.set("id", def_id);
+                if *flag == "compensate"
+                    && let Some(act) = a.get("activity")
+                {
+                    df.set("activityRef", act.clone());
+                }
                 e.push(df);
                 return;
             }
@@ -838,6 +1296,10 @@ impl<'a> Exporter<'a> {
             self.root.insert(0, cat);
         }
     }
+}
+
+fn compensation_id(activity_id: &str) -> String {
+    format!("{activity_id}-compensate")
 }
 
 fn after_props(act: &XElem) -> usize {

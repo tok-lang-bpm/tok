@@ -10,6 +10,8 @@ Outputs in fixtures/:
     tok/NAME.tok                 input copy
     tok/NAME.en.json, .pl.json   diagnostics of `tok check` (as in --json, without the file name)
     tok/NAME.bpmn, .svg          `tok bpmn` / `tok svg` output (documents without errors);
+    tok/NAME.rt.tok, .rt.noids.tok, .rt.warn
+                                 `tok import` of that BPMN output (round trip);
                                  .svg.err holds the message when there is nothing to draw
     tok/NAME.DECISION.dmn        `tok export` decision tables
     tok/NAME.FORM.form           `tok export` forms
@@ -70,6 +72,12 @@ def gen_tok(path, out_dir):
         s = os.path.join(tmp, name + ".svg")
         write_bpmn(doc, b)
         write(os.path.join(out_dir, name + ".bpmn"), read_text(b))
+        # round trip: import of the exported model (every construct of the language)
+        rt, rt_warn = bpmn_import.import_bpmn(b, keep_ids=True)
+        write(os.path.join(out_dir, name + ".rt.tok"), fmt(rt))
+        write(os.path.join(out_dir, name + ".rt.warn"), "".join(w + "\n" for w in rt_warn))
+        rt, _ = bpmn_import.import_bpmn(b, keep_ids=False)
+        write(os.path.join(out_dir, name + ".rt.noids.tok"), fmt(rt))
         try:
             write_svg(doc, s)
             write(os.path.join(out_dir, name + ".svg"), read_text(s))

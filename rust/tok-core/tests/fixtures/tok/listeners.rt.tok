@@ -1,0 +1,8 @@
+tok 0.3 "Nasłuchiwacze" executable process=sluchacze
+
+start s "Start"
+script wyliczenie "Wyliczenie" expr="1 + 1" result=wynik listeners="start: przed-wyliczeniem"
+user decyzja "Decyzja" listeners="creating: utworzenie-zadania (2)"
+end e "Koniec"
+
+flow s -> wyliczenie -> decyzja -> e

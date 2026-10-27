@@ -1,0 +1,17 @@
+tok 0.1 "Bramka OR"
+
+start s
+or g "Jakie powiadomienia?"
+send m "E-mail" message="Powiadomienie e-mail"
+send t "SMS" message="Powiadomienie SMS"
+task l "List"
+or j
+end e
+
+flow s -> g
+flow g -> m "e-mail" when="kanal.email"
+flow g -> t "sms" when="kanal.sms"
+flow g -> l "list" default
+flow m -> j
+flow t -> j
+flow l -> j -> e

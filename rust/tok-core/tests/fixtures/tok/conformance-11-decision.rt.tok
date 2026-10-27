@@ -1,0 +1,7 @@
+tok 0.1 "Decyzje"
+
+start s
+rule t "Ustalenie limitu"
+end e
+
+flow s -> t -> e

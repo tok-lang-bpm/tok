@@ -1,0 +1,43 @@
+tok 0.1 "Kwerenda archiwalna z podprocesem"
+
+pool archiwum "Archiwum Państwowe"
+  lane kancelaria "Kancelaria"
+    start wniosek "Wniosek o kwerendę wpłynął" message="Wniosek o kwerendę"
+    user rejestracja "Rejestracja wniosku"
+    xor zakres "Czy wniosek dotyczy zasobu archiwum?"
+    end bezprzedmiotowy "Wniosek bezprzedmiotowy" terminate
+    eventsub wycofanie "Wycofanie wniosku"
+      start w-start "Wniosek wycofany" message="Wycofanie wniosku"
+      user zamkniecie "Zamknięcie sprawy"
+      end w-koniec "Sprawa zamknięta"
+  lane archiwista "Archiwista"
+    sub poszukiwania "Poszukiwania w zasobie"
+      start p-start
+      user inwentarze "Przegląd inwentarzy"
+      xor znaleziono "Czy znaleziono akta?"
+      user akta "Analiza akt"
+      throw trudnosc "Kwerenda wymaga decyzji kierownika" escalation="Trudna kwerenda"
+      end p-koniec "Poszukiwania zakończone"
+    boundary eskalacja "Trudna kwerenda" noninterrupting on=poszukiwania escalation="Trudna kwerenda"
+    user odpowiedz "Przygotowanie odpowiedzi"
+    end wyslana "Odpowiedź wysłana" message="Odpowiedź na kwerendę"
+  lane kierownik "Kierownik oddziału"
+    user decyzja "Decyzja o dalszych poszukiwaniach"
+    end rozstrzygnieto "Sprawa rozstrzygnięta"
+
+pool wnioskodawca "Wnioskodawca"
+
+flow w-start -> zamkniecie -> w-koniec
+flow p-start -> inwentarze -> znaleziono
+flow znaleziono -> akta "tak"
+flow znaleziono -> trudnosc "nie"
+flow trudnosc -> akta -> p-koniec
+flow wniosek -> rejestracja -> zakres
+flow zakres -> poszukiwania "tak"
+flow zakres -> bezprzedmiotowy "nie"
+flow poszukiwania -> odpowiedz -> wyslana
+flow eskalacja -> decyzja -> rozstrzygnieto
+
+message wnioskodawca -> wniosek "Wniosek o kwerendę"
+message wyslana -> wnioskodawca "Odpowiedź na kwerendę"
+message wnioskodawca -> w-start "Wycofanie wniosku"

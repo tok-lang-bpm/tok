@@ -1,0 +1,7 @@
+tok 0.3 "Łącznik REST" executable process=lacznik
+
+start s "Start"
+service pobranie "Pobranie stanu silnika" result=stan connector=rest method=GET url="http://localhost:8080/v2/topology"
+end e "Koniec"
+
+flow s -> pobranie -> e

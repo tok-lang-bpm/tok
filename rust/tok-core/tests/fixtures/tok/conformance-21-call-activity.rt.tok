@@ -1,0 +1,10 @@
+tok 0.3 "Call activity and bindings" executable
+
+start s "Start" form=f-start binding=version-tag version="v3"
+call wysylka "Wysyłka" process=wysylka binding=version-tag version="v2" child-vars=none parent-vars=none business-id="=numer"
+call dynamiczne "Wywołanie dynamiczne" process="=nazwaProcesu" binding=deployment
+rule ustalenie "Ustalenie trybu" decision=tryb result=tryb binding=deployment
+user akcept "Akceptacja" form=f-start binding=latest
+end e "Koniec"
+
+flow s -> wysylka -> dynamiczne -> ustalenie -> akcept -> e

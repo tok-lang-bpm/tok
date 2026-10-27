@@ -1,0 +1,10 @@
+tok 0.3 "Executable layer in a descriptive model"
+
+start s "Start"
+user ocena "Ocena" assignee="kierownik" priority=70 inputs="x = y"
+service wysylka "Wysyłka" type="wysylka" retries=3
+adhoc opracowanie "Opracowanie" wait active="lista"
+  task a "A"
+end e "Koniec" message="Odpowiedź" type="odpowiedz"
+
+flow s -> ocena -> wysylka -> opracowanie -> e

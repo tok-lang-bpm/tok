@@ -1,0 +1,8 @@
+tok 0.3 "User task assignment" executable
+
+start s "Start"
+user akceptacja "Akceptacja" assignee="=wniosek.przelozony" candidate-users="anna, jan" candidate-groups="kierownicy, sekretariat" due="2027-01-15T12:00:00+01:00" follow-up="=now() + duration(\"P1D\")" priority=70
+user sprawdzenie "Sprawdzenie" assignee="kierownik" priority="=pilnosc * 10"
+end e "Koniec"
+
+flow s -> akceptacja -> sprawdzenie -> e

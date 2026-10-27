@@ -1,0 +1,7 @@
+tok 0.3 "Zadanie użytkownika" executable process=zadanie
+
+start s "Start"
+user akceptacja "Akceptacja wniosku" assignee="kierownik" candidate-groups="kierownicy, sekretariat" due="2027-01-15T12:00:00+01:00" follow-up="=now() + duration(\"P1D\")" priority=70
+end e "Koniec"
+
+flow s -> akceptacja -> e

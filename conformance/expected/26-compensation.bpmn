@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.3" id="definitions" name="Compensation" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Compensation">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="rezerwacja" name="Rezerwacja środków" />
+    <bpmn:boundaryEvent attachedToRef="rezerwacja" id="rezerwacja-compensate">
+      <bpmn:compensateEventDefinition id="rezerwacja-compensate-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="zwolnienie" isForCompensation="true" name="Zwolnienie rezerwacji" />
+    <bpmn:userTask id="wyslanie" name="Wysłanie zamówienia" />
+    <bpmn:boundaryEvent attachedToRef="wyslanie" id="wyslanie-compensate">
+      <bpmn:compensateEventDefinition id="wyslanie-compensate-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:manualTask id="anulowanie" isForCompensation="true" name="Anulowanie zamówienia" />
+    <bpmn:exclusiveGateway id="ok" name="Czy dostawa potwierdzona?" />
+    <bpmn:intermediateThrowEvent id="cofniecie" name="Cofnięcie rezerwacji">
+      <bpmn:compensateEventDefinition activityRef="rezerwacja" id="cofniecie-def" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" name="Zrealizowano" />
+    <bpmn:endEvent id="e2" name="Wycofano">
+      <bpmn:compensateEventDefinition id="e2-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-rezerwacja" sourceRef="s" targetRef="rezerwacja" />
+    <bpmn:sequenceFlow id="f-rezerwacja-wyslanie" sourceRef="rezerwacja" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-ok" sourceRef="wyslanie" targetRef="ok" />
+    <bpmn:sequenceFlow id="f-ok-e" name="tak" sourceRef="ok" targetRef="e" />
+    <bpmn:sequenceFlow id="f-ok-cofniecie" name="nie" sourceRef="ok" targetRef="cofniecie" />
+    <bpmn:sequenceFlow id="f-cofniecie-e2" sourceRef="cofniecie" targetRef="e2" />
+    <bpmn:association associationDirection="One" id="rezerwacja-compensate-assoc" sourceRef="rezerwacja-compensate" targetRef="zwolnienie" />
+    <bpmn:association associationDirection="One" id="wyslanie-compensate-assoc" sourceRef="wyslanie-compensate" targetRef="anulowanie" />
+  </bpmn:process>
+</bpmn:definitions>

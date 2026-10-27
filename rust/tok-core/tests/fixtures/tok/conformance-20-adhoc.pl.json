@@ -1,0 +1,16 @@
+[
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 5,
+    "id": "inwentarz",
+    "message": "Zadanie użytkownika „inwentarz” nie ma formularza (form=)."
+  },
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 6,
+    "id": "skany",
+    "message": "Zadanie użytkownika „skany” nie ma formularza (form=)."
+  }
+]

@@ -44,7 +44,8 @@ fn kind_of_tag(t: &str) -> Option<&'static str> {
         "parallelGateway" => "and",
         "inclusiveGateway" => "or",
         "eventBasedGateway" => "eventgw",
-        "transaction" | "adHocSubProcess" => "sub",
+        "adHocSubProcess" => "adhoc",
+        "transaction" => "sub",
         _ => return None,
     })
 }
@@ -93,6 +94,36 @@ fn find<'a, 'i>(e: X<'a, 'i>, name: &str) -> Option<X<'a, 'i>> {
 
 fn findall<'a, 'i>(e: X<'a, 'i>, name: &'static str) -> impl Iterator<Item = X<'a, 'i>> {
     children(e).filter(move |c| is_b(*c, name))
+}
+
+/// First Camunda (`zeebe:`) child element with the local name `name`.
+fn zfind<'a, 'i>(e: X<'a, 'i>, name: &str) -> Option<X<'a, 'i>> {
+    children(e).find(|c| c.tag_name().namespace() == Some(ZEEBE_NS) && local(*c) == name)
+}
+
+/// `e.find(B + "extensionElements/" + Z + name)`
+fn ext_find<'a, 'i>(e: X<'a, 'i>, name: &str) -> Option<X<'a, 'i>> {
+    findall(e, "extensionElements").find_map(|x| zfind(x, name))
+}
+
+const REST_CONNECTOR_TYPE: &str = "io.camunda:http-json:1";
+
+fn binding_name(v: &str) -> String {
+    match v {
+        "versionTag" => "version-tag".into(),
+        other => other.to_string(),
+    }
+}
+
+fn connector_input(target: &str) -> Option<&'static str> {
+    Some(match target {
+        "method" => "method",
+        "url" => "url",
+        "headers" => "headers-in",
+        "queryParameters" => "query",
+        "body" => "body",
+        _ => return None,
+    })
 }
 
 /// Text of an element as ElementTree reports it (text before the first child element).
@@ -144,6 +175,12 @@ struct Importer<'a, 'i> {
     used: HashSet<String>,
     by_id: IndexMap<String, X<'a, 'i>>,
     warned: HashSet<String>,
+    /// compensation boundary event id -> (activity, handler, association id)
+    compensation: IndexMap<String, (String, String, Option<String>)>,
+    /// element ids skipped by `container` (generated compensation boundaries and associations)
+    skip_ids: HashSet<String>,
+    /// an association without id was skipped (Python: `None in skip_ids`)
+    skip_none: bool,
 }
 
 /// Read BPMN 2.0 XML text. Returns the document and warning strings `"id: explanation"`.
@@ -171,6 +208,9 @@ pub fn import_bpmn(xml: &str, keep_ids: bool) -> Result<(Document, Vec<String>),
         used: HashSet::new(),
         by_id,
         warned: HashSet::new(),
+        compensation: IndexMap::new(),
+        skip_ids: HashSet::new(),
+        skip_none: false,
     };
     imp.run()
 }
@@ -233,8 +273,71 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
     }
 
+    fn uses_03(&mut self) {
+        self.doc.version = Some("0.3".into());
+    }
+
+    /// Compensation boundary events with an association to a handler: tok writes them as
+    /// `compensate=` on the activity.
+    fn compensation_boundaries(&mut self) {
+        let assocs: Vec<X> = self
+            .root
+            .descendants()
+            .filter(|e| is_b(*e, "association"))
+            .collect();
+        for a in assocs {
+            let src = a
+                .attribute("sourceRef")
+                .and_then(|r| self.by_id.get(r))
+                .copied();
+            let tgt = a
+                .attribute("targetRef")
+                .and_then(|r| self.by_id.get(r))
+                .copied();
+            let (Some(src), Some(tgt)) = (src, tgt) else {
+                continue;
+            };
+            let attached = src.attribute("attachedToRef").filter(|v| !v.is_empty());
+            if local(src) == "boundaryEvent"
+                && find(src, "compensateEventDefinition").is_some()
+                && tgt.attribute("isForCompensation") == Some("true")
+                && let Some(act) = attached
+            {
+                self.compensation.insert(
+                    src.attribute("id").unwrap_or("").to_string(),
+                    (
+                        act.to_string(),
+                        tgt.attribute("id").unwrap_or("").to_string(),
+                        a.attribute("id").map(str::to_string),
+                    ),
+                );
+            }
+        }
+        for (bid, (_, _, assoc)) in &self.compensation {
+            self.skip_ids.insert(bid.clone());
+            match assoc {
+                Some(i) => {
+                    self.skip_ids.insert(i.clone());
+                }
+                None => self.skip_none = true,
+            }
+        }
+    }
+
+    fn read_binding(&mut self, z: X, a: &mut Attrs) {
+        if let Some(b) = z.attribute("bindingType").filter(|v| !v.is_empty()) {
+            a.insert("binding".into(), binding_name(b));
+            self.uses_03();
+        }
+        if let Some(v) = z.attribute("versionTag").filter(|v| !v.is_empty()) {
+            a.insert("version".into(), v.to_string());
+            self.uses_03();
+        }
+    }
+
     fn run(mut self) -> Result<(Document, Vec<String>), ImportError> {
         let root = self.root;
+        self.compensation_boundaries();
         if !is_b(root, "definitions") {
             return Err(ImportError(format!(
                 "not a BPMN 2.0 document: root element is {}",
@@ -468,6 +571,22 @@ impl<'a, 'i> Importer<'a, 'i> {
     }
 
     fn process(&mut self, p: X<'a, 'i>, pool: Option<usize>) {
+        if let Some(vt) = ext_find(p, "versionTag")
+            && let Some(v) = vt.attribute("value").filter(|v| !v.is_empty())
+        {
+            match pool {
+                Some(i) => {
+                    self.doc.pools[i]
+                        .base
+                        .attrs
+                        .insert("version-tag".into(), v.to_string());
+                }
+                None => {
+                    self.doc.attrs.insert("version-tag".into(), v.to_string());
+                }
+            }
+            self.uses_03();
+        }
         let scope = match pool {
             Some(i) => self.doc.pools[i].process_id(),
             None => self.doc.default_process_id(),
@@ -675,6 +794,13 @@ impl<'a, 'i> Importer<'a, 'i> {
             if !is_bpmn(c) {
                 continue;
             }
+            let skip = match c.attribute("id") {
+                Some(i) => self.skip_ids.contains(i),
+                None => self.skip_none,
+            };
+            if skip {
+                continue;
+            }
             let t = local(c);
             if kind_of_tag(t).is_some() {
                 let nid = self.node(c, t, scope, pool);
@@ -732,7 +858,7 @@ impl<'a, 'i> Importer<'a, 'i> {
 
     fn node(&mut self, e: X<'a, 'i>, t: &str, scope: &str, pool: Option<&str>) -> String {
         let mut kind = kind_of_tag(t).unwrap_or("task");
-        if t == "transaction" || t == "adHocSubProcess" {
+        if t == "transaction" {
             self.warn(
                 e.attribute("id"),
                 &format!("{t} imported as an embedded sub-process"),
@@ -774,6 +900,32 @@ impl<'a, 'i> Importer<'a, 'i> {
         {
             n.base.attrs.insert("process".into(), ce.to_string());
         }
+        if kind == "adhoc" {
+            self.uses_03();
+            if e.attribute("ordering") == Some("Sequential") {
+                n.base.flags.push("sequential".into());
+            }
+            if e.attribute("cancelRemainingInstances") == Some("false") {
+                n.base.flags.push("wait".into());
+            }
+            if let Some(cc) = find(e, "completionCondition")
+                && !strip(text(cc).unwrap_or("")).is_empty()
+            {
+                n.base.attrs.insert("until".into(), strip_feel(text(cc)));
+            }
+        }
+        let own_id = e.attribute("id").unwrap_or("");
+        let handlers: Vec<String> = self
+            .compensation
+            .values()
+            .filter(|(act, _, _)| act == own_id)
+            .map(|(_, h, _)| h.clone())
+            .collect();
+        for h in handlers {
+            let t = self.tid_s(Some(&h));
+            n.base.attrs.insert("compensate".into(), t);
+            self.uses_03();
+        }
         if e.attribute("isForCompensation") == Some("true") {
             n.base.flags.push("compensation".into());
         }
@@ -811,6 +963,29 @@ impl<'a, 'i> Importer<'a, 'i> {
                 }
                 .into(),
             );
+            if let Some(lc) = ext_find(mi, "loopCharacteristics") {
+                self.uses_03();
+                let a = &mut n.base.attrs;
+                let get = |name: &str| lc.attribute(name).filter(|v| !v.is_empty());
+                if let Some(v) = get("inputCollection") {
+                    a.insert("collection".into(), strip_feel(Some(v)));
+                }
+                if let Some(v) = get("inputElement") {
+                    a.insert("item".into(), v.to_string());
+                }
+                if let Some(v) = get("outputCollection") {
+                    a.insert("output".into(), v.to_string());
+                }
+                if let Some(v) = get("outputElement") {
+                    a.insert("output-item".into(), strip_feel(Some(v)));
+                }
+            }
+            if let Some(cc) = find(mi, "completionCondition")
+                && !strip(text(cc).unwrap_or("")).is_empty()
+            {
+                n.base.attrs.insert("until".into(), strip_feel(text(cc)));
+                self.uses_03();
+            }
         }
         self.extensions(e, &mut n);
         if find(e, "ioSpecification").is_some() && kind != "sub" {
@@ -875,15 +1050,11 @@ impl<'a, 'i> Importer<'a, 'i> {
             "terminate" | "compensate" => {
                 n.base.flags.push(key.into());
                 if key == "compensate"
-                    && c.attribute("activityRef")
-                        .map(|a| !a.is_empty())
-                        .unwrap_or(false)
+                    && let Some(r) = c.attribute("activityRef").filter(|a| !a.is_empty())
                 {
-                    self.warn(
-                        Some(&nid),
-                        "activityRef of a compensation event was skipped",
-                        None,
-                    );
+                    let t = self.tid_s(Some(r));
+                    n.base.attrs.insert("activity".into(), t);
+                    self.uses_03();
                 }
             }
             "message" => {
@@ -918,6 +1089,12 @@ impl<'a, 'i> Importer<'a, 'i> {
                         {
                             n.base.attrs.insert("code".into(), code.to_string());
                         }
+                    }
+                    None if CATCH_ALL_FLAGS.contains(&key)
+                        && (n.base.kind == "boundary" || n.base.kind == "start") =>
+                    {
+                        n.base.flags.push(key.into());
+                        self.uses_03();
                     }
                     None => {
                         n.base.attrs.insert(key.into(), label_or_id.clone());
@@ -983,7 +1160,6 @@ impl<'a, 'i> Importer<'a, 'i> {
                 );
                 continue;
             }
-            let a = &mut n.base.attrs;
             let attr = |name: &str| z.attribute(name).filter(|v| !v.is_empty());
             if t == "userTask" && kind == "user" {
                 continue;
@@ -991,7 +1167,10 @@ impl<'a, 'i> Importer<'a, 'i> {
             if t == "formDefinition" && (kind == "user" || kind == "start") {
                 match attr("formId") {
                     Some(f) => {
-                        a.insert("form".into(), f.to_string());
+                        n.base.attrs.insert("form".into(), f.to_string());
+                        let mut a = std::mem::take(&mut n.base.attrs);
+                        self.read_binding(z, &mut a);
+                        n.base.attrs = a;
                     }
                     None => self.warn(
                         Some(&nid),
@@ -1000,27 +1179,196 @@ impl<'a, 'i> Importer<'a, 'i> {
                     ),
                 }
             } else if t == "calledDecision" && kind == "rule" {
+                let mut a = std::mem::take(&mut n.base.attrs);
                 if let Some(d) = attr("decisionId") {
                     a.insert("decision".into(), d.to_string());
                 }
                 if let Some(r) = attr("resultVariable") {
                     a.insert("result".into(), r.to_string());
                 }
+                self.read_binding(z, &mut a);
+                n.base.attrs = a;
+            } else if t == "calledElement" && kind == "call" {
+                let mut a = std::mem::take(&mut n.base.attrs);
+                if let Some(p) = attr("processId") {
+                    a.insert("process".into(), p.to_string());
+                }
+                self.read_binding(z, &mut a);
+                if z.attribute("propagateAllChildVariables") == Some("false") {
+                    a.insert("child-vars".into(), "none".into());
+                }
+                if z.attribute("propagateAllParentVariables") == Some("false") {
+                    a.insert("parent-vars".into(), "none".into());
+                }
+                if let Some(b) = attr("businessId") {
+                    a.insert("business-id".into(), b.to_string());
+                }
+                n.base.attrs = a;
+                if z.attributes().count() > 1 {
+                    self.uses_03();
+                }
+            } else if t == "adHoc" && kind == "adhoc" {
+                if let Some(v) = attr("activeElementsCollection") {
+                    n.base.attrs.insert("active".into(), strip_feel(Some(v)));
+                }
+            } else if t == "assignmentDefinition" && kind == "user" {
+                for (at, key) in [
+                    ("assignee", "assignee"),
+                    ("candidateUsers", "candidate-users"),
+                    ("candidateGroups", "candidate-groups"),
+                ] {
+                    if let Some(v) = attr(at) {
+                        n.base.attrs.insert(key.into(), v.to_string());
+                    }
+                }
+                self.uses_03();
+            } else if t == "taskSchedule" && kind == "user" {
+                for (at, key) in [("dueDate", "due"), ("followUpDate", "follow-up")] {
+                    if let Some(v) = attr(at) {
+                        n.base.attrs.insert(key.into(), v.to_string());
+                    }
+                }
+                self.uses_03();
+            } else if t == "priorityDefinition" && kind == "user" {
+                if let Some(v) = attr("priority") {
+                    n.base.attrs.insert("priority".into(), v.to_string());
+                }
+                self.uses_03();
+            } else if t == "ioMapping" {
+                let pair = |c: X, name: &str| -> Option<(String, String)> {
+                    if c.tag_name().namespace() == Some(ZEEBE_NS) && local(c) == name {
+                        Some((
+                            c.attribute("target").unwrap_or("None").to_string(),
+                            c.attribute("source").unwrap_or("").to_string(),
+                        ))
+                    } else {
+                        None
+                    }
+                };
+                let mut ins: Vec<(String, String)> =
+                    children(z).filter_map(|c| pair(c, "input")).collect();
+                let outs: Vec<(String, String)> =
+                    children(z).filter_map(|c| pair(c, "output")).collect();
+                let a = &mut n.base.attrs;
+                if a.get("connector").map(String::as_str) == Some("rest")
+                    || a.get("type").map(String::as_str) == Some(REST_CONNECTOR_TYPE)
+                {
+                    let mut rest = Vec::new();
+                    for (target, source) in ins {
+                        if let Some(key) = connector_input(&target) {
+                            a.insert(key.into(), source);
+                        } else if target == "authentication.type" && source == "noAuth" {
+                            continue;
+                        } else {
+                            rest.push((target, source));
+                        }
+                    }
+                    ins = rest;
+                    a.insert("connector".into(), "rest".into());
+                    a.shift_remove("type");
+                }
+                if !ins.is_empty() {
+                    let v: Vec<String> = ins
+                        .iter()
+                        .map(|(tg, src)| format!("{tg} = {}", strip_feel(Some(src))))
+                        .collect();
+                    a.insert("inputs".into(), v.join("; "));
+                }
+                if !outs.is_empty() {
+                    let v: Vec<String> = outs
+                        .iter()
+                        .map(|(tg, src)| format!("{tg} = {}", strip_feel(Some(src))))
+                        .collect();
+                    a.insert("outputs".into(), v.join("; "));
+                }
+                self.uses_03();
+            } else if t == "taskHeaders" {
+                let mut hs: Vec<(String, String)> = children(z)
+                    .filter(|c| c.tag_name().namespace() == Some(ZEEBE_NS) && local(*c) == "header")
+                    .map(|h| {
+                        (
+                            h.attribute("key").unwrap_or("None").to_string(),
+                            h.attribute("value").unwrap_or("").to_string(),
+                        )
+                    })
+                    .collect();
+                let is_rest = zfind(x, "taskDefinition")
+                    .is_some_and(|td| td.attribute("type") == Some(REST_CONNECTOR_TYPE));
+                let a = &mut n.base.attrs;
+                if a.get("connector").map(String::as_str) == Some("rest") || is_rest {
+                    let mut keep = Vec::new();
+                    for (k, v) in hs {
+                        if k == "resultVariable" {
+                            a.insert("result".into(), v);
+                        } else {
+                            keep.push((k, v));
+                        }
+                    }
+                    hs = keep;
+                }
+                if !hs.is_empty() {
+                    let v: Vec<String> = hs.iter().map(|(k, v)| format!("{k}: {v}")).collect();
+                    a.insert("headers".into(), v.join("; "));
+                }
+                self.uses_03();
+            } else if t == "conditionalFilter" {
+                if let Some(v) = attr("variableEvents") {
+                    n.base.attrs.insert("events".into(), v.to_string());
+                    self.uses_03();
+                }
+            } else if t == "executionListeners" || t == "taskListeners" {
+                let mut items = Vec::new();
+                for li in children(z) {
+                    let ev = li.attribute("eventType").filter(|v| !v.is_empty());
+                    let typ = li.attribute("type").filter(|v| !v.is_empty());
+                    if let (Some(ev), Some(typ)) = (ev, typ) {
+                        let retries = li
+                            .attribute("retries")
+                            .filter(|v| !v.is_empty())
+                            .map(|r| format!(" ({r})"))
+                            .unwrap_or_default();
+                        items.push(format!("{ev}: {typ}{retries}"));
+                    }
+                }
+                if !items.is_empty() {
+                    let a = &mut n.base.attrs;
+                    let mut all: Vec<String> = a
+                        .get("listeners")
+                        .filter(|p| !p.is_empty())
+                        .cloned()
+                        .into_iter()
+                        .collect();
+                    all.extend(items);
+                    a.insert("listeners".into(), all.join("; "));
+                    self.uses_03();
+                }
             } else if t == "script" && kind == "script" {
+                let a = &mut n.base.attrs;
                 if let Some(x) = attr("expression") {
                     a.insert("expr".into(), strip_feel(Some(x)));
                 }
                 if let Some(r) = attr("resultVariable") {
                     a.insert("result".into(), r.to_string());
                 }
-            } else if t == "taskDefinition" && (kind == "service" || kind == "send") {
+            } else if t == "taskDefinition"
+                && (kind == "service"
+                    || kind == "send"
+                    || ((kind == "throw" || kind == "end") && n.base.attrs.contains_key("message")))
+            {
                 if let Some(ty) = attr("type") {
-                    let v = if ty.starts_with('=') {
-                        strip_feel(Some(ty))
-                    } else {
-                        ty.to_string()
-                    };
-                    a.insert("type".into(), v);
+                    n.base.attrs.insert("type".into(), ty.to_string());
+                    if ty == REST_CONNECTOR_TYPE && kind == "service" {
+                        n.base.attrs.insert("connector".into(), "rest".into());
+                        n.base.attrs.shift_remove("type");
+                        self.uses_03();
+                    }
+                }
+                if let Some(r) = attr("retries") {
+                    n.base.attrs.insert("retries".into(), r.to_string());
+                    self.uses_03();
+                }
+                if kind == "throw" || kind == "end" {
+                    self.uses_03();
                 }
             } else {
                 self.warn(

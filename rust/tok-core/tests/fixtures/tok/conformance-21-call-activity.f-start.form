@@ -1,0 +1,19 @@
+{
+  "id": "f-start",
+  "type": "default",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.10.0",
+  "exporter": {
+    "name": "tok",
+    "version": "0.1.0"
+  },
+  "components": [
+    {
+      "type": "number",
+      "id": "Field_cena",
+      "key": "cena",
+      "label": "Cena"
+    }
+  ],
+  "schemaVersion": 18
+}

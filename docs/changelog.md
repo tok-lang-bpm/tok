@@ -2,6 +2,31 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version may change the language; a patch version never does.
 
+## [0.3.0] — 2026-10-27
+
+Language 0.3 (`tok 0.3` in the header; documents written for 0.1 stay valid and mean the same). Reference: `docs/spec.md` §5.3, §10, §10.3, §13; design notes in `docs/design-0.3.md`.
+
+### Added
+
+- `adhoc` sub-process (BPMN `adHocSubProcess`): activities in any order, `sequential` ordering; checker rule `R050`.
+- Compensation in any document: `compensate=HANDLER` on an activity (boundary compensation event and association), the handler flag `compensation`, `throw|end … compensate activity=ID` (`activityRef`); checker rule `R051`.
+- Catch-all error and escalation events: the flags `error` and `escalation` without a name on boundary events and event sub-process starts.
+- Executable layer for Camunda 8 (only in executable documents): multi-instance collections (`collection`, `item`, `output`, `output-item`, `until`), ad-hoc activation (`active`, `until`, `wait`), call activities (`binding`, `version`, `child-vars`, `parent-vars`, `business-id`), decision and form bindings, variable mappings (`inputs`, `outputs`), user task assignment and scheduling (`assignee`, `candidate-users`, `candidate-groups`, `due`, `follow-up`, `priority`), jobs (`retries`, `headers`, `type` on message throw and end events), the REST connector (`connector=rest`, `method`, `url`, `body`, `query`, `headers-in`, `result`), conditional filters (`events`), execution and task listeners (`listeners`), process version tags (`version-tag`).
+- Checker codes `R052`–`R055`, `C022`, `C090`, `C091`; the levels `basic` and `analytic` reject the executable layer (`R040`); executable-layer attributes in documents that are not executable give `R055` and are ignored by the exporter.
+- FEEL subset: `now()`, `today()`, `duration("PnDTnHnMnS")` and date/time arithmetic with durations.
+- BPMN import reads all of the above back; an imported file that uses them is printed as `tok 0.3`.
+- Simulation of multi-instance collections (parallel and sequential, `output`, `until`), ad-hoc sub-processes (activated elements start at once) and compensation (handlers of completed activities run when a compensation event is reached).
+- Conformance: cases 19–32 and `expected/*.levels` (all diagnostic codes at the three levels); executable conformance on Camunda 8 Run 8.10.7 in `conformance/camunda/` (12 cases driven to their expected end events by `run.py`).
+
+### Implementations
+
+- Python, the Rust engine (`tok-core`, `tok-cli`, `tok-py`) and the Julia core implement language 0.3 and pass the whole conformance corpus byte for byte; Rust and Python are additionally compared on 62 documents (390 outputs).
+- Plan (`docs/roadmap.md`): from 0.4 the Rust engine is the only engine — Python and R call it, the pure-Python implementation stays frozen at language 0.3 as a test oracle; Julia calls the Rust engine, keeps its independent core and gets native simulation and calibration.
+
+### Not included
+
+- Error code and message variables on catching error events: Camunda 8.10 accepts `errorCodeVariable`/`errorMessageVariable` in the XML but ignores them; variables sent with an error are merged with `outputs=` on the catching event.
+
 ## [0.2.0] — 2026-10-27
 
 The language is unchanged (documents still start with `tok 0.1`); this release adds the Rust engine.

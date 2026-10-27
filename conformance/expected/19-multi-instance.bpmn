@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Multi-instance" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Multi-instance">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:scriptTask id="podwojenie" name="Podwojenie">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=x * 2" resultVariable="y" />
+      </bpmn:extensionElements>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=pozycje" inputElement="x" outputCollection="wyniki" outputElement="=y" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="ocena" name="Ocena recenzji">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true">
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="=recenzje" inputElement="recenzja" />
+        </bpmn:extensionElements>
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=numberOfCompletedInstances &gt;= 2</bpmn:completionCondition>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-podwojenie" sourceRef="s" targetRef="podwojenie" />
+    <bpmn:sequenceFlow id="f-podwojenie-ocena" sourceRef="podwojenie" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-e" sourceRef="ocena" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,51 @@
+[
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "'assignee' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "'priority' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 4,
+    "id": "ocena",
+    "message": "'inputs' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 5,
+    "id": "wysylka",
+    "message": "'retries' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 6,
+    "id": "opracowanie",
+    "message": "'active' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 6,
+    "id": "opracowanie",
+    "message": "'wait' belongs to the executable layer and is ignored because the document is not executable"
+  },
+  {
+    "code": "R055",
+    "severity": "warning",
+    "line": 8,
+    "id": "e",
+    "message": "'type' belongs to the executable layer and is ignored because the document is not executable"
+  }
+]

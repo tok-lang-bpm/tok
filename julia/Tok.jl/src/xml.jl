@@ -14,7 +14,7 @@ const TAGS = Dict(
     "throw" => "intermediateThrowEvent", "boundary" => "boundaryEvent",
     "task" => "task", "user" => "userTask", "service" => "serviceTask", "manual" => "manualTask",
     "script" => "scriptTask", "rule" => "businessRuleTask", "send" => "sendTask", "receive" => "receiveTask",
-    "call" => "callActivity", "sub" => "subProcess", "eventsub" => "subProcess",
+    "call" => "callActivity", "sub" => "subProcess", "eventsub" => "subProcess", "adhoc" => "adHocSubProcess",
     "xor" => "exclusiveGateway", "and" => "parallelGateway", "or" => "inclusiveGateway",
     "eventgw" => "eventBasedGateway",
 )
@@ -94,8 +94,40 @@ function slug(text::AbstractString)
     return t
 end
 
+const REST_CONNECTOR_TYPE = "io.camunda:http-json:1"
+const BINDINGS = Dict("latest" => "latest", "deployment" => "deployment", "version-tag" => "versionTag")
+
+"Pairs `left SEP right` separated by `;` (inputs, outputs, headers)."
+function split_pairs(text, sep::AbstractString)
+    out = Tuple{String,String}[]
+    text === nothing && return out
+    for item in split(text, ";")
+        item = pystrip(item)
+        if !isempty(item) && occursin(sep, item)
+            left, right = split(item, sep; limit=2)
+            push!(out, (pystrip(left), pystrip(right)))
+        end
+    end
+    return out
+end
+
+"Listener entries `event: type (retries)` separated by `;`."
+function parse_listeners(text)
+    out = Tuple{String,String,MaybeStr}[]
+    text === nothing && return out
+    for item in split(text, ";")
+        m = match(r"^([a-z]+)\s*:\s*(.+?)(?:\s*\((\d+)\))?$", pystrip(item))
+        if m !== nothing
+            push!(out, (String(m.captures[1]), pystrip(m.captures[2]),
+                        m.captures[3] === nothing ? nothing : String(m.captures[3])))
+        end
+    end
+    return out
+end
+
 function timer_kind(v::AbstractString)
     v = pystrip(v)
+    startswith(v, "=") && return "timeDuration"
     startswith(v, "R") && return "timeCycle"
     startswith(v, "P") && return "timeDuration"
     return "timeDate"
@@ -191,6 +223,13 @@ function run!(ex::Exporter)
     for (pid, name, executable, pool) in processes
         proc = bsub!(root, "process", "id" => pid, "name" => name, "isExecutable" => executable ? "true" : "false")
         ex.containers[pid] = proc
+        tag = pool !== nothing ? get(pool.attrs, "version-tag", nothing) : nothing
+        if !nonempty(tag)
+            tag = (pool === nothing || length(processes) == 1) ? get(d.attrs, "version-tag", nothing) : nothing
+        end
+        if ex.camunda && executable && nonempty(tag)
+            subelem!(ext!(proc), ZEEBE_NS, "versionTag", "value" => tag)
+        end
         if pool !== nothing
             lanes = [d.lanes[c] for c in pool.children if haskey(d.lanes, c)]
             if !isempty(lanes)
@@ -208,6 +247,8 @@ function run!(ex::Exporter)
     export_flows!(ex)
     export_data!(ex)
     export_artifacts!(ex)
+    compensation_links!(ex)
+    order_adhoc!(ex)
 
     decl = XElem[]
     for kind in ("message", "signal", "error", "escalation")
@@ -262,6 +303,9 @@ function export_lane!(ex::Exporter, parent::XElem, lane::Elem)
         if haskey(d.nodes, c)
             r = bsub!(e, "flowNodeRef")
             r.text = c
+            if haskey(d.nodes[c].attrs, "compensate")
+                bsub!(e, "flowNodeRef").text = compensation_id(c)
+            end
         end
     end
     if !isempty(sublanes)
@@ -288,7 +332,13 @@ function export_node!(ex::Exporter, container::XElem, n::Elem)
     end
     n.kind == "start" && has(n, "noninterrupting") && setattr!(e, "isInterrupting", "false")
     n.kind == "eventsub" && setattr!(e, "triggeredByEvent", "true")
-    n.kind == "call" && haskey(a, "process") && setattr!(e, "calledElement", a["process"])
+    if n.kind == "call" && haskey(a, "process") && !startswith(a["process"], "=")
+        setattr!(e, "calledElement", a["process"])
+    end
+    if n.kind == "adhoc"
+        has(n, "sequential") && setattr!(e, "ordering", "Sequential")
+        ex.camunda && has(n, "wait") && setattr!(e, "cancelRemainingInstances", "false")
+    end
     has(n, "compensation") && setattr!(e, "isForCompensation", "true")
     if n.kind in ("send", "receive") && haskey(a, "message")
         setattr!(e, "messageRef", declare!(ex, "message", a["message"]).id)
@@ -302,16 +352,167 @@ function export_node!(ex::Exporter, container::XElem, n::Elem)
     n.kind in EVENT_KINDS && export_event_definition!(ex, e, n)
     if has(n, "loop")
         bsub!(e, "standardLoopCharacteristics")
-    elseif has(n, "parallel") || has(n, "sequential")
-        bsub!(e, "multiInstanceLoopCharacteristics", "isSequential" => has(n, "sequential") ? "true" : "false")
+    elseif n.kind != "adhoc" && (has(n, "parallel") || has(n, "sequential"))
+        mi = bsub!(e, "multiInstanceLoopCharacteristics", "isSequential" => has(n, "sequential") ? "true" : "false")
+        if ex.camunda && haskey(a, "collection")
+            lc = Pair{String,String}["inputCollection" => feel(ex, a["collection"])]
+            haskey(a, "item") && push!(lc, "inputElement" => a["item"])
+            haskey(a, "output") && push!(lc, "outputCollection" => a["output"])
+            haskey(a, "output-item") && push!(lc, "outputElement" => feel(ex, a["output-item"]))
+            subelem!(ext!(mi), ZEEBE_NS, "loopCharacteristics", lc...)
+        end
+        if ex.camunda && haskey(a, "until")
+            c = bsub!(mi, "completionCondition")
+            setattr!(c, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
+            c.text = feel(ex, a["until"])
+        end
     end
     if n.kind in SUB_KINDS
         ex.containers[n.id] = e
         export_block!(ex, e, n.children)
+        if n.kind == "adhoc" && ex.camunda && haskey(a, "until")
+            c = bsub!(e, "completionCondition")
+            setattr!(c, "type", "bpmn:tFormalExpression"; ns=XSI_NS)
+            c.text = feel(ex, a["until"])
+        end
+    end
+    if haskey(a, "compensate")
+        cid = compensation_id(n.id)
+        b = bsub!(container, "boundaryEvent", "id" => cid, "attachedToRef" => n.id)
+        bsub!(b, "compensateEventDefinition", "id" => "$(cid)-def")
+    end
+end
+
+compensation_id(activity_id) = "$(activity_id)-compensate"
+
+function binding!(attrs::Vector{Pair{String,String}}, a::Dict{String,String})
+    haskey(a, "binding") && push!(attrs, "bindingType" => get(BINDINGS, a["binding"], a["binding"]))
+    haskey(a, "version") && push!(attrs, "versionTag" => a["version"])
+    return attrs
+end
+
+function node_executable(ex::Exporter, n::Elem)
+    d = ex.doc
+    is_executable(d) && return true
+    return any(p -> p.id == n.pool && has(p, "executable"), d.pools)
+end
+
+function io_mapping!(e::XElem, inputs, outputs)
+    x = ext!(e)
+    box = nothing
+    for c in x.children
+        if c.ns == ZEEBE_NS && c.name == "ioMapping"
+            box = c
+            break
+        end
+    end
+    box === nothing && (box = subelem!(x, ZEEBE_NS, "ioMapping"))
+    for (target, source) in inputs
+        subelem!(box, ZEEBE_NS, "input", "source" => source, "target" => target)
+    end
+    for (target, source) in outputs
+        subelem!(box, ZEEBE_NS, "output", "source" => source, "target" => target)
     end
 end
 
 function export_zeebe!(ex::Exporter, e::XElem, n::Elem)
+    node_executable(ex, n) || return export_zeebe_01!(ex, e, n)
+    a = n.attrs
+    if n.kind == "user"
+        x = ext!(e)
+        subelem!(x, ZEEBE_NS, "userTask")
+        if haskey(a, "form")
+            subelem!(x, ZEEBE_NS, "formDefinition", binding!(Pair{String,String}["formId" => a["form"]], a)...)
+        end
+        assign = Pair{String,String}[]
+        for (key, attr) in (("assignee", "assignee"), ("candidate-users", "candidateUsers"),
+                            ("candidate-groups", "candidateGroups"))
+            haskey(a, key) && push!(assign, attr => a[key])
+        end
+        isempty(assign) || subelem!(x, ZEEBE_NS, "assignmentDefinition", assign...)
+        sched = Pair{String,String}[]
+        for (key, attr) in (("due", "dueDate"), ("follow-up", "followUpDate"))
+            haskey(a, key) && push!(sched, attr => a[key])
+        end
+        isempty(sched) || subelem!(x, ZEEBE_NS, "taskSchedule", sched...)
+        haskey(a, "priority") && subelem!(x, ZEEBE_NS, "priorityDefinition", "priority" => a["priority"])
+    elseif n.kind == "start" && haskey(a, "form")
+        subelem!(ext!(e), ZEEBE_NS, "formDefinition", binding!(Pair{String,String}["formId" => a["form"]], a)...)
+    elseif n.kind == "rule" && haskey(a, "decision")
+        res = nonempty(get(a, "result", nothing)) ? a["result"] : default_result(ex, a["decision"])
+        subelem!(ext!(e), ZEEBE_NS, "calledDecision",
+                 binding!(Pair{String,String}["decisionId" => a["decision"], "resultVariable" => res], a)...)
+    elseif n.kind == "script" && haskey(a, "expr")
+        subelem!(ext!(e), ZEEBE_NS, "script", "expression" => feel(ex, a["expr"]),
+                 "resultVariable" => get(a, "result", "result"))
+    elseif n.kind == "call" && haskey(a, "process")
+        ce = binding!(Pair{String,String}["processId" => a["process"]], a)
+        get(a, "child-vars", nothing) == "none" && push!(ce, "propagateAllChildVariables" => "false")
+        get(a, "parent-vars", nothing) == "none" && push!(ce, "propagateAllParentVariables" => "false")
+        haskey(a, "business-id") && push!(ce, "businessId" => a["business-id"])
+        subelem!(ext!(e), ZEEBE_NS, "calledElement", ce...)
+    elseif n.kind == "adhoc" && haskey(a, "active")
+        subelem!(ext!(e), ZEEBE_NS, "adHoc", "activeElementsCollection" => feel(ex, a["active"]))
+    end
+    job_kinds = haskey(a, "message") ? ("service", "send", "throw", "end") : ("service", "send")
+    inputs = split_pairs(get(a, "inputs", nothing), "=")
+    headers = split_pairs(get(a, "headers", nothing), ":")
+    if n.kind == "service" && get(a, "connector", nothing) == "rest"
+        td = Pair{String,String}["type" => REST_CONNECTOR_TYPE]
+        haskey(a, "retries") && push!(td, "retries" => a["retries"])
+        subelem!(ext!(e), ZEEBE_NS, "taskDefinition", td...)
+        conn = Tuple{String,String}[("authentication.type", "noAuth"), ("method", get(a, "method", "GET")),
+                                    ("url", get(a, "url", ""))]
+        for (key, target) in (("headers-in", "headers"), ("query", "queryParameters"), ("body", "body"))
+            haskey(a, key) && push!(conn, (target, a[key]))
+        end
+        io_mapping!(e, conn, Tuple{String,String}[])
+        if haskey(a, "result")
+            headers = vcat(Tuple{String,String}[("resultVariable", a["result"])], headers)
+        end
+    elseif n.kind in job_kinds && haskey(a, "type")
+        td = Pair{String,String}["type" => a["type"]]
+        haskey(a, "retries") && push!(td, "retries" => a["retries"])
+        subelem!(ext!(e), ZEEBE_NS, "taskDefinition", td...)
+    end
+    if !isempty(inputs) || haskey(a, "outputs")
+        io_mapping!(e, [(t, feel(ex, src)) for (t, src) in inputs],
+                    [(t, feel(ex, src)) for (t, src) in split_pairs(get(a, "outputs", nothing), "=")])
+    end
+    if !isempty(headers)
+        th = subelem!(ext!(e), ZEEBE_NS, "taskHeaders")
+        for (k, v) in headers
+            subelem!(th, ZEEBE_NS, "header", "key" => k, "value" => v)
+        end
+    end
+    if haskey(a, "events") && n.kind in ("start", "catch", "boundary")
+        subelem!(ext!(e), ZEEBE_NS, "conditionalFilter", "variableEvents" => a["events"])
+    end
+    if haskey(a, "listeners")
+        execl = Vector{Pair{String,String}}[]
+        taskl = Vector{Pair{String,String}}[]
+        for (ev, typ, retries) in parse_listeners(a["listeners"])
+            item = Pair{String,String}["eventType" => ev, "type" => typ]
+            retries === nothing || push!(item, "retries" => retries)
+            push!(ev in ("start", "end") ? execl : taskl, item)
+        end
+        if !isempty(execl)
+            box = subelem!(ext!(e), ZEEBE_NS, "executionListeners")
+            for item in execl
+                subelem!(box, ZEEBE_NS, "executionListener", item...)
+            end
+        end
+        if !isempty(taskl)
+            box = subelem!(ext!(e), ZEEBE_NS, "taskListeners")
+            for item in taskl
+                subelem!(box, ZEEBE_NS, "taskListener", item...)
+            end
+        end
+    end
+end
+
+"The executable profile of language 0.1 (used where the process itself is not executable)."
+function export_zeebe_01!(ex::Exporter, e::XElem, n::Elem)
     a = n.attrs
     if n.kind == "user"
         x = ext!(e)
@@ -366,10 +567,36 @@ function export_event_definition!(ex::Exporter, e::XElem, n::Elem)
         end
         return
     end
-    for flag in TRIGGER_FLAGS
+    for flag in (TRIGGER_FLAGS..., CATCH_ALL_FLAGS...)
         if has(n, flag)
-            bsub!(e, DEFINITION[flag], "id" => "$(n.id)-def")
+            df = bsub!(e, DEFINITION[flag], "id" => "$(n.id)-def")
+            flag == "compensate" && haskey(a, "activity") && setattr!(df, "activityRef", a["activity"])
             return
+        end
+    end
+end
+
+"Associations from generated compensation boundary events to their handlers."
+function compensation_links!(ex::Exporter)
+    d = ex.doc
+    for n in ovalues(d.nodes)
+        h = get(n.attrs, "compensate", nothing)
+        (h === nothing || !haskey(d.nodes, h)) && continue
+        cont = n.scope === nothing ? nothing : get(ex.containers, n.scope, nothing)
+        cont === nothing && continue
+        cid = compensation_id(n.id)
+        bsub!(cont, "association", "id" => "$(cid)-assoc", "associationDirection" => "One",
+              "sourceRef" => cid, "targetRef" => h)
+    end
+end
+
+"completionCondition is the last child of an ad-hoc sub-process (BPMN schema order)."
+function order_adhoc!(ex::Exporter)
+    iter_elems(ex.root) do e
+        if e.ns == BPMN_NS && e.name == "adHocSubProcess"
+            conds = [c for c in e.children if c.ns == BPMN_NS && c.name == "completionCondition"]
+            filter!(c -> !(c.ns == BPMN_NS && c.name == "completionCondition"), e.children)
+            append!(e.children, conds)
         end
     end
 end

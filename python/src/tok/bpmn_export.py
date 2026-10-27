@@ -18,7 +18,7 @@ TAGS = {
     "throw": "intermediateThrowEvent", "boundary": "boundaryEvent",
     "task": "task", "user": "userTask", "service": "serviceTask", "manual": "manualTask",
     "script": "scriptTask", "rule": "businessRuleTask", "send": "sendTask", "receive": "receiveTask",
-    "call": "callActivity", "sub": "subProcess", "eventsub": "subProcess",
+    "call": "callActivity", "sub": "subProcess", "eventsub": "subProcess", "adhoc": "adHocSubProcess",
     "xor": "exclusiveGateway", "and": "parallelGateway", "or": "inclusiveGateway", "eventgw": "eventBasedGateway",
 }
 DEFINITION = {
@@ -39,8 +39,34 @@ def slug(text):
     return t
 
 
+REST_CONNECTOR_TYPE = "io.camunda:http-json:1"
+BINDINGS = {"latest": "latest", "deployment": "deployment", "version-tag": "versionTag"}
+
+
+def split_pairs(text, sep):
+    out = []
+    for item in (text or "").split(";"):
+        item = item.strip()
+        if item and sep in item:
+            left, right = item.split(sep, 1)
+            out.append((left.strip(), right.strip()))
+    return out
+
+
+def parse_listeners(text):
+    import re
+    out = []
+    for item in (text or "").split(";"):
+        m = re.match(r"^([a-z]+)\s*:\s*(.+?)(?:\s*\((\d+)\))?$", item.strip())
+        if m:
+            out.append((m.group(1), m.group(2).strip(), m.group(3)))
+    return out
+
+
 def timer_kind(value):
     v = value.strip()
+    if v.startswith("="):
+        return "timeDuration"
     if v.startswith("R"):
         return "timeCycle"
     if v.startswith("P"):
@@ -127,6 +153,10 @@ class Exporter:
         for pid, name, executable, pool in processes:
             proc = self.sub(root, "process", id=pid, name=name, isExecutable="true" if executable else "false")
             self.containers[pid] = proc
+            tag = (pool.attrs.get("version-tag") if pool is not None else None) or \
+                (d.attrs.get("version-tag") if pool is None or len(processes) == 1 else None)
+            if self.camunda and executable and tag:
+                ET.SubElement(self.ext(proc), Z + "versionTag", {"value": tag})
             if pool is not None:
                 lanes = [d.lanes[c] for c in pool.children if c in d.lanes]
                 if lanes:
@@ -140,6 +170,8 @@ class Exporter:
         self.flows()
         self.data()
         self.artifacts()
+        self.compensation_links()
+        self.order_adhoc()
 
         # declarations go before the collaboration and processes
         decl = []
@@ -180,6 +212,8 @@ class Exporter:
         for c in lane.children:
             if c in d.nodes:
                 self.sub(e, "flowNodeRef").text = c
+                if "compensate" in d.nodes[c].attrs:
+                    self.sub(e, "flowNodeRef").text = self.compensation_id(c)
         if sublanes:
             cls = self.sub(e, "childLaneSet", id="%s-lanes" % lane.id)
             for s in sublanes:
@@ -204,8 +238,13 @@ class Exporter:
             e.set("isInterrupting", "false")
         if n.kind == "eventsub":
             e.set("triggeredByEvent", "true")
-        if n.kind == "call" and "process" in a:
+        if n.kind == "call" and "process" in a and not a["process"].startswith("="):
             e.set("calledElement", a["process"])
+        if n.kind == "adhoc":
+            if n.has("sequential"):
+                e.set("ordering", "Sequential")
+            if self.camunda and n.has("wait"):
+                e.set("cancelRemainingInstances", "false")
         if n.has("compensation"):
             e.set("isForCompensation", "true")
         if n.kind in ("send", "receive") and "message" in a:
@@ -221,13 +260,146 @@ class Exporter:
             self.event_definition(e, n)
         if n.has("loop"):
             self.sub(e, "standardLoopCharacteristics")
-        elif n.has("parallel") or n.has("sequential"):
-            self.sub(e, "multiInstanceLoopCharacteristics", isSequential="true" if n.has("sequential") else "false")
+        elif n.kind != "adhoc" and (n.has("parallel") or n.has("sequential")):
+            mi = self.sub(e, "multiInstanceLoopCharacteristics", isSequential="true" if n.has("sequential") else "false")
+            if self.camunda and "collection" in a:
+                lc = {"inputCollection": self.feel(a["collection"])}
+                if "item" in a:
+                    lc["inputElement"] = a["item"]
+                if "output" in a:
+                    lc["outputCollection"] = a["output"]
+                if "output-item" in a:
+                    lc["outputElement"] = self.feel(a["output-item"])
+                ET.SubElement(self.ext(mi), Z + "loopCharacteristics", lc)
+            if self.camunda and "until" in a:
+                c = self.sub(mi, "completionCondition")
+                c.set("{%s}type" % XSI, "bpmn:tFormalExpression")
+                c.text = self.feel(a["until"])
         if n.kind in M.SUB_KINDS:
             self.containers[n.id] = e
             self.block(e, n.children)
+            if n.kind == "adhoc" and self.camunda and "until" in a:
+                c = self.sub(e, "completionCondition")
+                c.set("{%s}type" % XSI, "bpmn:tFormalExpression")
+                c.text = self.feel(a["until"])
+        if "compensate" in a:
+            b = self.sub(container, "boundaryEvent", id=self.compensation_id(n.id), attachedToRef=n.id)
+            self.sub(b, "compensateEventDefinition", id="%s-def" % self.compensation_id(n.id))
+
+    @staticmethod
+    def compensation_id(activity_id):
+        return "%s-compensate" % activity_id
+
+    def binding(self, attrs, a):
+        if "binding" in a:
+            attrs["bindingType"] = BINDINGS.get(a["binding"], a["binding"])
+        if "version" in a:
+            attrs["versionTag"] = a["version"]
+        return attrs
 
     def zeebe(self, e, n):
+        a = n.attrs
+        if not self.node_executable(n):
+            # only the 0.1 executable profile applies to processes that are not executable
+            return self.zeebe_01(e, n)
+        x = None
+        if n.kind == "user":
+            x = self.ext(e)
+            ET.SubElement(x, Z + "userTask")
+            if "form" in a:
+                ET.SubElement(x, Z + "formDefinition", self.binding({"formId": a["form"]}, a))
+            assign = {}
+            for key, attr in (("assignee", "assignee"), ("candidate-users", "candidateUsers"),
+                              ("candidate-groups", "candidateGroups")):
+                if key in a:
+                    assign[attr] = a[key]
+            if assign:
+                ET.SubElement(x, Z + "assignmentDefinition", assign)
+            sched = {}
+            for key, attr in (("due", "dueDate"), ("follow-up", "followUpDate")):
+                if key in a:
+                    sched[attr] = a[key]
+            if sched:
+                ET.SubElement(x, Z + "taskSchedule", sched)
+            if "priority" in a:
+                ET.SubElement(x, Z + "priorityDefinition", {"priority": a["priority"]})
+        elif n.kind == "start" and "form" in a:
+            ET.SubElement(self.ext(e), Z + "formDefinition", self.binding({"formId": a["form"]}, a))
+        elif n.kind == "rule" and "decision" in a:
+            res = a.get("result") or self.default_result(a["decision"])
+            ET.SubElement(self.ext(e), Z + "calledDecision",
+                          self.binding({"decisionId": a["decision"], "resultVariable": res}, a))
+        elif n.kind == "script" and "expr" in a:
+            ET.SubElement(self.ext(e), Z + "script",
+                          {"expression": self.feel(a["expr"]), "resultVariable": a.get("result", "result")})
+        elif n.kind == "call" and "process" in a:
+            ce = self.binding({"processId": a["process"]}, a)
+            if a.get("child-vars") == "none":
+                ce["propagateAllChildVariables"] = "false"
+            if a.get("parent-vars") == "none":
+                ce["propagateAllParentVariables"] = "false"
+            if "business-id" in a:
+                ce["businessId"] = a["business-id"]
+            ET.SubElement(self.ext(e), Z + "calledElement", ce)
+        elif n.kind == "adhoc" and "active" in a:
+            ET.SubElement(self.ext(e), Z + "adHoc", {"activeElementsCollection": self.feel(a["active"])})
+        job_kinds = ("service", "send") + (("throw", "end") if "message" in a else ())
+        inputs = list(split_pairs(a.get("inputs"), "="))
+        headers = list(split_pairs(a.get("headers"), ":"))
+        if n.kind == "service" and a.get("connector") == "rest":
+            td = {"type": REST_CONNECTOR_TYPE}
+            if "retries" in a:
+                td["retries"] = a["retries"]
+            ET.SubElement(self.ext(e), Z + "taskDefinition", td)
+            conn = [("authentication.type", "noAuth"), ("method", a.get("method", "GET")), ("url", a.get("url", ""))]
+            for key, target in (("headers-in", "headers"), ("query", "queryParameters"), ("body", "body")):
+                if key in a:
+                    conn.append((target, a[key]))
+            self.io_mapping(e, conn, [], static_sources=True)
+            if "result" in a:
+                headers = [("resultVariable", a["result"])] + headers
+        elif n.kind in job_kinds and "type" in a:
+            td = {"type": a["type"]}
+            if "retries" in a:
+                td["retries"] = a["retries"]
+            ET.SubElement(self.ext(e), Z + "taskDefinition", td)
+        if inputs or "outputs" in a:
+            self.io_mapping(e, [(t, self.feel(src)) for t, src in inputs],
+                            [(t, self.feel(src)) for t, src in split_pairs(a.get("outputs"), "=")])
+        if headers:
+            th = ET.SubElement(self.ext(e), Z + "taskHeaders")
+            for k, v in headers:
+                ET.SubElement(th, Z + "header", {"key": k, "value": v})
+        if "events" in a and n.kind in ("start", "catch", "boundary"):
+            ET.SubElement(self.ext(e), Z + "conditionalFilter", {"variableEvents": a["events"]})
+        if "listeners" in a:
+            execl, taskl = [], []
+            for ev, typ, retries in parse_listeners(a["listeners"]):
+                item = {"eventType": ev, "type": typ}
+                if retries:
+                    item["retries"] = retries
+                (execl if ev in ("start", "end") else taskl).append(item)
+            if execl:
+                box = ET.SubElement(self.ext(e), Z + "executionListeners")
+                for item in execl:
+                    ET.SubElement(box, Z + "executionListener", item)
+            if taskl:
+                box = ET.SubElement(self.ext(e), Z + "taskListeners")
+                for item in taskl:
+                    ET.SubElement(box, Z + "taskListener", item)
+
+    def io_mapping(self, e, inputs, outputs, static_sources=False):
+        x = self.ext(e)
+        box = x.find(Z + "ioMapping")
+        if box is None:
+            box = ET.SubElement(x, Z + "ioMapping")
+        for target, source in inputs:
+            ET.SubElement(box, Z + "input", {"source": source, "target": target})
+        for target, source in outputs:
+            ET.SubElement(box, Z + "output", {"source": source, "target": target})
+
+    def zeebe_01(self, e, n):
+        """The executable profile of language 0.1 (used where the process itself is not executable)."""
         a = n.attrs
         if n.kind == "user":
             x = self.ext(e)
@@ -244,6 +416,32 @@ class Exporter:
                           {"expression": self.feel(a["expr"]), "resultVariable": a.get("result", "result")})
         elif n.kind in ("service", "send") and "type" in a:
             ET.SubElement(self.ext(e), Z + "taskDefinition", {"type": a["type"]})
+
+    def node_executable(self, n):
+        d = self.doc
+        if d.executable:
+            return True
+        return any(p.id == n.pool and p.has("executable") for p in d.pools)
+
+    def compensation_links(self):
+        """Associations from generated compensation boundary events to their handlers."""
+        d = self.doc
+        for n in d.nodes.values():
+            h = n.attrs.get("compensate")
+            if h is None or h not in d.nodes:
+                continue
+            cont = self.containers.get(n.scope)
+            if cont is None:
+                continue
+            self.sub(cont, "association", id="%s-assoc" % self.compensation_id(n.id),
+                     associationDirection="One", sourceRef=self.compensation_id(n.id), targetRef=h)
+
+    def order_adhoc(self):
+        """completionCondition is the last child of an ad-hoc sub-process (BPMN schema order)."""
+        for e in self.root.iter(B + "adHocSubProcess"):
+            for c in e.findall(B + "completionCondition"):
+                e.remove(c)
+                e.append(c)
 
     def default_result(self, decision_id):
         dec = self.doc.decisions.get(decision_id)
@@ -279,9 +477,11 @@ class Exporter:
             elif key == "link":
                 d.set("name", a["link"])
             return
-        for flag in M.TRIGGER_FLAGS:
+        for flag in M.TRIGGER_FLAGS + M.CATCH_ALL_FLAGS:
             if n.has(flag):
-                self.sub(e, DEFINITION[flag], id="%s-def" % n.id)
+                d = self.sub(e, DEFINITION[flag], id="%s-def" % n.id)
+                if flag == "compensate" and "activity" in a:
+                    d.set("activityRef", a["activity"])
                 return
 
     def flows(self):

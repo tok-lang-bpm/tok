@@ -56,7 +56,7 @@ class FeelExpressionTest(unittest.TestCase):
         self.assertEqual(feel.check_expr("cena >")[0], "F002")
         self.assertEqual(feel.check_expr("{a: 1}")[0], "F001")
         self.assertEqual(feel.check_expr("for x in y return x")[0], "F001")
-        self.assertEqual(feel.check_expr("today()")[0], "F001")
+        self.assertEqual(feel.check_expr("sqrt(4)")[0], "F001")
         self.assertEqual(feel.check_expr("2 ** 3")[0], "F001")
         self.assertEqual(feel.check_expr("")[0], "F002")
 

@@ -1,0 +1,22 @@
+tok 0.1 "Oczekiwanie na odpowiedź"
+
+start s
+send z "Wysłanie zamówienia" message="Zamówienie"
+eventgw g "Co nastąpi pierwsze?"
+catch k "Książka dotarła" message="Książka"
+catch o "Odmowa" message="Odmowa"
+catch t "Minęło 14 dni" timer=P14D
+catch c "Zmiana statusu" condition="status = \"zamknięte\""
+throw l1 "Do strony 2" link="strona2"
+end e1
+end e2 "Koniec bez książki" terminate
+
+flow s -> z -> g
+flow g -> k
+flow g -> o
+flow g -> t
+flow g -> c
+flow k -> e1
+flow o -> e2
+flow t -> l1
+flow c -> e2

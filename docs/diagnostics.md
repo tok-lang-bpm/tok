@@ -44,6 +44,12 @@ Every diagnostic has a stable code, a severity and a line number. `tok check --l
 | R031 | error | '{id}' is declared at top level, but the document has pools; move it into a pool | „{id}” zadeklarowano poza basenem, a dokument ma baseny; przenieś go do basenu |
 | R032 | error | boundary event '{id}' needs on=ACTIVITY | zdarzenie graniczne „{id}” wymaga on=CZYNNOŚĆ |
 | R040 | error | '{keyword}' is not available at level {level} | „{keyword}” nie jest dostępne na poziomie {level} |
+| R050 | error | ad-hoc sub-process '{id}' must contain at least one activity and no start or end events | podproces ad hoc „{id}” musi zawierać co najmniej jedną czynność i żadnych zdarzeń początkowych ani końcowych |
+| R051 | error | compensation handler without the flag `compensation`, or with sequence flows | procedura kompensacji bez flagi `compensation` albo z przepływami sekwencji |
+| R052 | error | events= is not allowed on the root-level start event '{id}' | events= nie może wystąpić na zdarzeniu początkowym procesu „{id}” |
+| R053 | error | malformed {key}="…" list: '{item}' (expected {expected}) | niepoprawna lista {key}="…": „{item}” (oczekiwano: {expected_pl}) |
+| R054 | error | `collection=` without `parallel`/`sequential`; `output=` without `output-item=` or vice versa | `collection=` bez `parallel`/`sequential`; `output=` bez `output-item=` albo odwrotnie |
+| R055 | warning | '{key}' belongs to the executable layer and is ignored because the document is not executable | „{key}” należy do warstwy wykonywalnej i jest pomijany, bo dokument nie jest wykonywalny |
 
 ## Decision tables (D)
 
@@ -90,6 +96,9 @@ Checked when the header or a pool has the flag `executable`. The codes are the s
 | C040 | error | script task without `expr=` |
 | C052 | error | message catch event, message boundary event or receive task without `correlation=` |
 | C070 | error | flow leaving an `xor`/`or` gateway with several outgoing flows has neither `when=` nor `default` |
+| C022 | error | message throw or end event without `type=` (Camunda executes it as a job) |
+| C090 | error | static `due=`/`follow-up=` that is not an ISO 8601 date-time with a zone |
+| C091 | error | static `priority=` outside the integers 0–100 |
 
 ## BPMN 2.0 rules (E, W, L)
 

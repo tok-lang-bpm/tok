@@ -1,0 +1,21 @@
+tok 0.3 "Catch-all errors and escalations"
+
+start s "Start"
+sub praca "Praca"
+  start s2
+  throw zgloszenie "Zgłoszenie" escalation="Opóźnienie"
+  end e2 "Błąd" error="Brak danych" code="E42"
+boundary blad "Dowolny błąd" error on=praca
+boundary eskal "Dowolna eskalacja" noninterrupting escalation on=praca
+eventsub awaria "Awaria"
+  start s3 "Dowolny błąd" error
+  end e3
+end e "Koniec"
+end e4 "Obsłużono błąd"
+end e5 "Obsłużono eskalację"
+
+flow s2 -> zgloszenie -> e2
+flow s3 -> e3
+flow s -> praca -> e
+flow blad -> e4
+flow eskal -> e5

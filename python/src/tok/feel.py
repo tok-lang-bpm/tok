@@ -47,7 +47,20 @@ FUNCTIONS = {
     "abs": (1, 1), "floor": (1, 1), "ceiling": (1, 1), "round half up": (2, 2),
     "min": (1, 99), "max": (1, 99), "sum": (1, 99), "count": (1, 1),
     "string": (1, 1), "number": (1, 1), "date": (1, 1), "not": (1, 1),
+    # temporal helpers used by schedules of user tasks (language 0.3)
+    "now": (0, 0), "today": (0, 0), "duration": (1, 1),
 }
+_DURATION_RE = re.compile(r"^(-)?P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$")
+
+
+def parse_duration(text):
+    """ISO 8601 days-and-time duration (PnDTnHnMnS) -> datetime.timedelta, or None."""
+    m = _DURATION_RE.match((text or "").strip())
+    if not m or text.strip() in ("P", "PT", "-P", "-PT"):
+        return None
+    days, hours, minutes, seconds = (float(x) if x else 0.0 for x in m.groups()[1:])
+    td = datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)
+    return -td if m.group(1) else td
 MULTIWORD = sorted([f.split(" ") for f in FUNCTIONS if " " in f], key=len, reverse=True)
 
 # ------------------------------------------------------------------ tokenizer
@@ -642,6 +655,11 @@ def _arith(op, a, b):
         return None
     if op == "+" and isinstance(a, str) and isinstance(b, str):
         return a + b
+    if isinstance(b, datetime.timedelta) and isinstance(a, (datetime.date, datetime.timedelta)) \
+            and op in ("+", "-"):
+        return a + b if op == "+" else a - b
+    if isinstance(a, datetime.timedelta) and isinstance(b, datetime.date) and op == "+":
+        return b + a
     if not (_is_num(a) and _is_num(b)):
         return None
     try:
@@ -740,6 +758,12 @@ def _call(f, args):
             return D(v.strip())
         except decimal.InvalidOperation:
             return None
+    if f == "now":
+        return datetime.datetime.now(datetime.timezone.utc)
+    if f == "today":
+        return datetime.date.today()
+    if f == "duration":
+        return parse_duration(args[0]) if isinstance(args[0], str) else None
     if f == "date":
         v = args[0]
         if not isinstance(v, str):

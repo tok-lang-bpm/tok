@@ -20,7 +20,54 @@ const QUOTED_KEYS: &[&str] = &[
     "link",
     "code",
     "start",
+    // language 0.3: expressions, lists and values of the executable layer
+    "collection",
+    "output-item",
+    "until",
+    "active",
+    "inputs",
+    "outputs",
+    "headers",
+    "listeners",
+    "events",
+    "url",
+    "body",
+    "query",
+    "headers-in",
+    "assignee",
+    "candidate-users",
+    "candidate-groups",
+    "due",
+    "follow-up",
+    "business-id",
+    "version",
+    "version-tag",
 ];
+
+const EXECUTION_LISTENER_EVENTS: &[&str] = &["start", "end"];
+
+/// Execution listeners first, then task listeners, each group in written order (canonical form).
+pub fn normalize_listeners(text: &str) -> String {
+    let items: Vec<&str> = text
+        .split(';')
+        .map(crate::pyutil::strip)
+        .filter(|x| !x.is_empty())
+        .collect();
+    let event = |x: &str| crate::pyutil::strip(x.split(':').next().unwrap_or("")).to_string();
+    let first: Vec<&str> = items
+        .iter()
+        .copied()
+        .filter(|x| EXECUTION_LISTENER_EVENTS.contains(&event(x).as_str()))
+        .collect();
+    let rest: Vec<&str> = items
+        .iter()
+        .copied()
+        .filter(|x| !first.contains(x))
+        .collect();
+    let mut all = first;
+    all.extend(rest);
+    all.join("; ")
+}
 
 fn bare_core(v: &str) -> bool {
     let ch: Vec<char> = v.chars().collect();
@@ -74,6 +121,13 @@ pub fn q(text: &str) -> String {
 }
 
 fn value(key: &str, v: &str) -> String {
+    let normalized;
+    let v = if key == "listeners" {
+        normalized = normalize_listeners(v);
+        normalized.as_str()
+    } else {
+        v
+    };
     if QUOTED_KEYS.contains(&key) || !bare(v) || v.contains("->") {
         q(v)
     } else {

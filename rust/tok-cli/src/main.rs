@@ -1,5 +1,5 @@
 //! Command line interface of the tok process language: the same commands, options and
-//! output as `python -m tok` (version 0.1.1). `sim` and `eval` arrive with tok 0.4.
+//! output as `python -m tok` (language 0.3). `sim` and `eval` arrive with tok 0.4.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;

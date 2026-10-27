@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Executable layer in a descriptive model" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3">
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:process id="process" name="Executable layer in a descriptive model" isExecutable="false">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:userTask id="ocena" name="Ocena" />
+    <bpmn:serviceTask id="wysylka" name="Wysyłka" />
+    <bpmn:adHocSubProcess id="opracowanie" name="Opracowanie">
+      <bpmn:task id="a" name="A" />
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="e" name="Koniec">
+      <bpmn:messageEventDefinition id="e-def" messageRef="Message_Odpowiedz" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-wysylka" sourceRef="ocena" targetRef="wysylka" />
+    <bpmn:sequenceFlow id="f-wysylka-opracowanie" sourceRef="wysylka" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-e" sourceRef="opracowanie" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="87" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ocena_di" bpmnElement="ocena">
+        <dc:Bounds x="116" y="65" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wysylka_di" bpmnElement="wysylka">
+        <dc:Bounds x="266" y="65" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="opracowanie_di" bpmnElement="opracowanie" isExpanded="true">
+        <dc:Bounds x="416" y="30" width="160" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a">
+        <dc:Bounds x="446" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="626" y="87" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-ocena_di" bpmnElement="f-s-ocena">
+        <di:waypoint x="66" y="105" />
+        <di:waypoint x="116" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-ocena-wysylka_di" bpmnElement="f-ocena-wysylka">
+        <di:waypoint x="216" y="105" />
+        <di:waypoint x="266" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wysylka-opracowanie_di" bpmnElement="f-wysylka-opracowanie">
+        <di:waypoint x="366" y="105" />
+        <di:waypoint x="416" y="105" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-opracowanie-e_di" bpmnElement="f-opracowanie-e">
+        <di:waypoint x="576" y="105" />
+        <di:waypoint x="626" y="105" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

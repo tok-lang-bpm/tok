@@ -1,0 +1,12 @@
+tok 0.3 "Variable mappings" executable
+
+start s "Start" outputs="inicjator = kto"
+service rejestracja "Rejestracja" type="rejestracja" inputs="numer = zgloszenie.id; pilne = priorytet > 70" outputs="sygnatura = wynik.sygnatura; nadawca.iban = konto"
+catch odpowiedz "Odpowiedź" message="Odpowiedź" correlation="numer" outputs="tresc = odpowiedz.tresc"
+sub obsluga "Obsługa" inputs="lokalna = 1"
+  start s2
+  end e2
+end e "Koniec"
+
+flow s -> rejestracja -> odpowiedz -> obsluga -> e
+flow s2 -> e2

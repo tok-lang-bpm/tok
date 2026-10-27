@@ -1,0 +1,9 @@
+[
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 5,
+    "id": "praca",
+    "message": "Zadanie użytkownika „praca” nie ma formularza (form=)."
+  }
+]

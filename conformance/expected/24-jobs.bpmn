@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Jobs" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Zawiadomienie" name="Zawiadomienie" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:process id="process" isExecutable="true" name="Jobs">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="powiadomienie" name="Powiadomienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition retries="5" type="email" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="szablon" value="odmowa" />
+          <zeebe:header key="jezyk" value="pl" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="wyslanie" messageRef="Message_Zamowienie" name="Wysłanie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition retries="2" type="wysylka" />
+      </bpmn:extensionElements>
+    </bpmn:sendTask>
+    <bpmn:intermediateThrowEvent id="zawiadomienie" name="Zawiadomienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="zawiadomienie" />
+      </bpmn:extensionElements>
+      <bpmn:messageEventDefinition id="zawiadomienie-def" messageRef="Message_Zawiadomienie" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" name="Wysłano">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="odpowiedz" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="kanal" value="poczta" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:messageEventDefinition id="e-def" messageRef="Message_Odpowiedz" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-powiadomienie" sourceRef="s" targetRef="powiadomienie" />
+    <bpmn:sequenceFlow id="f-powiadomienie-wyslanie" sourceRef="powiadomienie" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-zawiadomienie" sourceRef="wyslanie" targetRef="zawiadomienie" />
+    <bpmn:sequenceFlow id="f-zawiadomienie-e" sourceRef="zawiadomienie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

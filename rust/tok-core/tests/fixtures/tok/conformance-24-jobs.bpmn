@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Jobs" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Zawiadomienie" name="Zawiadomienie" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:process id="process" name="Jobs" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="powiadomienie" name="Powiadomienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="email" retries="5" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="szablon" value="odmowa" />
+          <zeebe:header key="jezyk" value="pl" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="wyslanie" name="Wysłanie" messageRef="Message_Zamowienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="wysylka" retries="2" />
+      </bpmn:extensionElements>
+    </bpmn:sendTask>
+    <bpmn:intermediateThrowEvent id="zawiadomienie" name="Zawiadomienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="zawiadomienie" />
+      </bpmn:extensionElements>
+      <bpmn:messageEventDefinition id="zawiadomienie-def" messageRef="Message_Zawiadomienie" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" name="Wysłano">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="odpowiedz" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="kanal" value="poczta" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:messageEventDefinition id="e-def" messageRef="Message_Odpowiedz" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-powiadomienie" sourceRef="s" targetRef="powiadomienie" />
+    <bpmn:sequenceFlow id="f-powiadomienie-wyslanie" sourceRef="powiadomienie" targetRef="wyslanie" />
+    <bpmn:sequenceFlow id="f-wyslanie-zawiadomienie" sourceRef="wyslanie" targetRef="zawiadomienie" />
+    <bpmn:sequenceFlow id="f-zawiadomienie-e" sourceRef="zawiadomienie" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="powiadomienie_di" bpmnElement="powiadomienie">
+        <dc:Bounds x="116" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wyslanie_di" bpmnElement="wyslanie">
+        <dc:Bounds x="266" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zawiadomienie_di" bpmnElement="zawiadomienie">
+        <dc:Bounds x="416" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="502" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-powiadomienie_di" bpmnElement="f-s-powiadomienie">
+        <di:waypoint x="66" y="70" />
+        <di:waypoint x="116" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-powiadomienie-wyslanie_di" bpmnElement="f-powiadomienie-wyslanie">
+        <di:waypoint x="216" y="70" />
+        <di:waypoint x="266" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wyslanie-zawiadomienie_di" bpmnElement="f-wyslanie-zawiadomienie">
+        <di:waypoint x="366" y="70" />
+        <di:waypoint x="416" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zawiadomienie-e_di" bpmnElement="f-zawiadomienie-e">
+        <di:waypoint x="452" y="70" />
+        <di:waypoint x="502" y="70" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

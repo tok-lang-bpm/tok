@@ -66,6 +66,10 @@ const FUNCTIONS: &[(&str, usize, usize)] = &[
     ("number", 1, 1),
     ("date", 1, 1),
     ("not", 1, 1),
+    // temporal helpers used by schedules of user tasks (language 0.3)
+    ("now", 0, 0),
+    ("today", 0, 0),
+    ("duration", 1, 1),
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]

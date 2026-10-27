@@ -236,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "tok-bpmn"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "roxmltree",
  "serde_json",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "tok-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "tok-bpmn",
  "tok-core",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "tok-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "indexmap",
  "roxmltree",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "tok-py"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "pyo3",
  "tok-bpmn",

@@ -1,0 +1,9 @@
+[
+  {
+    "code": "C011",
+    "severity": "note",
+    "line": 5,
+    "id": "decyzja",
+    "message": "user task 'decyzja' has no form (form=)"
+  }
+]

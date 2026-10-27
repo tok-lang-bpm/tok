@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Errors of language 0.3" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_M" name="M" />
+  <bpmn:process id="process" isExecutable="true" name="Errors of language 0.3">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:extensionElements>
+        <zeebe:conditionalFilter variableEvents="create" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:adHocSubProcess id="pusty" name="Pusty">
+      <bpmn:startEvent id="s2" />
+      <bpmn:endEvent id="e2" />
+    </bpmn:adHocSubProcess>
+    <bpmn:serviceTask id="rez" name="Rezerwacja">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="r" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent attachedToRef="rez" id="rez-compensate">
+      <bpmn:compensateEventDefinition id="rez-compensate-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="zwykle" name="Zwykłe">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="z" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="handler" isForCompensation="true" name="Handler">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="h" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="ocena" name="Ocena">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:taskSchedule dueDate="jutro" />
+        <zeebe:priorityDefinition priority="150" />
+        <zeebe:taskListeners>
+          <zeebe:taskListener eventType="nieznane" type="typ" />
+        </zeebe:taskListeners>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:intermediateThrowEvent id="komunikat" name="Komunikat">
+      <bpmn:messageEventDefinition id="komunikat-def" messageRef="Message_M" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-pusty" sourceRef="s" targetRef="pusty" />
+    <bpmn:sequenceFlow id="f-pusty-rez" sourceRef="pusty" targetRef="rez" />
+    <bpmn:sequenceFlow id="f-rez-zwykle" sourceRef="rez" targetRef="zwykle" />
+    <bpmn:sequenceFlow id="f-zwykle-handler" sourceRef="zwykle" targetRef="handler" />
+    <bpmn:sequenceFlow id="f-handler-ocena" sourceRef="handler" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-komunikat" sourceRef="ocena" targetRef="komunikat" />
+    <bpmn:sequenceFlow id="f-komunikat-e" sourceRef="komunikat" targetRef="e" />
+    <bpmn:association associationDirection="One" id="rez-compensate-assoc" sourceRef="rez-compensate" targetRef="zwykle" />
+  </bpmn:process>
+</bpmn:definitions>

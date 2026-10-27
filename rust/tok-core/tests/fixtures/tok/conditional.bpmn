@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Zdarzenie warunkowe" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="warunek" name="Zdarzenie warunkowe" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:intermediateCatchEvent id="czekanie" name="Kompletne dane">
+      <bpmn:extensionElements>
+        <zeebe:conditionalFilter variableEvents="create, update" />
+      </bpmn:extensionElements>
+      <bpmn:conditionalEventDefinition id="czekanie-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">=kompletne = true</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-czekanie" sourceRef="s" targetRef="czekanie" />
+    <bpmn:sequenceFlow id="f-czekanie-e" sourceRef="czekanie" targetRef="e" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="warunek">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="czekanie_di" bpmnElement="czekanie">
+        <dc:Bounds x="116" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="202" y="30" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-czekanie_di" bpmnElement="f-s-czekanie">
+        <di:waypoint x="66" y="48" />
+        <di:waypoint x="116" y="48" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-czekanie-e_di" bpmnElement="f-czekanie-e">
+        <di:waypoint x="152" y="48" />
+        <di:waypoint x="202" y="48" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

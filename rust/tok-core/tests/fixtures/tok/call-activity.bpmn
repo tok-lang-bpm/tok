@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="definitions" name="Wywołanie procesu" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="p-glowny" name="Proces główny" processRef="glowny" />
+    <bpmn:participant id="p-wysylka" name="Wysyłka" processRef="wysylka" />
+  </bpmn:collaboration>
+  <bpmn:process id="glowny" name="Proces główny" isExecutable="true">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:callActivity id="wywolanie" name="Wysyłka" calledElement="wysylka">
+      <bpmn:extensionElements>
+        <zeebe:calledElement processId="wysylka" bindingType="deployment" propagateAllChildVariables="false" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=zamowienie" target="numer" />
+          <zeebe:output source="=numerPrzesylki" target="przesylka" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+    </bpmn:callActivity>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-wywolanie" sourceRef="s" targetRef="wywolanie" />
+    <bpmn:sequenceFlow id="f-wywolanie-e" sourceRef="wywolanie" targetRef="e" />
+  </bpmn:process>
+  <bpmn:process id="wysylka" name="Wysyłka" isExecutable="true">
+    <bpmn:startEvent id="s2" name="Start" />
+    <bpmn:scriptTask id="nadanie" name="Nadanie numeru">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=&quot;P-&quot; + numer" resultVariable="numerPrzesylki" />
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:endEvent id="e2" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s2-nadanie" sourceRef="s2" targetRef="nadanie" />
+    <bpmn:sequenceFlow id="f-nadanie-e2" sourceRef="nadanie" targetRef="e2" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="collaboration">
+      <bpmndi:BPMNShape id="p-glowny_di" bpmnElement="p-glowny" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="600" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="p-wysylka_di" bpmnElement="p-wysylka" isHorizontal="true">
+        <dc:Bounds x="0" y="180" width="600" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="60" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="wywolanie_di" bpmnElement="wywolanie">
+        <dc:Bounds x="146" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="296" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s2_di" bpmnElement="s2">
+        <dc:Bounds x="60" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="nadanie_di" bpmnElement="nadanie">
+        <dc:Bounds x="146" y="210" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="296" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s-wywolanie_di" bpmnElement="f-s-wywolanie">
+        <di:waypoint x="96" y="70" />
+        <di:waypoint x="146" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-wywolanie-e_di" bpmnElement="f-wywolanie-e">
+        <di:waypoint x="246" y="70" />
+        <di:waypoint x="296" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s2-nadanie_di" bpmnElement="f-s2-nadanie">
+        <di:waypoint x="96" y="250" />
+        <di:waypoint x="146" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-nadanie-e2_di" bpmnElement="f-nadanie-e2">
+        <di:waypoint x="246" y="250" />
+        <di:waypoint x="296" y="250" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

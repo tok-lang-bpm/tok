@@ -65,6 +65,22 @@ Camunda 8 extensions (namespace `http://camunda.org/schema/zeebe/1.0`):
 | `zeebe:taskDefinition/@type` on a service or send task | `type=` |
 | `zeebe:subscription/@correlationKey` of a message | `correlation=` on every catch, start or boundary event that waits for that message |
 | `zeebe:userTask` | implied by `user` in an executable document |
+| `adHocSubProcess` (`ordering`, `cancelRemainingInstances`, `completionCondition`, `zeebe:adHoc`) | `adhoc` with `sequential`, `wait`, `until=`, `active=` |
+| `zeebe:loopCharacteristics`, `completionCondition` of a multi-instance activity | `collection=`, `item=`, `output=`, `output-item=`, `until=` |
+| `zeebe:calledElement` | `process=`, `binding=`, `version=`, `child-vars=none`, `parent-vars=none`, `business-id=` |
+| `bindingType`, `versionTag` of `zeebe:calledDecision` and `zeebe:formDefinition` | `binding=`, `version=` |
+| `zeebe:ioMapping` | `inputs=`, `outputs=` (pairs `target = expression`) |
+| `zeebe:assignmentDefinition`, `zeebe:taskSchedule`, `zeebe:priorityDefinition` | `assignee=`, `candidate-users=`, `candidate-groups=`, `due=`, `follow-up=`, `priority=` |
+| `zeebe:taskDefinition/@retries`, `zeebe:taskHeaders`; `zeebe:taskDefinition` on message throw and end events | `retries=`, `headers=`; `type=` |
+| a service task with job type `io.camunda:http-json:1` | `connector=rest` with `method=`, `url=`, `body=`, `query=`, `headers-in=`, `result=` |
+| a compensation boundary event associated with a handler (`isForCompensation`) | `compensate=HANDLER` on the activity |
+| `compensateEventDefinition/@activityRef` | `activity=` |
+| `errorEventDefinition` / `escalationEventDefinition` without a reference on a boundary or start event | the flags `error` / `escalation` |
+| `zeebe:conditionalFilter/@variableEvents` | `events=` |
+| `zeebe:executionListeners`, `zeebe:taskListeners` | `listeners=` |
+| `zeebe:versionTag` of a process | `version-tag=` on the header or the pool |
+
+A file that uses any of these constructs is printed with the header `tok 0.3`; other files keep `tok 0.1`.
 
 ## Identifiers
 
@@ -89,7 +105,7 @@ These elements are reported and skipped, or simplified:
 | group membership | BPMN stores no member list; add `members="…"` by hand |
 | correlation key of a message awaited by a receive task | not expressible; model the wait as a message catch event |
 | process names | a single process is named after the document title; with several pools each process takes its pool's label |
-| other extension elements (Camunda 7, Signavio, `zeebe:ioMapping`, task headers, …) and `documentation` | skipped |
+| other extension elements (Camunda 7, Signavio, …) and `documentation` | skipped |
 | line breaks in names | replaced by spaces |
 
 ## Round trip

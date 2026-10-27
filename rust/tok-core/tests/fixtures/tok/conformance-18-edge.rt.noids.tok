@@ -1,0 +1,13 @@
+tok 0.1 "Edge cases"
+
+pool p "Organizacja"
+  start s
+  send w "Wysłanie" message="List"
+  end e
+
+pool q "Odbiorca"
+
+flow s -> w -> e
+
+message w -> q "List"
+message w -> q "List"

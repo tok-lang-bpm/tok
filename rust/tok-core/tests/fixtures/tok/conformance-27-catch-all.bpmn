@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="definitions" name="Catch-all errors and escalations" targetNamespace="http://bpmn.io/schema/bpmn" exporter="tok" exporterVersion="0.3">
+  <bpmn:error id="Error_Brak_danych" name="Brak danych" errorCode="E42" />
+  <bpmn:escalation id="Escalation_Opoznienie" name="Opóźnienie" />
+  <bpmn:process id="process" name="Catch-all errors and escalations" isExecutable="false">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:subProcess id="praca" name="Praca">
+      <bpmn:startEvent id="s2" />
+      <bpmn:intermediateThrowEvent id="zgloszenie" name="Zgłoszenie">
+        <bpmn:escalationEventDefinition id="zgloszenie-def" escalationRef="Escalation_Opoznienie" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:endEvent id="e2" name="Błąd">
+        <bpmn:errorEventDefinition id="e2-def" errorRef="Error_Brak_danych" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-s2-zgloszenie" sourceRef="s2" targetRef="zgloszenie" />
+      <bpmn:sequenceFlow id="f-zgloszenie-e2" sourceRef="zgloszenie" targetRef="e2" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="blad" name="Dowolny błąd" attachedToRef="praca">
+      <bpmn:errorEventDefinition id="blad-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="eskal" name="Dowolna eskalacja" attachedToRef="praca" cancelActivity="false">
+      <bpmn:escalationEventDefinition id="eskal-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:subProcess id="awaria" name="Awaria" triggeredByEvent="true">
+      <bpmn:startEvent id="s3" name="Dowolny błąd">
+        <bpmn:errorEventDefinition id="s3-def" />
+      </bpmn:startEvent>
+      <bpmn:endEvent id="e3" />
+      <bpmn:sequenceFlow id="f-s3-e3" sourceRef="s3" targetRef="e3" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e4" name="Obsłużono błąd" />
+    <bpmn:endEvent id="e5" name="Obsłużono eskalację" />
+    <bpmn:sequenceFlow id="f-s-praca" sourceRef="s" targetRef="praca" />
+    <bpmn:sequenceFlow id="f-praca-e" sourceRef="praca" targetRef="e" />
+    <bpmn:sequenceFlow id="f-blad-e4" sourceRef="blad" targetRef="e4" />
+    <bpmn:sequenceFlow id="f-eskal-e5" sourceRef="eskal" targetRef="e5" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+        <dc:Bounds x="30" y="67" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="praca_di" bpmnElement="praca" isExpanded="true">
+        <dc:Bounds x="116" y="30" width="270" height="110" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s2_di" bpmnElement="s2">
+        <dc:Bounds x="146" y="70" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="zgloszenie_di" bpmnElement="zgloszenie">
+        <dc:Bounds x="232" y="70" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2">
+        <dc:Bounds x="318" y="70" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="awaria_di" bpmnElement="awaria" isExpanded="true">
+        <dc:Bounds x="30" y="362" width="190" height="110" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s3_di" bpmnElement="s3">
+        <dc:Bounds x="60" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e3_di" bpmnElement="e3">
+        <dc:Bounds x="146" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e">
+        <dc:Bounds x="436" y="67" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e4_di" bpmnElement="e4">
+        <dc:Bounds x="436" y="190" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e5_di" bpmnElement="e5">
+        <dc:Bounds x="436" y="276" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="blad_di" bpmnElement="blad">
+        <dc:Bounds x="338" y="122" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="eskal_di" bpmnElement="eskal">
+        <dc:Bounds x="294" y="122" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f-s2-zgloszenie_di" bpmnElement="f-s2-zgloszenie">
+        <di:waypoint x="182" y="88" />
+        <di:waypoint x="232" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-zgloszenie-e2_di" bpmnElement="f-zgloszenie-e2">
+        <di:waypoint x="268" y="88" />
+        <di:waypoint x="318" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s3-e3_di" bpmnElement="f-s3-e3">
+        <di:waypoint x="96" y="420" />
+        <di:waypoint x="146" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-s-praca_di" bpmnElement="f-s-praca">
+        <di:waypoint x="66" y="85" />
+        <di:waypoint x="116" y="85" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-praca-e_di" bpmnElement="f-praca-e">
+        <di:waypoint x="386" y="85" />
+        <di:waypoint x="436" y="85" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-blad-e4_di" bpmnElement="f-blad-e4">
+        <di:waypoint x="356" y="158" />
+        <di:waypoint x="356" y="208" />
+        <di:waypoint x="436" y="208" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f-eskal-e5_di" bpmnElement="f-eskal-e5">
+        <di:waypoint x="312" y="158" />
+        <di:waypoint x="312" y="294" />
+        <di:waypoint x="436" y="294" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

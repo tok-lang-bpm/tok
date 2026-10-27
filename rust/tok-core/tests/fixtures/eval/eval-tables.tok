@@ -1,0 +1,90 @@
+tok 0.3 "Decision tables for evaluation tests"
+
+decision rabat "Rabat" hit=unique
+  | kwota: number | klient: string        || rabat: number    | opis: string                   |
+  | < 0           | -                     || null             | "błąd"                         |
+  | [0..100)      | -                     || 0                | "brak"                         |
+  | [100..500]    | "stały", "vip"        || kwota * 0.05     | "rabat " + string(kwota * 0.05) |
+  | [100..500]    | not("stały", "vip")   || 0                | "brak"                         |
+  | > 500         | "vip"                 || kwota / 3        | "trzecia część"                |
+  | >= 500        | -                     || round half up(kwota * 0.123, 2) | "duży"        |
+
+decision limit "Limit" hit=first
+  | wiek: number | konto: string          || limit: number | uwagi: string |
+  | < 18         | -                      || 5             | -             |
+  | [18..26]     | "student", "doktorant" || 15            | "ulga"        |
+  | >= 18        | "pracownik"            || 30            | upper case(konto) |
+  | -            | -                      || 10            | "pozostali"   |
+
+decision ocena "Ocena" hit=any
+  | punkty: number | zaliczenie: boolean || ocena: string |
+  | >= 90          | true                || "bardzo dobry" |
+  | >= 80          | true                || "dobry"     |
+  | >= 85          | -                   || "bardzo dobry" |
+  | < 50           | -                   || "niedostateczny" |
+  | -              | false               || "niedostateczny" |
+
+decision kanaly "Kanały" hit=collect
+  | pilne: boolean | kwota: number || kanal: string | koszt: number |
+  | true           | -             || "sms"         | 0.25          |
+  | -              | > 1000        || "list"        | kwota / 1000  |
+  | -              | -             || "e-mail"      | 0             |
+  | false          | <= 0          || "brak"        | -             |
+
+decision tagi "Tagi" hit=collect
+  | rodzaj: string || tag: string |
+  | "książka", "e-book" || "publikacja" |
+  | "e-book"            || "cyfrowe" |
+  | starts with(rodzaj, "e") || "e-" + rodzaj |
+  | -                   || lower case(rodzaj) |
+
+decision priorytet "Priorytet" hit=priority
+  | dni: number | typ: string || priorytet: number |
+  | <= 1        | -           || 1 |
+  | (1..7]      | "skarga"    || 2 |
+  | ]1..7]      | -           || 3 |
+  | > 7         | -           || 4 |
+
+decision wyrazenia "Wyrażenia" hit=first
+  | x: number | y: number || suma: number | iloraz: number | tekst: string | lista: number | data: date |
+  | null      | -         || y            | null           | string(y)     | count([x, y]) | date("2027-01-15") |
+  | -         | null      || x + 1        | x / 7          | string(x)     | sum([x, 1, 2]) | date("2027-02-30") |
+  | -         | -         || x + y        | x / y          | string(x / y) | max(x, y)     | date("2027-01-15") + duration("P1DT2H") |
+
+decision funkcje "Funkcje" hit=first
+  | kod: string || dlugosc: number | fragment: string | koniec: string | od_konca: string | liczba: number |
+  | ""          || string length(kod) | substring(kod, 1, 0) | substring(kod, 1) | substring(kod, -1) | number("12.50") |
+  | -           || string length(kod) | substring(kod, 2, 3) | substring(kod, string length(kod)) | substring(kod, -3, 2) | number(kod) |
+
+decision liczby "Liczby" hit=first
+  | n: number || dol: number | gora: number | bezwzgl: number | zaokr: number | tekst: string | min_max: number |
+  | -         || floor(n)    | ceiling(n)   | abs(n)          | round half up(n, 1) | string(n) | min([n, 0, -1]) + max(n, 2) |
+
+decision zakresy "Zakresy" hit=collect
+  | v: number | dolna: number | gorna: number || nazwa: string |
+  | [dolna..gorna] | -        | -             || "w przedziale" |
+  | < dolna        | -        | -             || "poniżej" |
+  | > gorna        | -        | -             || "powyżej" |
+  | not([dolna..gorna]) | -   | -             || "poza" |
+  | dolna, gorna  | -            | -             || "na granicy" |
+
+decision wejscia "Wejścia" hit=first
+  | x + y: number | string length(s): number | osoba.wiek: number || wynik: string |
+  | > 10          | -                        | -                  || "duża suma"   |
+  | -             | >= 3                     | -                  || "długi tekst" |
+  | -             | -                        | null               || "inne"        |
+
+decision teksty "Teksty" hit=first
+  | s: string || porownanie: boolean | zawiera: boolean | konczy: boolean | duze: string |
+  | > "m"     || s > "m"             | contains(s, "a") | ends with(s, "z") | upper case(s) |
+  | -         || s < "m"             | contains(s, "") | ends with(s, "") | lower case(s) |
+
+decision logika "Logika" hit=first
+  | a: boolean | b: boolean || i: boolean | lub: boolean | nie: boolean | jesli: string |
+  | -          | -          || a and b    | a or b       | not(a)       | if a then "tak" else "nie" |
+
+decision brak "Brak reguł pasujących" hit=unique
+  | kod: number || wynik: string |
+  | 1           || "jeden" |
+  | 2           || "dwa" |
+  | 2           || "znowu dwa" |

@@ -86,5 +86,27 @@ class HitPolicyTest(unittest.TestCase):
         self.assertEqual([c for c, _, _ in dmn.check_decision(empty)], ["D005"])
 
 
+class EvalCommandTest(unittest.TestCase):
+    def run_eval(self, *values):
+        import contextlib
+        import io
+        import tempfile
+        from tok import cli
+        text = ('tok 0.1 "t"\n\ndecision d hit=unique\n'
+                '  | x: number || y: number |\n  | > 1 || x * 2 |\n  | > 2 || 3 |\n')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "t.tok")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = cli.main(["eval", path, "d"] + list(values))
+        return code, out.getvalue(), err.getvalue()
+
+    def test_result_and_hit_policy_violation(self):
+        self.assertEqual(self.run_eval("x=1.5"), (0, '{"y": 3}\n', ""))
+        self.assertEqual(self.run_eval("x=5"), (1, "", "tok: rules 1, 2 all match (hit policy unique)\n"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,7 +22,7 @@ tok --version
 | `export` | writes the BPMN file, the SVG picture, one `.dmn` file per decision and one `.form` file per form: everything Camunda 8 needs for an executable document. |
 | `import` | converts a BPMN 2.0 XML file (for example drawn in Camunda Modeler) to tok. Elements tok 0.1 does not cover are reported on standard error. |
 | `sim` | runs the simulation described by `simulate`, `resource`, `variable` and the simulation attributes; prints indicators, optionally writes the event log and the per-case table as CSV. |
-| `eval` | evaluates a decision table for the given input values: `tok eval proposal.tok tryb-akceptacji rodzaj=e-book cena=120`. |
+| `eval` | evaluates a decision table for the given input values: `tok eval proposal.tok tryb-akceptacji rodzaj=e-book cena=120`. A value is `true`/`false`, a number, or else text. The result is printed as JSON: an object of outputs, `null` when no rule matches, a list of objects for hit policy `collect`. Exit code 1 when the document has errors or the hit policy is violated (several rules under `unique`, different outputs under `any`); 2 for an unknown decision or an argument that is not `name=value`. |
 | `cheatsheet` | prints the one-page language summary; useful as context for an AI agent. |
 
 `--lang pl` (or the environment variable `TOK_LANG=pl`) switches messages to Polish. `--json` prints machine-readable output for programs and agents.

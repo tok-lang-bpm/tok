@@ -28,6 +28,139 @@ fn printable(c: char) -> bool {
         || (c.is_whitespace() && c != ' '))
 }
 
+/// A Python exception raised by the reference implementation, kept as data: `kind` is the
+/// qualified class name as a traceback prints it (`decimal.InvalidOperation`, `ValueError`,
+/// `tok.dmn.DecisionError`), `message` is `str(exception)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PyError {
+    pub kind: String,
+    pub message: String,
+}
+
+impl PyError {
+    pub fn new(kind: impl Into<String>, message: impl Into<String>) -> Self {
+        PyError {
+            kind: kind.into(),
+            message: message.into(),
+        }
+    }
+
+    /// Unqualified class name (`InvalidOperation` for `decimal.InvalidOperation`).
+    pub fn class_name(&self) -> &str {
+        self.kind.rsplit('.').next().unwrap_or(&self.kind)
+    }
+}
+
+impl std::fmt::Display for PyError {
+    /// The last line of a Python traceback: `kind: message`, or `kind` alone.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.message.is_empty() {
+            write!(f, "{}", self.kind)
+        } else {
+            write!(f, "{}: {}", self.kind, self.message)
+        }
+    }
+}
+
+impl std::error::Error for PyError {}
+
+/// Code points of the digit zero of every Unicode decimal-digit run (category Nd,
+/// Unicode 14.0 as in Python 3.11); each run holds the digits 0 to 9 in order.
+const ND_ZEROS: [u32; 66] = [
+    0x30, 0x660, 0x6F0, 0x7C0, 0x966, 0x9E6, 0xA66, 0xAE6, 0xB66, 0xBE6, 0xC66, 0xCE6, 0xD66,
+    0xDE6, 0xE50, 0xED0, 0xF20, 0x1040, 0x1090, 0x17E0, 0x1810, 0x1946, 0x19D0, 0x1A80, 0x1A90,
+    0x1B50, 0x1BB0, 0x1C40, 0x1C50, 0xA620, 0xA8D0, 0xA900, 0xA9D0, 0xA9F0, 0xAA50, 0xABF0, 0xFF10,
+    0x104A0, 0x10D30, 0x11066, 0x110F0, 0x11136, 0x111D0, 0x112F0, 0x11450, 0x114D0, 0x11650,
+    0x116C0, 0x11730, 0x118E0, 0x11950, 0x11C50, 0x11D50, 0x11DA0, 0x16A60, 0x16AC0, 0x16B50,
+    0x1D7CE, 0x1D7D8, 0x1D7E2, 0x1D7EC, 0x1D7F6, 0x1E140, 0x1E2F0, 0x1E950, 0x1FBF0,
+];
+
+/// Python `unicodedata.decimal(c, None)`: the value of a decimal digit of any script.
+pub fn decimal_value(c: char) -> Option<u32> {
+    let n = c as u32;
+    let k = ND_ZEROS.partition_point(|z| *z <= n);
+    if k == 0 {
+        return None;
+    }
+    let off = n - ND_ZEROS[k - 1];
+    (off < 10).then_some(off)
+}
+
+/// Python `int(text)` in base 10: surrounding whitespace, a sign, digits of any script and
+/// single underscores between digits. Errors as `ValueError`.
+pub fn parse_int(text: &str) -> Result<i128, PyError> {
+    let err = || {
+        PyError::new(
+            "ValueError",
+            format!("invalid literal for int() with base 10: {}", repr_str(text)),
+        )
+    };
+    let t = strip(text);
+    let (neg, body) = match t.chars().next() {
+        Some('-') => (true, &t[1..]),
+        Some('+') => (false, &t[1..]),
+        _ => (false, t),
+    };
+    let mut value: i128 = 0;
+    let mut prev_digit = false;
+    let mut any = false;
+    let chars: Vec<char> = body.chars().collect();
+    for (i, c) in chars.iter().enumerate() {
+        if *c == '_' {
+            let next_digit = chars.get(i + 1).and_then(|n| decimal_value(*n)).is_some();
+            if !prev_digit || !next_digit {
+                return Err(err());
+            }
+            prev_digit = false;
+            continue;
+        }
+        let d = decimal_value(*c).ok_or_else(err)?;
+        value = value.saturating_mul(10).saturating_add(d as i128);
+        prev_digit = true;
+        any = true;
+    }
+    if !any {
+        return Err(err());
+    }
+    Ok(if neg { -value } else { value })
+}
+
+/// Python `repr()` of a string: single quotes unless the text contains `'` and no `"`.
+pub fn repr_str(s: &str) -> String {
+    let quote = if s.contains('\'') && !s.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push(quote);
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c if printable(c) => out.push(c),
+            c => {
+                let n = c as u32;
+                if n < 0x100 {
+                    out.push_str(&format!("\\x{n:02x}"));
+                } else if n < 0x10000 {
+                    out.push_str(&format!("\\u{n:04x}"));
+                } else {
+                    out.push_str(&format!("\\U{n:08x}"));
+                }
+            }
+        }
+    }
+    out.push(quote);
+    out
+}
+
 /// Python `repr()` of a one-character string, e.g. `'x'`, `"'"`, `'\n'`.
 pub fn repr_char(c: char) -> String {
     let body = match c {

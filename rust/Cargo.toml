@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["tok-core", "tok-bpmn", "tok-cli", "tok-py"]
+members = ["tok-core", "tok-bpmn", "tok-cli", "tok-py", "tok-sim"]
 
 [workspace.package]
 version = "0.3.0"

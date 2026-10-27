@@ -1,5 +1,9 @@
 """Parity of the Rust engine (Python module ``tok_engine``) with the pure-Python implementation.
 
+Compared: diagnostics, canonical text, BPMN, SVG and exported files of every document; BPMN
+import; decision table evaluation over a grid of typed input values; FEEL evaluation of the
+expression corpus of the Rust fixtures (``rust/tok-core/tests/fixtures/eval/feel.json``).
+
 The tests are skipped when ``tok_engine`` is not installed; see ``rust/tok-py/README.md``.
 The pure-Python reference runs in a fresh interpreter for every input, so that the global
 namespace registry of ElementTree does not carry over from one model to the next.
@@ -110,10 +114,130 @@ sys.stdout.buffer.write(json.dumps(out, ensure_ascii=False).encode("utf-8"))
 '''
 
 
-def reference(script, path):
+EVAL_FIXTURES = os.path.join(REPO, "rust", "tok-core", "tests", "fixtures", "eval")
+FEEL_CORPUS = os.path.join(EVAL_FIXTURES, "feel.json")
+# synthetic decision tables (every hit policy, expressions in cells) of the Rust fixtures
+EVAL_TABLES = os.path.join(EVAL_FIXTURES, "eval-tables.tok")
+
+# shared by the reference script and the test: typed values in JSON, results as (repr) or error
+VALUES_CODE = r'''
+import datetime
+from decimal import Decimal
+
+
+def decode(v):
+    if isinstance(v, dict):
+        if "n" in v:
+            return Decimal(v["n"])
+        if "i" in v:
+            return int(v["i"])
+        if "f" in v:
+            return float(v["f"])
+        if "d" in v:
+            return datetime.date.fromisoformat(v["d"])
+        if "td" in v:
+            return datetime.timedelta(days=v["td"][0], seconds=v["td"][1], microseconds=v["td"][2])
+        if "c" in v:
+            return dict((k, decode(x)) for k, x in v["c"])
+    if isinstance(v, list):
+        return [decode(x) for x in v]
+    return v
+
+
+def outcome(fn, *args):
+    try:
+        return ["ok", repr(fn(*args))]
+    except Exception as ex:
+        return ["error", type(ex).__name__, str(ex)]
+'''
+
+REFERENCE_EVAL = VALUES_CODE + r'''
+import json, sys
+from tok import dmn
+from tok.parser import parse
+
+with open(sys.argv[1], encoding="utf-8") as f:
+    doc, _ = parse(f.read())
+runs = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+out = [outcome(dmn.evaluate_decision, doc.decisions[d], decode(values)) for d, values in runs]
+sys.stdout.buffer.write(json.dumps(out, ensure_ascii=False).encode("utf-8"))
+'''
+
+REFERENCE_FEEL = VALUES_CODE + r'''
+import json, sys
+from tok import feel
+
+data = json.loads(sys.stdin.buffer.read().decode("utf-8"))
+ctx = dict((k, decode(v)) for k, v in data["context"])
+out = [outcome(feel.eval_text, e, ctx) for e in data["expressions"]]
+sys.stdout.buffer.write(json.dumps(out, ensure_ascii=False).encode("utf-8"))
+'''
+
+_values = {}
+exec(VALUES_CODE, _values)
+decode_value, outcome = _values["decode"], _values["outcome"]
+
+
+def reference(script, path, stdin=None):
     env = dict(os.environ, PYTHONPATH=SRC, PYTHONIOENCODING="utf-8")
-    res = subprocess.run([sys.executable, "-c", script, path], env=env, capture_output=True, check=True)
+    args = [sys.executable, "-c", script] + ([path] if path else [])
+    data = None if stdin is None else json.dumps(stdin, ensure_ascii=False).encode("utf-8")
+    res = subprocess.run(args, env=env, input=data, capture_output=True, check=True)
     return json.loads(res.stdout.decode("utf-8"))
+
+
+def decision_grid(decision):
+    """Typed input values for a decision: literals of the cells and their neighbours as
+    Decimal, int and float, other strings and booleans, wrong types and missing inputs."""
+    sys.path.insert(0, SRC)
+    from tok import feel
+
+    def walk(node, names, lits):
+        if isinstance(node, tuple) and node:
+            if node[0] == "name":
+                names.append(node[1])
+            elif node[0] in ("num", "str", "bool"):
+                lits.append(node[1])
+            else:
+                for x in node[1:]:
+                    walk(x, names, lits)
+        elif isinstance(node, list):
+            for x in node:
+                walk(x, names, lits)
+
+    names, lits = [], []
+    for expr, _ in decision.inputs:
+        walk(feel.parse_expr(expr), names, [])
+    for rule in decision.rules:
+        for cell in rule.inputs:
+            walk(feel.parse_unary_tests(cell), names, lits)
+        for cell in rule.outputs:
+            if cell.strip() != "-":
+                walk(feel.parse_expr(cell), names, [])
+    values = [None, True, "", "x", {"i": 0}, {"f": 2.5}, {"n": "-1"}]
+    for lit in lits:
+        if isinstance(lit, bool) or isinstance(lit, str):
+            values.append(lit)
+        else:
+            for d in (lit, lit - 1, lit + 1, lit + lit.__class__("0.5")):
+                values.append({"n": str(d)})
+            values.append({"i": int(lit)})
+            values.append({"f": float(lit)})
+    unique_values = []
+    for v in values:
+        if v not in unique_values:
+            unique_values.append(v)
+    names = list(dict.fromkeys(names))
+    runs = []
+    for k in range(max(len(unique_values), 1)):
+        # each value once for every variable, the others shifted through the list
+        combo = []
+        for j, n in enumerate(names):
+            v = unique_values[(k + 3 * j) % len(unique_values)]
+            if v is not None or (k + j) % 2:
+                combo.append([n, v])
+        runs.append((decision.id, {"c": combo}))
+    return runs
 
 
 def engine_or_none(fn, *args, **kw):
@@ -159,6 +283,40 @@ class EngineParity(unittest.TestCase):
                     text, warnings = tok_engine.import_bpmn(xml, keep)
                     self.assertEqual([text, list(warnings)], ref[str(keep)])
         self.assertGreater(len(BPMN_FILES), 0)
+
+    def test_eval_decisions(self):
+        sys.path.insert(0, SRC)
+        from tok.check import check
+        from tok.parser import parse
+        compared = 0
+        for path in DOCUMENTS + ([EVAL_TABLES] if os.path.exists(EVAL_TABLES) else []):
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+            doc, diags = parse(text)
+            if not doc.decisions or any(d.severity == "error" for d in diags):
+                continue
+            if any(d.severity == "error" for d in diags + check(doc, bpmn=False)):
+                continue
+            runs = [r for dec in doc.decisions.values() for r in decision_grid(dec)]
+            ref = reference(REFERENCE_EVAL, path, stdin=runs)
+            for (dec_id, values), expected in zip(runs, ref):
+                with self.subTest(document=os.path.basename(path), decision=dec_id, values=values):
+                    got = outcome(tok_engine.eval_decision, text, dec_id, decode_value(values))
+                    self.assertEqual(got, expected)
+                compared += 1
+        self.assertGreater(compared, 0)
+
+    @unittest.skipUnless(os.path.exists(FEEL_CORPUS), "FEEL corpus not generated")
+    def test_feel_eval(self):
+        with open(FEEL_CORPUS, encoding="utf-8") as f:
+            corpus = json.load(f)
+        data = {"context": corpus["context"], "expressions": [e["expr"] for e in corpus["expressions"]]}
+        ref = reference(REFERENCE_FEEL, None, stdin=data)
+        ctx = dict((k, decode_value(v)) for k, v in corpus["context"])
+        for expr, expected in zip(data["expressions"], ref):
+            with self.subTest(expr=expr):
+                self.assertEqual(outcome(tok_engine.feel_eval, expr, ctx), expected)
+        self.assertGreater(len(ref), 10000)
 
     def test_errors_raise(self):
         with self.assertRaises(ValueError):

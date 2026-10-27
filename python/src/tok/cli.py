@@ -209,7 +209,11 @@ def cmd_eval(args):
             return EXIT_USAGE
         k, v = pair.split("=", 1)
         ctx[k] = _value(v)
-    result = dmn.evaluate_decision(dec, ctx)
+    try:
+        result = dmn.evaluate_decision(dec, ctx)
+    except dmn.DecisionError as ex:
+        sys.stderr.write("tok: %s\n" % ex)
+        return EXIT_ERRORS
     sys.stdout.write(json.dumps(result, ensure_ascii=False, default=str) + "\n")
     return EXIT_OK
 

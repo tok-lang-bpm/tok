@@ -1,9 +1,11 @@
-//! Decision tables: checks (D-codes, FEEL in cells, overlap warnings) and DMN 1.3 export.
-//! Mirrors `dmn.py` (evaluation comes later).
+//! Decision tables: checks (D-codes, FEEL in cells, overlap warnings), DMN 1.3 export and
+//! evaluation. Mirrors `dmn.py`.
 
 use crate::dec::Dec;
 use crate::feel::{self, Ast, Positive, Unary};
+use crate::feel_eval::{self as fe, Context, PyValue, feel_error};
 use crate::model::{Decision, Document, HIT_POLICIES};
+use crate::pyutil::{PyError, strip};
 use crate::xml::{DMN_NS, MODELER_NS, XElem};
 
 /// (code, line, arguments)
@@ -392,4 +394,108 @@ pub fn export_dmn(d: &Decision, doc: Option<&Document>) -> String {
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{}\n",
         root.to_string_root()
     )
+}
+
+// ------------------------------------------------------------------ evaluation
+
+fn decision_error(message: String) -> PyError {
+    PyError::new("tok.dmn.DecisionError", message)
+}
+
+/// Evaluate a decision table against a context of variables (`dmn.evaluate_decision`).
+///
+/// Returns, as plain values: for the hit policies unique, first, any and priority a dict
+/// {output name: value} or `None` when no rule matches; for collect a list of such dicts.
+/// A violated hit policy (several rules under unique, different outputs under any) is the
+/// error `tok.dmn.DecisionError`; FEEL errors and the exceptions of Python's decimal and
+/// datetime arithmetic are returned the same way. `priority` behaves like `first`.
+pub fn evaluate_decision(d: &Decision, ctx: &Context) -> Result<PyValue, PyError> {
+    let mut values = Vec::with_capacity(d.inputs.len());
+    for (expr, _) in &d.inputs {
+        let node = feel::parse_expr(expr).map_err(feel_error)?;
+        values.push(fe::evaluate(&node, ctx)?);
+    }
+    let mut matched: Vec<(usize, Vec<(String, PyValue)>)> = Vec::new();
+    for (idx, rule) in d.rules.iter().enumerate() {
+        let mut ok = true;
+        for (cell, v) in rule.inputs.iter().zip(&values) {
+            let unary = feel::parse_unary_tests(cell).map_err(feel_error)?;
+            if fe::test(&unary, v, ctx)? != Some(true) {
+                ok = false;
+                break;
+            }
+        }
+        if ok {
+            let mut out: Vec<(String, PyValue)> = Vec::new();
+            for ((name, _), cell) in d.outputs.iter().zip(&rule.outputs) {
+                let value = if strip(cell) == "-" {
+                    PyValue::None
+                } else {
+                    fe::to_python(&fe::eval_text(cell, ctx)?)?
+                };
+                match out.iter_mut().find(|(k, _)| k == name) {
+                    Some(slot) => slot.1 = value,
+                    None => out.push((name.clone(), value)),
+                }
+            }
+            matched.push((idx + 1, out));
+        }
+    }
+    let hit = d.hit();
+    if hit == "collect" {
+        return Ok(PyValue::List(
+            matched.into_iter().map(|(_, o)| PyValue::Dict(o)).collect(),
+        ));
+    }
+    if matched.is_empty() {
+        return Ok(PyValue::None);
+    }
+    if hit == "unique" && matched.len() > 1 {
+        let ids: Vec<String> = matched.iter().map(|(i, _)| i.to_string()).collect();
+        return Err(decision_error(format!(
+            "rules {} all match (hit policy unique)",
+            ids.join(", ")
+        )));
+    }
+    if hit == "any" {
+        let first = PyValue::Dict(matched[0].1.clone());
+        for (i, o) in &matched[1..] {
+            if !PyValue::Dict(o.clone()).py_eq(&first) {
+                return Err(decision_error(format!(
+                    "rules {} and {i} match with different outputs (hit policy any)",
+                    matched[0].0
+                )));
+            }
+        }
+    }
+    Ok(PyValue::Dict(matched.swap_remove(0).1))
+}
+
+/// For a decision with one output, unwrap {name: value} to the value (what Camunda stores
+/// in `resultVariable`); lists of such dicts become lists of values (`dmn.single_result`).
+pub fn single_result(d: &Decision, result: PyValue) -> PyValue {
+    if d.outputs.len() != 1 {
+        return result;
+    }
+    let name = &d.outputs[0].0;
+    let unwrap = |pairs: Vec<(String, PyValue)>| {
+        pairs
+            .into_iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
+            .unwrap_or(PyValue::None)
+    };
+    match result {
+        PyValue::Dict(pairs) => unwrap(pairs),
+        PyValue::List(items) => PyValue::List(
+            items
+                .into_iter()
+                .map(|r| match r {
+                    PyValue::Dict(pairs) => unwrap(pairs),
+                    other => other,
+                })
+                .collect(),
+        ),
+        other => other,
+    }
 }

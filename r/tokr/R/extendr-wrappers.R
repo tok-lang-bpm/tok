@@ -19,3 +19,5 @@ engine_export <- function(text, name, lang) .Call(wrap__engine_export, text, nam
 engine_import <- function(xml, keep_ids) .Call(wrap__engine_import, xml, keep_ids)
 
 engine_eval <- function(text, decision, values, lang) .Call(wrap__engine_eval, text, decision, values, lang)
+
+engine_sim <- function(text, cases, seed, lang) .Call(wrap__engine_sim, text, cases, seed, lang)

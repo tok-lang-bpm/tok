@@ -1,6 +1,6 @@
 # tokr: tok for R
 
-The R package `tokr` reads, checks, formats and exports process models written in [tok](https://codeberg.org/MarekDeja/tok), and draws them in the viewer and in R Markdown or Quarto documents. The work is done by the Rust engine of tok, the same one the `tok` command and the Python package use, so the results are identical.
+The R package `tokr` reads, checks, formats, exports and simulates process models written in [tok](https://codeberg.org/MarekDeja/tok), and draws them in the viewer and in R Markdown or Quarto documents. The work is done by the Rust engine of tok, the same one the `tok` command and the Python package use, so the results are identical.
 
 ## Install
 
@@ -38,6 +38,30 @@ tok_eval("propozycja-zakupu.tok", "tryb-akceptacji",
 ```
 
 Every function takes a model read with `tok_read()`, the path of a `.tok` file, or the text of a model. `options(tok.lang = "pl")` switches all messages to Polish.
+
+## Simulation
+
+`tok_sim()` runs the simulation of `tok sim` on a model with `simulate`, `resource` and `variable` statements (see `docs/simulation.md` in the repository). The same model and seed give the same numbers as `tok sim` and the Python package.
+
+```r
+s <- tok_sim("kwerenda-symulacja.tok")   # cases and seed of the simulate statement
+s                                        # the report of tok sim
+s <- tok_sim("kwerenda-symulacja.tok", cases = 1000, seed = 3, lang = "pl")
+s$kpi$activities                         # count, mean wait and processing per activity
+s$kpi$resources                          # utilization per resource
+s$cases                                  # one row per case, with the case variables
+log <- as.data.frame(s)                  # the event log
+```
+
+The event log has one row per activity instance, with the columns of `tok sim --log` (`case`, `activity`, `label`, `resource`, `enqueue`, `start`, `end`, `status`) and the same data under the names process-mining packages use (`case_id`, `activity_id`, `activity_instance_id`, `resource_id`, `schedule`, `start`, `complete`). Times are `POSIXct` in UTC. With bupaR:
+
+```r
+bupaR::activitylog(log, case_id = "case_id", activity_id = "activity_id",
+                   resource_id = "resource_id",
+                   timestamps = c("schedule", "start", "complete"))
+```
+
+See `?tok_sim` for every element of the result.
 
 ## In documents
 

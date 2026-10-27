@@ -10,7 +10,10 @@ use tok_core::check::{BpmnIssue, BpmnRules};
 use tok_core::diagnostics::{Diag, format_diag};
 use tok_core::feel_eval::{Context, PyValue, Value};
 use tok_core::pydec::Decimal;
+use tok_core::pytime::DateTime;
 use tok_core::{Document, dmn, export, forms, import, printer};
+use tok_sim::sim::shift;
+use tok_sim::{Param, PyError};
 
 type Res<T> = std::result::Result<T, Error>;
 
@@ -280,6 +283,183 @@ fn engine_eval(text: &str, decision: &str, values: List, lang: &str) -> Res<Robj
         .map_err(|e| fail(e.message))
 }
 
+/// `cases` or `seed` of the simulation: `NULL` keeps the value of `simulate`; an integer,
+/// a double or a string is passed on as Python would pass it to `int(float(value))`.
+fn param_from_r(x: &Robj, name: &str) -> Res<Option<Param>> {
+    if x.is_null() {
+        return Ok(None);
+    }
+    if x.len() == 1 {
+        if let Some(i) = x.as_integer() {
+            return Ok(Some(Param::Int(i.to_string())));
+        }
+        if let Some(f) = x.as_real() {
+            return Ok(Some(Param::Float(f)));
+        }
+        if let Some(s) = x.as_str() {
+            return Ok(Some(Param::Text(s.to_string())));
+        }
+    }
+    Err(fail(format!("`{name}` must be a single number")))
+}
+
+/// Seconds since 1970-01-01 UTC of a time; a time without an offset is taken as UTC.
+fn epoch(t: &DateTime) -> f64 {
+    const UNIX_ORDINAL: i128 = 719_163;
+    let local = (i128::from(t.date.ordinal()) - UNIX_ORDINAL) * 86_400_000_000
+        + ((i128::from(t.hour) * 60 + i128::from(t.minute)) * 60 + i128::from(t.second))
+            * 1_000_000
+        + i128::from(t.microsecond);
+    let utc = local - t.offset.map(|o| o.total_micros()).unwrap_or(0);
+    utc as f64 / 1e6
+}
+
+/// A simulated instant (seconds from the start of the simulation) as seconds since
+/// 1970-01-01 UTC, through the same calendar arithmetic as the times of the event log.
+fn instant(t0: &DateTime, s: Option<f64>) -> Res<Option<f64>> {
+    s.map(|s| shift(t0, s).map(|t| epoch(&t)))
+        .transpose()
+        .map_err(sim_fail)
+}
+
+/// An exception of the simulator, as the last line of the traceback `tok sim` prints.
+fn sim_fail(e: PyError) -> Error {
+    fail(e.to_string())
+}
+
+fn r_int(n: u64) -> Option<i32> {
+    i32::try_from(n).ok()
+}
+
+/// Run the simulation (`tok sim`). The result is a list: `report` (the text `tok sim`
+/// prints, in `lang`), `seed`, `horizon_s`, `warnings`, the indicators `started`,
+/// `finished`, `by_end_event`, `cycle_time`, `activities` and `resources`, the event log
+/// `log` and the table `cases`; tables are lists of equal-length columns, times are
+/// seconds since 1970-01-01 UTC.
+#[extendr]
+fn engine_sim(text: &str, cases: Robj, seed: Robj, lang: &str) -> Res<List> {
+    let doc = load_ok(text, lang)?;
+    let (cases, seed) = (param_from_r(&cases, "cases")?, param_from_r(&seed, "seed")?);
+    let res = tok_sim::simulate(&doc, cases, seed).map_err(sim_fail)?;
+    let kpi = res.kpi();
+    let o = &res.outcome;
+
+    let by_end_event = list!(
+        end_event = kpi
+            .by_end_event
+            .iter()
+            .map(|(k, _)| k.as_str())
+            .collect::<Vec<_>>(),
+        cases = kpi
+            .by_end_event
+            .iter()
+            .map(|(_, n)| r_int(*n as u64))
+            .collect::<Vec<_>>()
+    );
+    let cycle_time = list!(
+        mean_s = kpi.mean_s,
+        median_s = kpi.median_s,
+        p90_s = kpi.p90_s,
+        mean = kpi.mean.as_str(),
+        median = kpi.median.as_str(),
+        p90 = kpi.p90.as_str()
+    );
+    let acts = &kpi.activities;
+    let activities = list!(
+        activity = acts.iter().map(|(k, _)| k.as_str()).collect::<Vec<_>>(),
+        label = acts
+            .iter()
+            .map(|(_, a)| a.label.as_str())
+            .collect::<Vec<_>>(),
+        count = acts.iter().map(|(_, a)| r_int(a.count)).collect::<Vec<_>>(),
+        mean_wait_s = acts.iter().map(|(_, a)| a.mean_wait_s).collect::<Vec<_>>(),
+        mean_processing_s = acts
+            .iter()
+            .map(|(_, a)| a.mean_processing_s)
+            .collect::<Vec<_>>(),
+        mean_wait = acts
+            .iter()
+            .map(|(_, a)| a.mean_wait.as_str())
+            .collect::<Vec<_>>(),
+        mean_processing = acts
+            .iter()
+            .map(|(_, a)| a.mean_processing.as_str())
+            .collect::<Vec<_>>()
+    );
+    let ress = &kpi.resources;
+    let resources = list!(
+        resource = ress.iter().map(|(k, _)| k.as_str()).collect::<Vec<_>>(),
+        label = ress
+            .iter()
+            .map(|(_, r)| r.label.as_str())
+            .collect::<Vec<_>>(),
+        count = ress.iter().map(|(_, r)| r.count).collect::<Vec<_>>(),
+        utilization = ress.iter().map(|(_, r)| r.utilization).collect::<Vec<_>>()
+    );
+
+    let rows = &o.rows;
+    let mut enqueue = Vec::with_capacity(rows.len());
+    let mut start = Vec::with_capacity(rows.len());
+    let mut end = Vec::with_capacity(rows.len());
+    for r in rows {
+        enqueue.push(instant(&o.t0, Some(r.enqueue))?);
+        start.push(instant(&o.t0, r.start)?);
+        end.push(instant(&o.t0, r.end)?);
+    }
+    let log = list!(
+        case = rows.iter().map(|r| r_int(r.case)).collect::<Vec<_>>(),
+        activity = rows.iter().map(|r| r.activity.as_str()).collect::<Vec<_>>(),
+        label = rows.iter().map(|r| r.label.as_str()).collect::<Vec<_>>(),
+        resource = rows.iter().map(|r| r.resource.as_str()).collect::<Vec<_>>(),
+        enqueue = enqueue,
+        start = start,
+        end = end,
+        status = rows.iter().map(|r| r.status).collect::<Vec<_>>()
+    );
+
+    let cs = &o.cases;
+    let mut case_start = Vec::with_capacity(cs.len());
+    let mut case_end = Vec::with_capacity(cs.len());
+    for c in cs {
+        case_start.push(instant(&o.t0, Some(c.start))?);
+        case_end.push(instant(&o.t0, c.end)?);
+    }
+    let variables = List::from_values(cs.iter().map(|c| {
+        List::from_names_and_values(
+            c.vars.iter().map(|(k, _)| k.as_str()),
+            c.vars.iter().map(|(_, v)| value_to_r(v)),
+        )
+        .map(Robj::from)
+        .unwrap_or_else(|_| ().into())
+    }));
+    let cases = list!(
+        case = cs.iter().map(|c| r_int(c.id)).collect::<Vec<_>>(),
+        start = case_start,
+        end = case_end,
+        end_event = cs.iter().map(|c| c.end_event.clone()).collect::<Vec<_>>(),
+        cycle_time_s = cs
+            .iter()
+            .map(|c| c.end.map(|e| tok_sim::result::round(e - c.start, 3)))
+            .collect::<Vec<_>>(),
+        variables = variables
+    );
+
+    Ok(list!(
+        report = kpi.format(lang),
+        seed = kpi.seed.as_str(),
+        horizon_s = kpi.horizon_s,
+        warnings = kpi.warnings.clone(),
+        started = r_int(kpi.started as u64),
+        finished = r_int(kpi.finished as u64),
+        by_end_event = by_end_event,
+        cycle_time = cycle_time,
+        activities = activities,
+        resources = resources,
+        log = log,
+        cases = cases
+    ))
+}
+
 extendr_module! {
     mod tokr;
     fn engine_version;
@@ -290,4 +470,5 @@ extendr_module! {
     fn engine_export;
     fn engine_import;
     fn engine_eval;
+    fn engine_sim;
 }

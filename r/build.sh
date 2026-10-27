@@ -8,7 +8,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CRATES="tok-core tok-bpmn"
+CRATES="tok-core tok-bpmn tok-sim"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 

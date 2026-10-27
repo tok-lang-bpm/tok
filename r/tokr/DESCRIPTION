@@ -8,8 +8,10 @@ Description: Reads, checks, formats and exports process models written in tok,
     Camunda forms and simulation parameters. Models are checked against the
     BPMN 2.0 rules with diagnostics in English or Polish, exported to BPMN XML
     with diagram layout, SVG pictures, DMN and form files, and drawn in the
-    viewer or in R Markdown and Quarto documents through a knitr engine. The
-    work is done by the Rust engine of tok, shared with the Python package.
+    viewer or in R Markdown and Quarto documents through a knitr engine.
+    Processes are simulated as discrete-event models, giving indicators, an
+    event log for process mining and a table of cases. The work is done by
+    the Rust engine of tok, shared with the Python package.
 License: GPL (>= 3)
 URL: https://codeberg.org/MarekDeja/tok
 BugReports: https://codeberg.org/MarekDeja/tok/issues

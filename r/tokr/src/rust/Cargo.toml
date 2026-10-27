@@ -15,6 +15,7 @@ crate-type = ["staticlib"]
 [dependencies]
 tok-core = { path = "../../../../rust/tok-core" }
 tok-bpmn = { path = "../../../../rust/tok-bpmn" }
+tok-sim = { path = "../../../../rust/tok-sim" }
 extendr-api = "0.9"
 
 [profile.release]

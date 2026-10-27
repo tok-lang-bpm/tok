@@ -173,7 +173,9 @@ def eval_decision(text, decision, values=None):
 def simulate(text, cases=None, seed=None):
     """Simulate the process (``tok sim``). The result has ``kpi()``, ``log``, ``cases``,
     ``warnings``, ``seed``, ``horizon``, ``to_json(include_log=False)`` and
-    ``write_csv(path_log, path_cases=None)``; :func:`format_kpi` prints the report."""
+    ``write_csv(path_log, path_cases=None)``; :func:`format_kpi` prints the report.
+    On the Rust engine only, it also has ``to_xes()`` and ``write_xes(path)``: the event
+    log as an XES document (IEEE 1849-2016) for process-mining tools."""
     e = _engine()
     if e is not None:
         return e.simulate(text, cases, seed)

@@ -1,9 +1,11 @@
 # tok (Rust command line)
 
-A native build of the `tok` command. It reads the same files and prints the same
-results as the Python reference implementation (`python -m tok`):
-the same diagnostics in English and Polish, the same canonical text from `fmt`,
-and byte-identical BPMN XML, SVG, DMN and form files.
+A native build of the `tok` command. For language 0.3 it prints the same results as
+the pure-Python implementation (`TOK_ENGINE=python python -m tok`): the same
+diagnostics in English and Polish, the same canonical text from `fmt`, the same
+semantic BPMN, DMN and form files, `eval` results and simulation reports. From 0.4
+the diagram layout of BPMN and SVG output is the improved layout of `tok-bpmn`
+(fewer crossings, no label collisions), so drawings differ from the Python ones.
 
 ```
 cargo build --release -p tok-cli
@@ -22,7 +24,7 @@ target/release/tok check examples/wypozyczenie.tok --lang pl
 | `import FILE.bpmn` | `-o PATH`, `--no-flow-ids` | available |
 | `cheatsheet` |  | available |
 | `--version` |  | available |
-| `sim FILE` | `--cases N`, `--seed N`, `--log PATH`, `--cases-csv PATH`, `--lang en\|pl`, `--json` | available |
+| `sim FILE` | `--cases N`, `--seed N`, `--log PATH`, `--cases-csv PATH`, `--xes PATH`, `--lang en\|pl`, `--json` | available |
 | `eval FILE DECISION name=value …` | `--lang en\|pl` | available |
 
 Exit status: 0 when there are no errors, 1 when the document has errors (or a file
@@ -33,8 +35,8 @@ cannot be produced), 2 for a usage error.
 - `tok-core`: lexer, parser, checker (structure, FEEL, decision tables, forms,
   simulation settings), canonical printer, BPMN/DMN/form exporters and the BPMN
   importer.
-- `tok-bpmn`: BPMN 2.0 rules, automatic layout and SVG rendering (the course
-  validator `bpmn.py`).
+- `tok-bpmn`: BPMN 2.0 rules (the course validator `bpmn.py`), automatic layout
+  with route and label refinement, and SVG rendering.
 - `tok-sim`: the discrete-event simulator (`sim.py`), with a bit-exact port of
   Python's `random.Random`.
 - `tok-cli`: this command.
@@ -45,8 +47,10 @@ cannot be produced), 2 for a usage error.
   (`conformance/cases`): canonical text, core diagnostic codes and semantic BPMN XML.
 - `tok-core/tests/python_parity.rs` compares complete outputs with fixtures produced
   by the Python implementation (`tok-core/tests/gen_python_expected.py`): the
-  diagnostics of `check --json` in both languages, BPMN XML after layout, SVG, DMN,
-  forms, and `import` with and without flow identifiers. To refresh the fixtures
+  diagnostics of `check --json` in both languages, BPMN XML without the diagram,
+  whether drawing succeeds, DMN, forms, and `import` with and without flow
+  identifiers; the layout itself is covered by the golden files and quality
+  measures of `tok-bpmn` (see `tok-bpmn/PARITY.md`). To refresh the fixtures
   after a change in the Python reference:
 
   ```
@@ -57,10 +61,14 @@ cannot be produced), 2 for a usage error.
   produced by `python -m tok sim` (`tok-sim/tests/gen_python_sim.py`, one file per
   platform because the C library's `log`, `exp`, `sin` and `cos` differ in the last
   bit) and compares standard output, standard error, the exit code and the CSV files.
+  The Python command has no `--xes`; the test adds that option to the usage line and
+  the help text that Python prints before comparing them.
 
 ## Known differences
 
 - `--version` prints the version of the Rust build.
+- `sim --xes PATH` writes the event log as XES (IEEE 1849-2016) for process-mining
+  tools (see `docs/simulation.md`); the frozen Python command does not have it.
 - The overlap analysis of decision tables (D010) uses exact decimals of up to 38
   significant digits; a number literal that is longer, or written with digits
   outside ASCII, is left out of that analysis.

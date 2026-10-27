@@ -637,6 +637,20 @@ impl PySimResult {
             .map_err(|e| eval_error_to_py(py, e))
     }
 
+    /// The event log as an XES document (IEEE 1849-2016) for process-mining tools.
+    /// Only the engine has it; the pure-Python `sim.Result` does not.
+    fn to_xes(&self, py: Python<'_>) -> PyResult<String> {
+        self.inner.to_xes().map_err(|e| eval_error_to_py(py, e))
+    }
+
+    /// Write the XES event log to a file (UTF-8, `\n` line endings); `path` is a `str`
+    /// or an `os.PathLike`.
+    fn write_xes(&self, py: Python<'_>, path: std::path::PathBuf) -> PyResult<()> {
+        self.inner
+            .write_xes(&path.to_string_lossy())
+            .map_err(|e| eval_error_to_py(py, e))
+    }
+
     /// The plain-text report of the indicators (`sim.format_kpi(result.kpi(), lang)`).
     #[pyo3(signature = (lang = "en"))]
     fn format_kpi(&self, lang: &str) -> String {

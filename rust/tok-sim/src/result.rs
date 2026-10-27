@@ -400,7 +400,7 @@ pub fn os_error(e: &std::io::Error, path: &str) -> PyError {
     PyError::new(kind, format!("[Errno {errno}] {text}: {}", repr_str(path)))
 }
 
-fn write_file(path: &str, text: &str) -> R<()> {
+pub(crate) fn write_file(path: &str, text: &str) -> R<()> {
     if path.is_empty() {
         let e = std::io::Error::from(std::io::ErrorKind::NotFound);
         return Err(os_error(&e, path));

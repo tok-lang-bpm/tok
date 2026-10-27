@@ -5,6 +5,7 @@
 //! generator exactly, the simulator draws in the same order, and the results are
 //! formatted as Python formats them, so the same model and seed give the same event
 //! log, indicators and reports (on the same platform: see `DEPENDENCIES.md`).
+//! [`xes`] writes the event log as XES (IEEE 1849-2016), which `sim.py` does not.
 //!
 //! Errors are [`PyError`]s: the exceptions `sim.py` lets through (for example
 //! `tok.sim.SimError` for a process without a start event), as the last line of a
@@ -15,6 +16,7 @@ pub mod pyrandom;
 pub mod pyval;
 pub mod result;
 pub mod sim;
+pub mod xes;
 
 pub use pyrandom::{PyRandom, SeedError};
 pub use result::{Kpi, SimResult};

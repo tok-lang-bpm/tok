@@ -63,6 +63,17 @@ bupaR::activitylog(log, case_id = "case_id", activity_id = "activity_id",
 
 See `?tok_sim` for every element of the result.
 
+### XES event log
+
+`tok_xes()` writes the event log as an XES document (IEEE 1849-2016), the file of `tok sim --xes`, which process-mining tools such as ProM, pm4py, bupaR and Disco read directly. It takes a result of `tok_sim()` (the run is repeated with the same model, number of cases and seed, so the log is the same) or a model:
+
+```r
+tok_xes(s, "kwerenda.xes")                                       # the log of s
+tok_xes("kwerenda-symulacja.tok", "kwerenda.xes", cases = 500, seed = 3)
+```
+
+Each case is a trace; each activity instance gives the events `schedule`, `start` and `complete` (or `ati_abort` and `withdraw` for instances interrupted by a boundary timer while running or while waiting), with the label, the resource and timestamps with milliseconds. See `?tok_xes`.
+
 ## In documents
 
 Loading the package registers a knitr engine. A chunk written as

@@ -19,6 +19,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.1.0, 0.1.1** — language 0.1 with the Python reference implementation and the Julia core.
 - **0.2.0** — Rust engine at parity with Python: `tok-core`, `tok-bpmn`, native `tok`, Python bindings for parity testing.
 - **0.3.0** — language 0.3: complete Camunda 8 coverage as an optional executable layer (multi-instance, ad-hoc sub-processes, call activities, variable mappings, user task assignment and scheduling, jobs and REST connector, compensation, catch-all errors and escalations, conditional filters, listeners, version tags); Python, Rust and the Julia core at parity; executable conformance on Camunda 8 Run.
+- **0.4.0** — the Rust engine is the only engine: `eval` and `sim` in Rust, XES event logs, improved layout; `tok-lang` wheels on the engine with the module `tok.api`; R package `tokr`; release gates in `tools/check.sh`.
 
 ## State at 0.1
 
@@ -72,7 +73,7 @@ From 0.4 every new feature is written once, in Rust. Python, R and Julia call th
 
 - R package `tok` on the Rust core: `tok_read()`, `tok_check()` (diagnostics as a data frame), `tok_fmt()`, `tok_export()`, `tok_plot()` (SVG in the RStudio viewer and documents), `tok_sim()` (event log and cases as data frames, compatible with process-mining packages), `tok_eval()`; knitr engine `{tok}`; vendored crates for offline CRAN builds.
 - Simulation engine in Rust with identical semantics to the Python reference; statistical comparison of indicators on fixed seeds; XES event-log export.
-- Layout engine in Rust: deterministic, faster, with better routing of message flows and boundary paths.
+- Layout engine in Rust: deterministic, with better routing of message flows and boundary paths and without label collisions.
 
 ## 0.5 — BPMN 2.0.2 process modelling conformance
 

@@ -7,7 +7,8 @@
 //! This test runs the `tok` binary with the same arguments in the same folder and compares
 //! standard output, standard error, the exit code and the CSV files. Random draws that go
 //! through the C library's `log`, `exp`, `sin` and `cos` differ in the last bit between
-//! platforms, so the test reads the fixture of the platform it runs on.
+//! platforms, so the test reads the fixture of the platform it runs on. The Rust command
+//! also has `--xes`, which Python's usage line and help text get before the comparison.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -44,6 +45,19 @@ fn fixtures() -> PathBuf {
         .join("sim")
 }
 
+/// Python's usage line and help text of `tok sim` with the option `--xes`, which only the
+/// Rust command has.
+fn with_xes_option(text: &str) -> String {
+    text.replace(
+        "[--cases-csv CASES_CSV] [--lang",
+        "[--cases-csv CASES_CSV] [--xes XES] [--lang",
+    )
+    .replace(
+        "write one row per case (CSV)\n",
+        "write one row per case (CSV)\n  --xes XES             write the event log (XES, IEEE 1849-2016)\n",
+    )
+}
+
 fn load_cases() -> Vec<Case> {
     let p = fixtures().join(format!("cases-{PLATFORM}.json"));
     let text = std::fs::read_to_string(&p).unwrap_or_else(|e| {
@@ -66,8 +80,8 @@ fn load_cases() -> Vec<Case> {
                 .map(text_of)
                 .collect(),
             env_lang: c.get("env_lang").map(text_of),
-            stdout: text_of(&c["stdout"]),
-            stderr: text_of(&c["stderr"]),
+            stdout: with_xes_option(&text_of(&c["stdout"])),
+            stderr: with_xes_option(&text_of(&c["stderr"])),
             code: c["code"].as_i64().expect("code") as i32,
             files: c
                 .get("files")

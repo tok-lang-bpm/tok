@@ -45,6 +45,9 @@ event.
 shows.
 }
 
+The object also keeps the model, the number of cases and the seed of the run, so
+\code{\link[=tok_xes]{tok_xes()}} can write its event log as XES.
+
 \code{as.data.frame()} returns the event log. The function stops with the errors of the
 model (see \code{\link[=tok_check]{tok_check()}}) and with the errors of the simulator as \verb{tok sim} reports
 them, for example \verb{tok.sim.SimError: the process 'process' has no start event}.

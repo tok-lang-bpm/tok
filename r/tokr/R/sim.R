@@ -56,6 +56,9 @@
 #'   * `report`: the text report of `tok sim` in the language `lang`, which `print()`
 #'     shows.
 #'
+#'   The object also keeps the model, the number of cases and the seed of the run, so
+#'   [tok_xes()] can write its event log as XES.
+#'
 #'   `as.data.frame()` returns the event log. The function stops with the errors of the
 #'   model (see [tok_check()]) and with the errors of the simulator as `tok sim` reports
 #'   them, for example `tok.sim.SimError: the process 'process' has no start event`.
@@ -91,8 +94,61 @@ tok_sim <- function(x, cases = NULL, seed = NULL, lang = getOption("tok.lang", "
       warnings = res$warnings, seed = seed, horizon = res$horizon_s,
       report = res$report
     ),
-    class = "tok_sim"
+    class = "tok_sim",
+    run = list(text = m$text, cases = res$started, seed = seed)
   )
+}
+
+#' XES event log of a simulation
+#'
+#' Writes the event log of [tok_sim()] as an XES document (IEEE 1849-2016, eXtensible
+#' Event Stream), the exchange format of process-mining tools such as ProM, pm4py,
+#' bupaR, Disco and Celonis; it is the file of `tok sim --xes`.
+#'
+#' The log has one trace per case and up to three events per activity instance, with the
+#' transitions of the standard lifecycle model: `schedule` when the case reached the
+#' activity, `start` when a performer started the work and `complete` when it completed;
+#' an instance interrupted by a boundary timer ends with `ati_abort` when it was running
+#' and with `withdraw` when it was still waiting for a performer. Events carry
+#' `concept:name` (the label of the activity), `concept:instance`, `org:resource`,
+#' `time:timestamp` (with milliseconds and the UTC offset of `start=` of `simulate`) and
+#' `activity` (the identifier). Traces carry the case number, `start`, `end`,
+#' `end_event`, `cycle_time_s` and the case variables as typed attributes. See
+#' `docs/simulation.md` in the repository for the details.
+#'
+#' @param x A result of [tok_sim()], whose run is repeated with the same model, number of
+#'   cases and seed (which gives the same log), or a model: a `tok_model`, the path of a
+#'   `.tok` file, or the text of a model, which is simulated with `cases` and `seed`.
+#' @param file Optional path to write to.
+#' @param cases,seed As in [tok_sim()]; only for a model, not for a result of
+#'   [tok_sim()].
+#' @inheritParams tok_check
+#' @return The XES text; invisibly when written to `file`.
+#' @examples
+#' f <- system.file("examples", "kwerenda-symulacja.tok", package = "tokr")
+#' s <- tok_sim(f, cases = 20)
+#' xes <- tempfile(fileext = ".xes")
+#' tok_xes(s, xes)
+#' substr(tok_xes(f, cases = 2, seed = 7), 1, 200)
+#' @export
+tok_xes <- function(x, file = NULL, cases = NULL, seed = NULL,
+                    lang = getOption("tok.lang", "en")) {
+  lang <- check_lang(lang)
+  if (inherits(x, "tok_sim")) {
+    if (!is.null(cases) || !is.null(seed)) {
+      stop("`cases` and `seed` are those of the simulation `x`", call. = FALSE)
+    }
+    run <- attr(x, "run")
+    if (is.null(run)) stop("`x` does not keep its model; run tok_sim() again", call. = FALSE)
+    text <- run$text
+    cases <- run$cases
+    seed <- run$seed
+  } else {
+    text <- as_model(x)$text
+    cases <- sim_param(cases, "cases")
+    seed <- sim_param(seed, "seed")
+  }
+  out(engine_sim_xes(text, cases, seed, lang), file)
 }
 
 sim_param <- function(x, name) {

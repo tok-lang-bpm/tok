@@ -7,7 +7,7 @@ tok bpmn FILE [-o OUT.bpmn] [--no-layout]
 tok svg FILE [-o OUT.svg]
 tok export FILE [-o FOLDER]
 tok import FILE.bpmn [-o OUT.tok]
-tok sim FILE [--cases N] [--seed N] [--log LOG.csv] [--cases-csv CASES.csv] [--json]
+tok sim FILE [--cases N] [--seed N] [--log LOG.csv] [--cases-csv CASES.csv] [--xes LOG.xes] [--json]
 tok eval FILE DECISION name=value …
 tok cheatsheet
 tok --version
@@ -21,10 +21,10 @@ tok --version
 | `svg` | writes a picture of the diagram. |
 | `export` | writes the BPMN file, the SVG picture, one `.dmn` file per decision and one `.form` file per form: everything Camunda 8 needs for an executable document. |
 | `import` | converts a BPMN 2.0 XML file (for example drawn in Camunda Modeler) to tok. Elements tok 0.1 does not cover are reported on standard error. |
-| `sim` | runs the simulation described by `simulate`, `resource`, `variable` and the simulation attributes; prints indicators, optionally writes the event log and the per-case table as CSV. |
+| `sim` | runs the simulation described by `simulate`, `resource`, `variable` and the simulation attributes; prints indicators, optionally writes the event log and the per-case table as CSV (`--log`, `--cases-csv`) and the event log as XES, IEEE 1849-2016, for process-mining tools (`--xes`; see `simulation.md`). |
 | `eval` | evaluates a decision table for the given input values: `tok eval proposal.tok tryb-akceptacji rodzaj=e-book cena=120`. A value is `true`/`false`, a number, or else text. The result is printed as JSON: an object of outputs, `null` when no rule matches, a list of objects for hit policy `collect`. Exit code 1 when the document has errors or the hit policy is violated (several rules under `unique`, different outputs under `any`); 2 for an unknown decision or an argument that is not `name=value`. |
 | `cheatsheet` | prints the one-page language summary; useful as context for an AI agent. |
 
 `--lang pl` (or the environment variable `TOK_LANG=pl`) switches messages to Polish. `--json` prints machine-readable output for programs and agents.
 
-Without installation the same commands run as `python -m tok …` with `PYTHONPATH` pointing to `python/src`.
+Without installation the same commands run as `python -m tok …` with `PYTHONPATH` pointing to `python/src`. That pure-Python implementation is frozen at language 0.3 and has no `tok sim --xes`; the option needs the Rust engine (the native `tok` program, or the `tok-lang` package with the engine).

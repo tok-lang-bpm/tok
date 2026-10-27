@@ -1,5 +1,6 @@
 //! Command line interface of the tok process language: the same commands, options and
-//! output as `python -m tok` (language 0.3).
+//! output as `python -m tok` (language 0.3), and `tok sim --xes`, which the frozen
+//! reference does not have.
 
 use std::path::{Path, PathBuf};
 
@@ -770,13 +771,13 @@ fn eval_command(argv: &[String]) -> Result<u8, u8> {
 // -------------------------------------------------------------------------- sim
 
 const SIM_USAGE: &str = "usage: tok sim [-h] [--cases CASES] [--seed SEED] [--log LOG] \
-                         [--cases-csv CASES_CSV] [--lang {en,pl}] [--json] file";
+                         [--cases-csv CASES_CSV] [--xes XES] [--lang {en,pl}] [--json] file";
 
 const SIM: argparse::Spec = argparse::Spec {
     name: "sim",
     usage: SIM_USAGE,
     help: "usage: tok sim [-h] [--cases CASES] [--seed SEED] [--log LOG] \
-           [--cases-csv CASES_CSV] [--lang {en,pl}] [--json] file
+           [--cases-csv CASES_CSV] [--xes XES] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -788,6 +789,7 @@ options:
   --log LOG             write the event log (CSV)
   --cases-csv CASES_CSV
                         write one row per case (CSV)
+  --xes XES             write the event log (XES, IEEE 1849-2016)
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -798,6 +800,7 @@ options:
         ("--seed", Opt::Value("seed", Conv::Int)),
         ("--log", Opt::Value("log", Conv::Text)),
         ("--cases-csv", Opt::Value("cases_csv", Conv::Text)),
+        ("--xes", Opt::Value("xes", Conv::Text)),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -826,6 +829,10 @@ fn sim_command(argv: &[String]) -> Result<u8, u8> {
         let cases_csv = p.value("cases_csv").filter(|v| !v.is_empty());
         if log.is_some() || cases_csv.is_some() {
             result.write_csv(p.value("log"), p.value("cases_csv"))?;
+        }
+        // not in the reference command line: the event log as XES
+        if let Some(path) = p.value("xes").filter(|v| !v.is_empty()) {
+            result.write_xes(path)?;
         }
         if a.json {
             Ok(result.to_json(false)?

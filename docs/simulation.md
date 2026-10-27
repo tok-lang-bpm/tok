@@ -77,7 +77,7 @@ All draws come from one random number generator seeded with `seed=`. The same do
 | `end` | when the activity completed or was interrupted |
 | `status` | `completed` or `interrupted` |
 
-The log can be read by process-mining tools: `case` is the case identifier, `label` the activity, `start` and `end` the timestamps.
+The log can be read by process-mining tools: `case` is the case identifier, `label` the activity, `start` and `end` the timestamps. The same log in the XES format, which these tools read without any column mapping, is written by `--xes` (see [XES event log](#xes-event-log)).
 
 **Cases** (`--cases-csv cases.csv`): case number, start, end, end event, cycle time in seconds and the case variables (JSON).
 
@@ -91,6 +91,47 @@ The log can be read by process-mining tools: `case` is the case identifier, `lab
 | `resources.ID.utilization` | busy time divided by `count` × simulated period |
 | `horizon_s` | simulated period: from the first arrival to the last event |
 | `warnings` | conditions or expressions the simulator could not evaluate |
+
+## XES event log
+
+`tok sim FILE --xes log.xes` writes the event log as an XES document (IEEE 1849-2016, eXtensible Event Stream), the exchange format of process-mining tools such as ProM, pm4py, bupaR, Disco and Celonis. It can be combined with `--log`, `--cases-csv` and `--json`. The same document comes from `SimResult.to_xes()` and `SimResult.write_xes(path)` of the Python package and from `tok_xes()` of the R package. XES export is a feature of the Rust engine: the pure-Python implementation, frozen at language 0.3, does not have it.
+
+**Structure.** The document follows the XML schema of IEEE 1849-2016: the elements have no XML namespace, and the log element has `xes.version="1.0"` (the schema types the attribute as a decimal; `1.0` is the value OpenXES and ProM write, so every reader accepts it). In schema order the log contains:
+
+1. the standard extensions Concept (`concept`), Time (`time`), Lifecycle (`lifecycle`) and Organizational (`org`), with their definition URIs at `http://www.xes-standard.org/`;
+2. global attributes: every trace has `concept:name` and `start`; every event has `concept:name`, `concept:instance`, `lifecycle:transition`, `time:timestamp` and `activity`;
+3. the classifiers `Activity` (`concept:name`), `Activity_lifecycle` (`concept:name lifecycle:transition`) and `Activity_id` (`activity`);
+4. the log attributes `lifecycle:model` = `standard` and `seed`;
+5. one trace per case, in case order.
+
+**Traces.** A trace has the attributes:
+
+| Key | Type | Content |
+|---|---|---|
+| `concept:name` | string | case number, from 1 |
+| `start` | date | arrival of the case |
+| `end` | date | end of the case (absent for an unfinished case) |
+| `end_event` | string | identifier of the end event (absent for an unfinished case) |
+| `cycle_time_s` | float | cycle time in seconds, as in the table of cases |
+| one key per case variable | see below | the value at the end of the case |
+
+Case variables are typed: booleans are `boolean`; integers are `int` (as text when they do not fit in 64 bits); other numbers are `float`; durations are `float` seconds; text that is exactly an ISO date or date-time (as FEEL dates and date-times are stored, for example `2027-03-01`) is `date`; any other text is `string`; lists and contexts are `string` holding compact JSON. A variable without a value has no attribute. Keys are XML names: characters other than letters, digits, `_`, `-` and `.` become `_` (`:` too, because XES reserves it for extension prefixes), and a name that collides with one of the keys above gets the prefix `variable_`.
+
+**Events.** Each row of the event log, one activity instance, gives up to three events in the transitions of the standard lifecycle model:
+
+| Transition | Time | When |
+|---|---|---|
+| `schedule` | `enqueue` | always: the case reached the activity |
+| `start` | `start` | a performer started the work |
+| `complete` | `end` | the activity completed (`status` `completed`) |
+| `ati_abort` | `end` | the activity was interrupted by a boundary timer while it was running |
+| `withdraw` | `end` | the activity was interrupted by a boundary timer while it was waiting for a performer (no `start`) |
+
+An interrupting boundary timer cancels only the activity, not the case, so the transition is `ati_abort` (activity instance aborted), not `pi_abort` (process instance aborted); the simulator never aborts a whole case on its own, so `pi_abort` does not occur. Every event has `concept:name` (the label of the activity, or its identifier when it has no label), `concept:instance` (the row number of the instance in the event log, from 1, shared by its events), `lifecycle:transition`, `time:timestamp`, `org:resource` (the resource of `by=`, only when the activity has one) and `activity` (the identifier of the activity). Within a trace the events are ordered by time; events at the same time keep the order of the event log and of the lifecycle.
+
+**Timestamps** are `xs:dateTime` values with milliseconds, for example `2027-03-01T09:49:56.984+01:00`. The simulator counts time from `start=` of `simulate`, and the timestamps keep its UTC offset: `start="2027-03-01T09:00+01:00"` gives times with `+01:00`; a `start=` without an offset (as the default `2027-01-04T08:00`) gives times without one, which process-mining tools read as local time. An offset that is not a whole number of minutes or exceeds 14 hours (outside `xs:dateTime`) is converted to UTC. Fractions of a millisecond are cut off, as Python's `isoformat(timespec="milliseconds")` does.
+
+The output is deterministic: the same document and seed give the same bytes, encoded in UTF-8 with `\n` line endings; attribute values are escaped for XML, and characters XML 1.0 does not allow become U+FFFD.
 
 ## Example
 

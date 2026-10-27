@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tok-lang"
-version = "0.3.0"
+version = "0.4.0"
 description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
 readme = "README.md"
 requires-python = ">=3.8"

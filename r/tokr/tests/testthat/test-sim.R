@@ -195,3 +195,47 @@ test_that("errors are reported as tok sim reports them", {
   expect_error(tok_sim(kwerenda(), cases = 1:2), "`cases` must be a single number", fixed = TRUE)
   expect_error(tok_sim(kwerenda(), lang = "de"), "`lang`")
 })
+
+# fixtures/repair-desk.xes was written by `tok sim repair-desk.tok --xes`; the model draws
+# only uniform and triangular durations, so the file is the same on every platform.
+test_that("tok_xes gives the XES file of tok sim --xes", {
+  repair <- fixture("repair-desk.tok")
+  want <- paste(readLines(fixture("repair-desk.xes"), encoding = "UTF-8"), collapse = "\n")
+  want <- paste0(want, "\n")
+  s <- tok_sim(repair)
+  xes <- tok_xes(s)
+  expect_s3_class(xes, "tok_text")
+  expect_identical(as.character(unclass(xes)), want)
+  expect_identical(as.character(unclass(tok_xes(repair))), want)
+  expect_identical(as.character(unclass(tok_xes(tok_read(repair), cases = 8, seed = 3))), want)
+  dir <- withr_tempdir()
+  path <- file.path(dir, "log.xes")
+  expect_invisible(tok_xes(s, path))
+  expect_identical(readBin(path, "raw", file.size(path)), charToRaw(enc2utf8(want)))
+})
+
+test_that("the XES log has one trace per case and the events of the event log", {
+  s <- tok_sim(kwerenda(), cases = 15, seed = 4)
+  xes <- tok_xes(s)
+  count <- function(pattern) lengths(regmatches(xes, gregexpr(pattern, xes, fixed = TRUE)))
+  expect_true(startsWith(xes, '<?xml version="1.0" encoding="UTF-8"?>\n<log xes.version="1.0">'))
+  expect_equal(count("<trace>"), nrow(s$cases))
+  expect_equal(count("<event>"), nrow(s$log) + sum(!is.na(s$log$start)) + sum(!is.na(s$log$end)))
+  expect_equal(count('value="schedule"'), nrow(s$log))
+  expect_equal(count('value="complete"'), sum(s$log$status == "completed") + 1L)
+  expect_identical(tok_xes(kwerenda(), cases = 15, seed = 4), xes)
+  expect_match(xes, '<date key="start" value="2027-01-04T08:00:00.000"/>', fixed = TRUE)
+  loan <- tok_xes(fixture("loan-desk.tok"))
+  expect_match(loan, '<date key="time:timestamp" value="2027-05-03T08:00:00.000+02:00"/>',
+               fixed = TRUE)
+  expect_match(loan, '<string key="org:resource" value="staff"/>', fixed = TRUE)
+})
+
+test_that("tok_xes reports its errors", {
+  s <- tok_sim(kwerenda(), cases = 5)
+  expect_error(tok_xes(s, cases = 3), "`cases` and `seed` are those of the simulation")
+  expect_error(tok_xes(no_start), "tok.sim.SimError: the process 'process' has no start event",
+               fixed = TRUE)
+  expect_error(tok_xes(kwerenda(), seed = "7"), "`seed` must be a single number", fixed = TRUE)
+  expect_error(tok_xes(kwerenda(), lang = "de"), "`lang`")
+})

@@ -2,6 +2,28 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version may change the language; a patch version never does.
 
+## [0.4.0] — 2026-10-27
+
+The language is unchanged (language 0.3). From this release the Rust engine is the only engine: every new feature is written once, in Rust, and Python and R call it.
+
+### Added
+
+- Rust engine: FEEL evaluation with Python's decimal semantics, decision table evaluation with all hit policies, and `tok eval`; the discrete-event simulator (`tok-sim`, with a bit-exact port of Python's `random.Random`) and `tok sim`. Both print exactly what the pure-Python commands print for language 0.3; simulation results are identical per platform (Python's own `gauss`, `lognormvariate` and `expovariate` differ in the last bit between Windows and Linux, and so does the engine, deliberately).
+- XES event log of a simulation (IEEE 1849-2016): `tok sim FILE --xes PATH`, `SimResult.to_xes()` and `write_xes()` in Python, `tok_xes()` in R. One trace per case with typed case variables, lifecycle transitions `schedule`, `start`, `complete`, `ati_abort` and `withdraw`, resources, deterministic output. See `docs/simulation.md`.
+- Python package `tok-lang` on the engine: wheels contain the extension module `tok._engine`; the `tok` command runs the Rust command line; the new module `tok.api` (`check`, `fmt`, `bpmn`, `svg`, `export`, `import_bpmn`, `eval_decision`, `simulate`, `format_kpi`) works on the engine, or on the pure-Python implementation where no wheel is installed or with `TOK_ENGINE=python`. `tools/wheel.sh` builds the wheels (abi3, Python 3.8 or newer).
+- R package `tokr` (`r/tokr`, the CRAN name `tok` is taken) on the engine through extendr: `tok_read()`, `tok_check()` (diagnostics as a data frame), `tok_fmt()`, `tok_bpmn()`, `tok_svg()`, `tok_plot()` (viewer), `tok_export()`, `tok_import()`, `tok_eval()`, `tok_sim()` (indicators, an event log ready for bupaR, cases as data frames) and `tok_xes()`; knitr engine `{tok}` for R Markdown and Quarto. `r/build.sh` builds a source archive that carries every Rust crate it needs and installs without network access; it passes `R CMD check --as-cran`.
+- Release gates in one script, `tools/check.sh`: formatting, lints and tests of Rust, Python, R and Julia, the wheel and its parity with the pure-Python implementation, the native `tok` program; checked on Windows and Linux, with Linux wheels for x86_64 and aarch64 (manylinux2014) and a cross-compiled macOS wheel (universal2).
+
+### Changed
+
+- Diagram layout of the engine (`tok bpmn`, `tok svg`, `tok export`, and every binding): after the classic layout, flows are rerouted and labels moved where this removes defects, and columns are reordered by barycentre sweeps when that is better. On the 65 models of the corpus edge crossings fell from 59 to 30, flows through shapes from 22 to 17, label collisions from 28 to 0, labels on edges from 112 to 3 and bends from 281 to 228; no model is worse on any measure, and a model that brings its own diagram is drawn as before. The layout stays deterministic. It takes about 1.6 ms per model instead of 0.7 ms. Drawings therefore differ from those of the pure-Python implementation; semantic BPMN, DMN and form files remain identical.
+- The pure-Python implementation is frozen at language 0.3 and remains the reference of the parity tests.
+- The argument parsing of the native `tok` command follows the Python command for every command, including help texts and error messages.
+
+### Fixed
+
+- `tok eval` reports a violated hit policy (two rules under `unique`, different outputs under `any`) as `tok: rules 1, 2 all match (hit policy unique)` with exit status 1 instead of a Python traceback.
+
 ## [0.3.0] — 2026-10-27
 
 Language 0.3 (`tok 0.3` in the header; documents written for 0.1 stay valid and mean the same). Reference: `docs/spec.md` §5.3, §10, §10.3, §13; design notes in `docs/design-0.3.md`.

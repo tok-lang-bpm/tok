@@ -460,6 +460,17 @@ fn engine_sim(text: &str, cases: Robj, seed: Robj, lang: &str) -> Res<List> {
     ))
 }
 
+/// Run the simulation (`tok sim`) and return its event log as an XES document
+/// (`tok sim --xes`).
+#[extendr]
+fn engine_sim_xes(text: &str, cases: Robj, seed: Robj, lang: &str) -> Res<String> {
+    let doc = load_ok(text, lang)?;
+    let (cases, seed) = (param_from_r(&cases, "cases")?, param_from_r(&seed, "seed")?);
+    tok_sim::simulate(&doc, cases, seed)
+        .and_then(|res| res.to_xes())
+        .map_err(sim_fail)
+}
+
 extendr_module! {
     mod tokr;
     fn engine_version;
@@ -471,4 +482,5 @@ extendr_module! {
     fn engine_import;
     fn engine_eval;
     fn engine_sim;
+    fn engine_sim_xes;
 }

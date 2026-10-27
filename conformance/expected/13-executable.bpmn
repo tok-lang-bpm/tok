@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Propozycja zakupu książki" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_potwierdzenie" name="potwierdzenie">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=numer_zamowienia" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="propozycja-zakupu" />
+    <bpmn:participant id="dostawca" name="Dostawca" />
+    <bpmn:messageFlow id="m-zamowienie-dostawca" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="zamowienie" targetRef="dostawca" />
+    <bpmn:messageFlow id="m-dostawca-potw" messageRef="Message_potwierdzenie" name="Potwierdzenie" sourceRef="dostawca" targetRef="potw" />
+  </bpmn:collaboration>
+  <bpmn:process id="propozycja-zakupu" isExecutable="true" name="Propozycja zakupu książki">
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>zlozona</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="system" name="System biblioteczny">
+        <bpmn:flowNodeRef>tryb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>potrzebna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>scalenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>koszt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>powiad</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="kierownik" name="Kierownik Oddziału Gromadzenia">
+        <bpmn:flowNodeRef>akceptacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>termin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zgoda</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odrzucona</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wygasla</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="gromadzenie" name="Bibliotekarz gromadzenia">
+        <bpmn:flowNodeRef>zamowienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>potw</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>war</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowiona</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="zlozona" name="Propozycja złożona">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="f-propozycja" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="tryb" name="Ustalenie trybu akceptacji">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="tryb-akceptacji" resultVariable="tryb" />
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway default="f-potrzebna-scalenie" id="potrzebna" name="Czy potrzebna akceptacja kierownika?" />
+    <bpmn:exclusiveGateway id="scalenie" />
+    <bpmn:scriptTask id="koszt" name="Wyliczenie kosztu zakupu">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=cena + 12.5" resultVariable="koszt" />
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:serviceTask id="powiad" name="Powiadomienie">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="powiadomienie" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="akceptacja" name="Akceptacja propozycji">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="f-akceptacja" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent attachedToRef="akceptacja" id="termin" name="Minęło 7 dni">
+      <bpmn:timerEventDefinition id="termin-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P7D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway default="f-zgoda-odrzucona" id="zgoda" name="Czy kierownik się zgodził?" />
+    <bpmn:endEvent id="odrzucona" name="Propozycja odrzucona" />
+    <bpmn:endEvent id="wygasla" name="Propozycja wygasła" />
+    <bpmn:userTask id="zamowienie" name="Złożenie zamówienia u dostawcy">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="potw" name="Potwierdzenie dostawcy">
+      <bpmn:messageEventDefinition id="potw-def" messageRef="Message_potwierdzenie" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="war" name="Warunek">
+      <bpmn:conditionalEventDefinition id="war-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">=koszt &gt; 100</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="zamowiona" name="Książka zamówiona" />
+    <bpmn:sequenceFlow id="f-zlozona-tryb" sourceRef="zlozona" targetRef="tryb" />
+    <bpmn:sequenceFlow id="f-tryb-potrzebna" sourceRef="tryb" targetRef="potrzebna" />
+    <bpmn:sequenceFlow id="f-potrzebna-akceptacja" name="tak" sourceRef="potrzebna" targetRef="akceptacja">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=tryb = "kierownik"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-potrzebna-scalenie" name="nie" sourceRef="potrzebna" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-akceptacja-zgoda" sourceRef="akceptacja" targetRef="zgoda" />
+    <bpmn:sequenceFlow id="f-zgoda-scalenie" name="tak" sourceRef="zgoda" targetRef="scalenie">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=zgoda = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-zgoda-odrzucona" name="nie" sourceRef="zgoda" targetRef="odrzucona" />
+    <bpmn:sequenceFlow id="f-termin-wygasla" sourceRef="termin" targetRef="wygasla" />
+    <bpmn:sequenceFlow id="f-scalenie-koszt" sourceRef="scalenie" targetRef="koszt" />
+    <bpmn:sequenceFlow id="f-koszt-powiad" sourceRef="koszt" targetRef="powiad" />
+    <bpmn:sequenceFlow id="f-powiad-zamowienie" sourceRef="powiad" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-zamowienie-potw" sourceRef="zamowienie" targetRef="potw" />
+    <bpmn:sequenceFlow id="f-potw-war" sourceRef="potw" targetRef="war" />
+    <bpmn:sequenceFlow id="f-war-zamowiona" sourceRef="war" targetRef="zamowiona" />
+  </bpmn:process>
+</bpmn:definitions>

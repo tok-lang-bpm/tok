@@ -1,0 +1,11 @@
+# Wypożyczenie: najprostszy przebieg
+tok 0.1 "Wypożyczenie"  # nagłówek dokumentu
+
+start s "Potrzeba książki"
+user z "Złożenie zamówienia"
+task k "Sprawdzenie katalogów"  # krok w systemie
+end e "Zamówienie przyjęte"
+
+flow s -> z -> k -> e
+
+# koniec dokumentu

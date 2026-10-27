@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Oczekiwanie na odpowiedź" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Ksiazka" name="Książka" />
+  <bpmn:message id="Message_Odmowa" name="Odmowa" />
+  <bpmn:process id="process" isExecutable="false" name="Oczekiwanie na odpowiedź">
+    <bpmn:startEvent id="s" />
+    <bpmn:sendTask id="z" messageRef="Message_Zamowienie" name="Wysłanie zamówienia" />
+    <bpmn:eventBasedGateway id="g" name="Co nastąpi pierwsze?" />
+    <bpmn:intermediateCatchEvent id="k" name="Książka dotarła">
+      <bpmn:messageEventDefinition id="k-def" messageRef="Message_Ksiazka" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="o" name="Odmowa">
+      <bpmn:messageEventDefinition id="o-def" messageRef="Message_Odmowa" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="t" name="Minęło 14 dni">
+      <bpmn:timerEventDefinition id="t-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P14D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="c" name="Zmiana statusu">
+      <bpmn:conditionalEventDefinition id="c-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">status = "zamknięte"</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateThrowEvent id="l1" name="Do strony 2">
+      <bpmn:linkEventDefinition id="l1-def" name="strona2" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="e1" />
+    <bpmn:endEvent id="e2" name="Koniec bez książki">
+      <bpmn:terminateEventDefinition id="e2-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-z" sourceRef="s" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-g" sourceRef="z" targetRef="g" />
+    <bpmn:sequenceFlow id="f-g-k" sourceRef="g" targetRef="k" />
+    <bpmn:sequenceFlow id="f-g-o" sourceRef="g" targetRef="o" />
+    <bpmn:sequenceFlow id="f-g-t" sourceRef="g" targetRef="t" />
+    <bpmn:sequenceFlow id="f-g-c" sourceRef="g" targetRef="c" />
+    <bpmn:sequenceFlow id="f-k-e1" sourceRef="k" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-o-e2" sourceRef="o" targetRef="e2" />
+    <bpmn:sequenceFlow id="f-t-l1" sourceRef="t" targetRef="l1" />
+    <bpmn:sequenceFlow id="f-c-e2" sourceRef="c" targetRef="e2" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,6 @@
+tok 0.1 "Tabulator"
+
+pool p "Pula"
+	lane l "Tor"
+  task t "Zadanie"
+	task t2

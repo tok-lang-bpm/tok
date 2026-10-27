@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Równoległość" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Równoległość">
+    <bpmn:startEvent id="s" />
+    <bpmn:parallelGateway id="split" name="Uruchomienie realizacji" />
+    <bpmn:serviceTask id="a" name="Rezerwacja środków" />
+    <bpmn:serviceTask id="b" name="Wysłanie zamówienia" />
+    <bpmn:parallelGateway id="join" />
+    <bpmn:manualTask id="c" name="Archiwizacja" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-split" sourceRef="s" targetRef="split" />
+    <bpmn:sequenceFlow id="f-split-a" sourceRef="split" targetRef="a" />
+    <bpmn:sequenceFlow id="f-split-b" sourceRef="split" targetRef="b" />
+    <bpmn:sequenceFlow id="f-a-join" sourceRef="a" targetRef="join" />
+    <bpmn:sequenceFlow id="f-b-join" sourceRef="b" targetRef="join" />
+    <bpmn:sequenceFlow id="f-join-c" sourceRef="join" targetRef="c" />
+    <bpmn:sequenceFlow id="f-c-e" sourceRef="c" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

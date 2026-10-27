@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tok-lang"
+version = "0.1.0"
+description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Marek Deja" }]
+keywords = ["BPMN", "DMN", "process modelling", "simulation", "Camunda"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://codeberg.org/MarekDeja/tok"
+
+[project.scripts]
+tok = "tok.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["python/src"]
+
+[tool.setuptools.package-data]
+tok = ["cheatsheet.md"]

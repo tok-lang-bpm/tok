@@ -1,0 +1,18 @@
+tok 0.1 "Podprocesy"
+
+start s
+sub p "Poszukiwania w zasobie" loop
+  start ps
+  task a "Kwerenda w inwentarzu" parallel
+  task b "Kwerenda w aktach" sequential
+  end pe
+call c "Wydanie kopii" compensation process=wydanie
+end e terminate
+eventsub w "Wycofanie wniosku"
+  start ws "Wniosek wycofany" noninterrupting message="Wycofanie"
+  task wt "Zamknięcie sprawy"
+  end we compensate
+
+flow ps -> a -> b -> pe
+flow ws -> wt -> we
+flow s -> p -> c -> e

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Decyzje" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Decyzje">
+    <bpmn:startEvent id="s" />
+    <bpmn:businessRuleTask id="t" name="Ustalenie limitu" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-t" sourceRef="s" targetRef="t" />
+    <bpmn:sequenceFlow id="f-t-e" sourceRef="t" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

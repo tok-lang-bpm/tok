@@ -1,0 +1,21 @@
+tok 0.1 "Decyzje"
+
+start s
+rule t "Ustalenie limitu" decision=limit
+end e
+
+flow s -> t -> e
+
+# tabela limitów wypożyczeń
+decision limit "Limit wypożyczeń" hit=first
+  | wiek: number | typ: string           || limit: number || uwagi              |
+  # niepełnoletni
+  | < 18         | -                     || 5             || niepełnoletni      |
+  | >= 18        | "student","doktorant" || 15            ||                    |
+  | >= 18        | "pracownik"           || 30            || pracownicy uczelni |  # wszyscy
+  | -            | -                     || 10            || pozostali          |
+
+decision tryb "Tryb"
+  | rodzaj: string || tryb: string |
+  | "e-book"       || "kierownik"  |
+  | "druk|ebook"   || "auto"       |

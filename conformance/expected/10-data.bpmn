@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Dane i artefakty" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:dataStore id="kat-store" name="Katalog" />
+  <bpmn:dataStore id="rej-store" name="rej" />
+  <bpmn:category id="categories">
+    <bpmn:categoryValue id="g1-value" value="Etap przyjęcia" />
+  </bpmn:category>
+  <bpmn:process id="process" isExecutable="false" name="Dane i artefakty">
+    <bpmn:startEvent id="s">
+      <bpmn:dataOutputAssociation id="s-doa-7">
+        <bpmn:targetRef>lista</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:startEvent>
+    <bpmn:userTask id="z" name="Złożenie wniosku">
+      <bpmn:dataOutputAssociation id="z-doa-1">
+        <bpmn:targetRef>w</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:subProcess id="p" name="Ocena">
+      <bpmn:startEvent id="ps" />
+      <bpmn:task id="a" name="Analiza">
+        <bpmn:property id="a-in-6" name="__targetRef_placeholder" />
+        <bpmn:dataInputAssociation id="a-dia-6">
+          <bpmn:sourceRef>dp</bpmn:sourceRef>
+          <bpmn:targetRef>a-in-6</bpmn:targetRef>
+        </bpmn:dataInputAssociation>
+      </bpmn:task>
+      <bpmn:endEvent id="pe" />
+      <bpmn:sequenceFlow id="f-ps-a" sourceRef="ps" targetRef="a" />
+      <bpmn:sequenceFlow id="f-a-pe" sourceRef="a" targetRef="pe" />
+      <bpmn:dataObject id="dp-object" name="Notatka" />
+      <bpmn:dataObjectReference dataObjectRef="dp-object" id="dp" name="Notatka" />
+    </bpmn:subProcess>
+    <bpmn:task id="r" name="Rejestracja">
+      <bpmn:property id="r-in-4" name="__targetRef_placeholder" />
+      <bpmn:property id="r-in-2" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="r-dia-2">
+        <bpmn:sourceRef>w</bpmn:sourceRef>
+        <bpmn:targetRef>r-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="r-doa-3">
+        <bpmn:targetRef>w2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:dataInputAssociation id="r-dia-4">
+        <bpmn:sourceRef>kat</bpmn:sourceRef>
+        <bpmn:targetRef>r-in-4</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="r-doa-5">
+        <bpmn:targetRef>kat2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-z" sourceRef="s" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-p" sourceRef="z" targetRef="p" />
+    <bpmn:sequenceFlow id="f-p-r" sourceRef="p" targetRef="r" />
+    <bpmn:sequenceFlow id="f-r-e" sourceRef="r" targetRef="e" />
+    <bpmn:dataObject id="w-object" name="Wniosek" />
+    <bpmn:dataObjectReference dataObjectRef="w-object" id="w" name="Wniosek">
+      <bpmn:dataState id="w-state" name="złożony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="w2-object" name="Wniosek" />
+    <bpmn:dataObjectReference dataObjectRef="w2-object" id="w2" name="Wniosek">
+      <bpmn:dataState id="w2-state" name="zarejestrowany" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="lista-object" isCollection="true" name="Lista pozycji" />
+    <bpmn:dataObjectReference dataObjectRef="lista-object" id="lista" name="Lista pozycji" />
+    <bpmn:dataStoreReference dataStoreRef="kat-store" id="kat" name="Katalog" />
+    <bpmn:dataStoreReference dataStoreRef="kat-store" id="kat2" name="Katalog" />
+    <bpmn:dataStoreReference dataStoreRef="rej-store" id="rej" />
+    <bpmn:textAnnotation id="n1">
+      <bpmn:text>Podstawa: regulamin biblioteki</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="n1-assoc" sourceRef="n1" targetRef="z" />
+    <bpmn:textAnnotation id="n2">
+      <bpmn:text>Uwaga ogólna</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:group categoryValueRef="g1-value" id="g1" />
+  </bpmn:process>
+</bpmn:definitions>

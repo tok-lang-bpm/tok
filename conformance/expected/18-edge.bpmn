@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Edge cases" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_List" name="List" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="p" name="Organizacja" processRef="p-process" />
+    <bpmn:participant id="q" name="Odbiorca" />
+    <bpmn:messageFlow id="m-w-q" messageRef="Message_List" name="List" sourceRef="w" targetRef="q" />
+    <bpmn:messageFlow id="m-w-q-2" messageRef="Message_List" name="List" sourceRef="w" targetRef="q" />
+  </bpmn:collaboration>
+  <bpmn:process id="p-process" isExecutable="false" name="Edge cases">
+    <bpmn:startEvent id="s" />
+    <bpmn:sendTask id="w" messageRef="Message_List" name="Wysłanie" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-w" sourceRef="s" targetRef="w" />
+    <bpmn:sequenceFlow id="f-w-e" sourceRef="w" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

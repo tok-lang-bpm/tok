@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Kwerenda" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/06">
+  <bpmn:message id="Msg_Wniosek" name="Wniosek o kwerendę" />
+  <bpmn:message id="Msg_Wycofanie" name="Wycofanie wniosku" />
+  <bpmn:message id="Msg_Przedluzenie" name="Zawiadomienie o nowym terminie" />
+  <bpmn:message id="Msg_Odpowiedz" name="Odpowiedź na kwerendę" />
+  <bpmn:escalation id="Esc_Szersze" name="Kwerenda wymaga szerszych poszukiwań" escalationCode="SZERSZE" />
+  <bpmn:collaboration id="Collaboration_Kwerenda">
+    <bpmn:participant id="Participant_Archiwum" name="Archiwum" processRef="Process_Kwerenda" />
+    <bpmn:participant id="Participant_Wnioskodawca" name="Wnioskodawca" />
+    <bpmn:messageFlow id="MF_Wniosek" name="Wniosek" sourceRef="Participant_Wnioskodawca" targetRef="Start_Wniosek" messageRef="Msg_Wniosek" />
+    <bpmn:messageFlow id="MF_Przedluzenie" name="Nowy termin" sourceRef="Task_Zawiadomienie" targetRef="Participant_Wnioskodawca" messageRef="Msg_Przedluzenie" />
+    <bpmn:messageFlow id="MF_Odpowiedz" name="Odpowiedź" sourceRef="Task_Wyslanie" targetRef="Participant_Wnioskodawca" messageRef="Msg_Odpowiedz" />
+    <bpmn:messageFlow id="MF_Wycofanie" name="Wycofanie" sourceRef="Participant_Wnioskodawca" targetRef="EventSub_Start" messageRef="Msg_Wycofanie" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Kwerenda" name="Kwerenda archiwalna" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Kwerenda">
+      <bpmn:lane id="Lane_Kancelaria" name="Pracownik kancelarii">
+        <bpmn:flowNodeRef>Start_Wniosek</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rejestracja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wyslanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Wyslana</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EventSub_Wycofanie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Archiwista" name="Archiwista">
+        <bpmn:flowNodeRef>Sub_Poszukiwania</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Szersze</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Odpowiedz</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kierownik" name="Kierownik oddziału">
+        <bpmn:flowNodeRef>Task_NowyTermin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zawiadomienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Zawiadomiony</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Wniosek" name="Wniosek wpłynął">
+      <bpmn:messageEventDefinition id="Start_Wniosek_def" messageRef="Msg_Wniosek" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Rejestracja" name="Rejestracja wniosku" />
+    <bpmn:subProcess id="Sub_Poszukiwania" name="Poszukiwania w zasobie">
+      <bpmn:startEvent id="Sub_Start" name="Poszukiwania rozpoczęte" />
+      <bpmn:userTask id="Sub_Task_Inwentarze" name="Przegląd inwentarzy i katalogów" />
+      <bpmn:exclusiveGateway id="Sub_Gw_Odnalezione" name="Czy akta odnalezione w inwentarzach?" />
+      <bpmn:intermediateThrowEvent id="Sub_Throw_Szersze" name="Zgłoszenie szerszych poszukiwań">
+        <bpmn:escalationEventDefinition id="Sub_Throw_Szersze_def" escalationRef="Esc_Szersze" />
+      </bpmn:intermediateThrowEvent>
+      <bpmn:userTask id="Sub_Task_Pokrewne" name="Przeszukanie zespołów pokrewnych" />
+      <bpmn:exclusiveGateway id="Sub_Gw_Scalenie" />
+      <bpmn:userTask id="Sub_Task_Wyniki" name="Sporządzenie wyników kwerendy" />
+      <bpmn:endEvent id="Sub_End" name="Wyniki gotowe" />
+      <bpmn:sequenceFlow id="SF1" sourceRef="Sub_Start" targetRef="Sub_Task_Inwentarze" />
+      <bpmn:sequenceFlow id="SF2" sourceRef="Sub_Task_Inwentarze" targetRef="Sub_Gw_Odnalezione" />
+      <bpmn:sequenceFlow id="SF3" name="tak" sourceRef="Sub_Gw_Odnalezione" targetRef="Sub_Gw_Scalenie" />
+      <bpmn:sequenceFlow id="SF4" name="nie" sourceRef="Sub_Gw_Odnalezione" targetRef="Sub_Throw_Szersze" />
+      <bpmn:sequenceFlow id="SF5" sourceRef="Sub_Throw_Szersze" targetRef="Sub_Task_Pokrewne" />
+      <bpmn:sequenceFlow id="SF6" sourceRef="Sub_Task_Pokrewne" targetRef="Sub_Gw_Scalenie" />
+      <bpmn:sequenceFlow id="SF7" sourceRef="Sub_Gw_Scalenie" targetRef="Sub_Task_Wyniki" />
+      <bpmn:sequenceFlow id="SF8" sourceRef="Sub_Task_Wyniki" targetRef="Sub_End" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_Szersze" name="Szersze poszukiwania" attachedToRef="Sub_Poszukiwania" cancelActivity="false">
+      <bpmn:escalationEventDefinition id="Boundary_Szersze_def" escalationRef="Esc_Szersze" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_NowyTermin" name="Wyznaczenie nowego terminu odpowiedzi" />
+    <bpmn:sendTask id="Task_Zawiadomienie" name="Zawiadomienie wnioskodawcy o nowym terminie" messageRef="Msg_Przedluzenie" />
+    <bpmn:endEvent id="End_Zawiadomiony" name="Wnioskodawca zawiadomiony" />
+    <bpmn:userTask id="Task_Odpowiedz" name="Przygotowanie odpowiedzi" />
+    <bpmn:sendTask id="Task_Wyslanie" name="Wysłanie odpowiedzi" messageRef="Msg_Odpowiedz" />
+    <bpmn:endEvent id="End_Wyslana" name="Odpowiedź wysłana" />
+    <bpmn:subProcess id="EventSub_Wycofanie" name="Wycofanie wniosku" triggeredByEvent="true">
+      <bpmn:startEvent id="EventSub_Start" name="Wycofanie otrzymane">
+        <bpmn:messageEventDefinition id="EventSub_Start_def" messageRef="Msg_Wycofanie" />
+      </bpmn:startEvent>
+      <bpmn:userTask id="EventSub_Task_Zamkniecie" name="Zamknięcie sprawy w rejestrze" />
+      <bpmn:endEvent id="EventSub_End" name="Sprawa zamknięta" />
+      <bpmn:sequenceFlow id="EF1" sourceRef="EventSub_Start" targetRef="EventSub_Task_Zamkniecie" />
+      <bpmn:sequenceFlow id="EF2" sourceRef="EventSub_Task_Zamkniecie" targetRef="EventSub_End" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Wniosek" targetRef="Task_Rejestracja" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Rejestracja" targetRef="Sub_Poszukiwania" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Sub_Poszukiwania" targetRef="Task_Odpowiedz" />
+    <bpmn:sequenceFlow id="F4" sourceRef="Task_Odpowiedz" targetRef="Task_Wyslanie" />
+    <bpmn:sequenceFlow id="F5" sourceRef="Task_Wyslanie" targetRef="End_Wyslana" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Boundary_Szersze" targetRef="Task_NowyTermin" />
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_NowyTermin" targetRef="Task_Zawiadomienie" />
+    <bpmn:sequenceFlow id="F8" sourceRef="Task_Zawiadomienie" targetRef="End_Zawiadomiony" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Kwerenda">
+      <bpmndi:BPMNShape id="Participant_Archiwum_di" bpmnElement="Participant_Archiwum" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="1670" height="690" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Wnioskodawca_di" bpmnElement="Participant_Wnioskodawca" isHorizontal="true">
+        <dc:Bounds x="0" y="730" width="1670" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kancelaria_di" bpmnElement="Lane_Kancelaria" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="1640" height="340" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Archiwista_di" bpmnElement="Lane_Archiwista" isHorizontal="true">
+        <dc:Bounds x="30" y="340" width="1640" height="210" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kierownik_di" bpmnElement="Lane_Kierownik" isHorizontal="true">
+        <dc:Bounds x="30" y="550" width="1640" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Wniosek_di" bpmnElement="Start_Wniosek">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Rejestracja_di" bpmnElement="Task_Rejestracja">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Poszukiwania_di" bpmnElement="Sub_Poszukiwania" isExpanded="true">
+        <dc:Bounds x="326" y="370" width="920" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Start_di" bpmnElement="Sub_Start">
+        <dc:Bounds x="356" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Task_Inwentarze_di" bpmnElement="Sub_Task_Inwentarze">
+        <dc:Bounds x="442" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Gw_Odnalezione_di" bpmnElement="Sub_Gw_Odnalezione" isMarkerVisible="true">
+        <dc:Bounds x="592" y="425" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Throw_Szersze_di" bpmnElement="Sub_Throw_Szersze">
+        <dc:Bounds x="692" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Task_Pokrewne_di" bpmnElement="Sub_Task_Pokrewne">
+        <dc:Bounds x="778" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Gw_Scalenie_di" bpmnElement="Sub_Gw_Scalenie" isMarkerVisible="true">
+        <dc:Bounds x="928" y="425" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_Task_Wyniki_di" bpmnElement="Sub_Task_Wyniki">
+        <dc:Bounds x="1028" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Sub_End_di" bpmnElement="Sub_End">
+        <dc:Bounds x="1178" y="432" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NowyTermin_di" bpmnElement="Task_NowyTermin">
+        <dc:Bounds x="1296" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zawiadomienie_di" bpmnElement="Task_Zawiadomienie">
+        <dc:Bounds x="1446" y="580" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Zawiadomiony_di" bpmnElement="End_Zawiadomiony">
+        <dc:Bounds x="1596" y="602" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Odpowiedz_di" bpmnElement="Task_Odpowiedz">
+        <dc:Bounds x="1296" y="405" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wyslanie_di" bpmnElement="Task_Wyslanie">
+        <dc:Bounds x="1446" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Wyslana_di" bpmnElement="End_Wyslana">
+        <dc:Bounds x="1596" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EventSub_Wycofanie_di" bpmnElement="EventSub_Wycofanie" isExpanded="true">
+        <dc:Bounds x="90" y="160" width="340" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EventSub_Start_di" bpmnElement="EventSub_Start">
+        <dc:Bounds x="120" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EventSub_Task_Zamkniecie_di" bpmnElement="EventSub_Task_Zamkniecie">
+        <dc:Bounds x="206" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EventSub_End_di" bpmnElement="EventSub_End">
+        <dc:Bounds x="356" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Szersze_di" bpmnElement="Boundary_Szersze">
+        <dc:Bounds x="1198" y="502" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="MF_Wniosek_di" bpmnElement="MF_Wniosek">
+        <di:waypoint x="76" y="730" />
+        <di:waypoint x="76" y="78" />
+        <di:waypoint x="92" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Przedluzenie_di" bpmnElement="MF_Przedluzenie">
+        <di:waypoint x="1496" y="660" />
+        <di:waypoint x="1496" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Odpowiedz_di" bpmnElement="MF_Odpowiedz">
+        <di:waypoint x="1546" y="78" />
+        <di:waypoint x="1566" y="78" />
+        <di:waypoint x="1566" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Wycofanie_di" bpmnElement="MF_Wycofanie">
+        <di:waypoint x="138" y="730" />
+        <di:waypoint x="138" y="258" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF1_di" bpmnElement="SF1">
+        <di:waypoint x="392" y="450" />
+        <di:waypoint x="442" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF2_di" bpmnElement="SF2">
+        <di:waypoint x="542" y="450" />
+        <di:waypoint x="592" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF3_di" bpmnElement="SF3">
+        <di:waypoint x="617" y="425" />
+        <di:waypoint x="617" y="410" />
+        <di:waypoint x="903" y="410" />
+        <di:waypoint x="903" y="450" />
+        <di:waypoint x="928" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF4_di" bpmnElement="SF4">
+        <di:waypoint x="642" y="450" />
+        <di:waypoint x="692" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF5_di" bpmnElement="SF5">
+        <di:waypoint x="728" y="450" />
+        <di:waypoint x="778" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF6_di" bpmnElement="SF6">
+        <di:waypoint x="878" y="450" />
+        <di:waypoint x="928" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF7_di" bpmnElement="SF7">
+        <di:waypoint x="978" y="450" />
+        <di:waypoint x="1028" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF8_di" bpmnElement="SF8">
+        <di:waypoint x="1128" y="450" />
+        <di:waypoint x="1178" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="EF1_di" bpmnElement="EF1">
+        <di:waypoint x="156" y="240" />
+        <di:waypoint x="206" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="EF2_di" bpmnElement="EF2">
+        <di:waypoint x="306" y="240" />
+        <di:waypoint x="356" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="301" y="70" />
+        <di:waypoint x="301" y="445" />
+        <di:waypoint x="326" y="445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="1246" y="445" />
+        <di:waypoint x="1296" y="445" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="1396" y="445" />
+        <di:waypoint x="1421" y="445" />
+        <di:waypoint x="1421" y="70" />
+        <di:waypoint x="1446" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="1546" y="70" />
+        <di:waypoint x="1596" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="1216" y="538" />
+        <di:waypoint x="1216" y="620" />
+        <di:waypoint x="1296" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7">
+        <di:waypoint x="1396" y="620" />
+        <di:waypoint x="1446" y="620" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8">
+        <di:waypoint x="1546" y="620" />
+        <di:waypoint x="1596" y="620" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

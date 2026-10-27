@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Koniec linii CRLF" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Koniec linii CRLF">
+    <bpmn:startEvent id="s" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-e" sourceRef="s" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

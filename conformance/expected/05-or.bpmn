@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.1.0" id="definitions" name="Bramka OR" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Powiadomienie_e_mail" name="Powiadomienie e-mail" />
+  <bpmn:message id="Message_Powiadomienie_SMS" name="Powiadomienie SMS" />
+  <bpmn:process id="process" isExecutable="false" name="Bramka OR">
+    <bpmn:startEvent id="s" />
+    <bpmn:inclusiveGateway default="f-g-l" id="g" name="Jakie powiadomienia?" />
+    <bpmn:sendTask id="m" messageRef="Message_Powiadomienie_e_mail" name="E-mail" />
+    <bpmn:sendTask id="t" messageRef="Message_Powiadomienie_SMS" name="SMS" />
+    <bpmn:task id="l" name="List" />
+    <bpmn:inclusiveGateway id="j" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-g" sourceRef="s" targetRef="g" />
+    <bpmn:sequenceFlow id="f-g-m" name="e-mail" sourceRef="g" targetRef="m">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">kanal.email</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-t" name="sms" sourceRef="g" targetRef="t">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">kanal.sms</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-g-l" name="list" sourceRef="g" targetRef="l" />
+    <bpmn:sequenceFlow id="f-m-j" sourceRef="m" targetRef="j" />
+    <bpmn:sequenceFlow id="f-t-j" sourceRef="t" targetRef="j" />
+    <bpmn:sequenceFlow id="f-l-j" sourceRef="l" targetRef="j" />
+    <bpmn:sequenceFlow id="f-j-e" sourceRef="j" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

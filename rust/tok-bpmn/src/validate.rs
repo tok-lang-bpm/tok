@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use crate::model::{
-    Model, is_act, is_container, is_data, is_evt, is_flownode, is_gw, is_subp, local, m, ns_uri,
-    tag_pl_or,
+    Model, is_act, is_choreo_act, is_container, is_data, is_evt, is_flownode, is_gw, is_subp,
+    local, m, ns_uri, tag_pl_or,
 };
 use crate::pyfmt::capitalize;
 use crate::xml::{BPMN_NS, BPMNDI_NS, Doc, Id, qn};
@@ -549,6 +549,7 @@ pub fn validate_model(md: &Model, opts: &ValidateOptions) -> Vec<Issue> {
             let host = md.get(md.attr(e, "attachedToRef"));
             if let Some(h) = host
                 && !is_act(&md.tag(h))
+                && !is_choreo_act(&md.tag(h))
             {
                 o.add(
                         Level::Error,
@@ -1417,7 +1418,15 @@ pub fn validate_model(md: &Model, opts: &ValidateOptions) -> Vec<Issue> {
                     t.as_str(),
                     "sequenceFlow" | "messageFlow" | "participant" | "lane" | "textAnnotation"
                 );
+            // the message flows of a choreography are drawn as the envelopes of its
+            // participant bands, not as edges (BPMN 2.0.2 §12.2.3)
+            let in_choreography = t == "messageFlow"
+                && md
+                    .parent
+                    .get(&e)
+                    .is_some_and(|p| md.tag(*p) == "choreography");
             if kind
+                && !in_choreography
                 && ns_uri(d.tag(e)) == BPMN_NS
                 && !have.contains(&md.id_of(e).map(str::to_string))
             {

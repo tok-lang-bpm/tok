@@ -1,10 +1,12 @@
-# tok — Language Specification, version 0.5
+# tok — Language Specification, version 0.6
 
 tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decision tables it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
 This document is normative. The reference implementation is the Rust engine in `rust/` (the `tok` command and the Python and R packages run it); the pure-Python implementation in `python/` is frozen at language 0.3, and the Julia package in `julia/` implements the core (parsing, formatting, core diagnostics, BPMN export) against the same conformance corpus.
 
 Language 0.5 adds the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute: transactions and cancel events (§5.3), the complex gateway (§5.4), the attributes of the standard loop (§5.2.1), multiple and parallel multiple events (§5.1.1), instantiating receive tasks and event-based gateways (§5.2, §5.4), process data (§7.1), resources and performers (§7.2), global tasks, interfaces and operations (§5.6) and correlation keys (§6.3). Every BPMN 2.0.2 rule the checker enforces is listed with its clause in `bpmn-rules.md`.
+
+Language 0.6 adds the interactions between participants: conversations (§6.4), choreographies (§5.7), and the multiplicity of participants with the participant associations of calls (§5.5, §5.7, §6.4). The tools check a document against the conformance classes of BPMN 2.0.2 (§13) and keep the diagram of an imported file in a layout sidecar (§16).
 
 ## 1. Design goals
 
@@ -52,7 +54,7 @@ flag           a bare WORD after the identifier and label: a boolean set to true
 
 Attributes may appear in any order; the formatter prints them in the order of the attribute tables below. An unknown attribute key is a warning (`R010`); an unknown flag is an error (`R011`).
 
-**Documentation** (language 0.5). `doc="Text"` gives the BPMN `documentation` of the element a statement exports: flow nodes, flows, message flows, pools (the participant), lanes, `data`, `store`, `input`, `output`, `property`, notes, groups, `global`, `interface` and `operation`; on the header it documents the process of a document without pools and the definitions of a document with pools. It is plain text (`\n` for a line break) and allowed at every level. The label of an `item` is already its documentation.
+**Documentation** (language 0.5). `doc="Text"` gives the BPMN `documentation` of the element a statement exports: flow nodes, flows, message flows, pools (the participant), lanes, `data`, `store`, `input`, `output`, `property`, notes, groups, `global`, `interface` and `operation`, and (language 0.6) choreographies, their activities and conversation nodes; on the header it documents the process of a document without pools and the definitions of a document with pools. It is plain text (`\n` for a line break) and allowed at every level. The label of an `item` is already its documentation.
 
 A key is normally given once; when it is repeated, the last value counts. In a document of language 0.5 the trigger keys of events (`message`, `timer`, `signal`, `error`, `escalation`, `condition`, `link`, §5.1.1) and `error` on an `operation` (§5.6) may repeat: every value counts, in written order, and the formatter prints the values of one key together.
 
@@ -61,12 +63,12 @@ A key is normally given once; when it is repeated, the last value counts. In a d
 The first statement is the header:
 
 ```
-tok 0.5 "Interlibrary loan" executable
+tok 0.6 "Interlibrary loan" executable
 ```
 
 | Part | Meaning |
 |---|---|
-| `tok 0.5` | language version (required). Accepted versions: `0.1`, `0.3` and `0.5`; a document written for an earlier version means the same under 0.5. The language version follows the minor version of the release that changed the language. Two things depend on the declared version, so that older documents keep their meaning: only a 0.5 document may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), and only in a 0.5 document do `resource` and `by=` also describe BPMN resources and performers (§7.2). Everything else of 0.5 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5`. |
+| `tok 0.6` | language version (required). Accepted versions: `0.1`, `0.3`, `0.5` and `0.6`; a document written for an earlier version means the same under 0.6. The language version follows the minor version of the release that changed the language. Three things depend on the declared version, so that older documents keep their meaning: only a document of 0.5 or later may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), only there do `resource` and `by=` also describe BPMN resources and performers (§7.2), and only in a document of 0.6 do `min=` and `max=` give a pool a multiplicity (§5.5; in older documents they are unknown attributes, `R010`). Everything else of 0.5 and 0.6 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5` or `tok 0.6`. |
 | label | document title; becomes `definitions/@name` and the default process name |
 | `id=` | identifier of the definitions element (default: `definitions`) |
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
@@ -80,6 +82,7 @@ After the header come top-level statements in any order:
 - **flow nodes** (§5), **flows** (§6), **data** (§7) and **artifacts** (§8) — in a document without pools these form one process whose identifier is `process` (override with `process=ID` in the header);
 - **pools** with their lanes and flow nodes (§5.5);
 - **declarations** of language 0.5: item definitions (§7.1), global tasks and interfaces (§5.6), correlation keys (§6.3);
+- **choreographies** (§5.7) and **conversation nodes** (§6.4) of language 0.6;
 - **decisions** (§9), **forms** (§10.2), **simulation statements** (§11).
 
 References may point forward: a flow may name a node declared later.
@@ -268,6 +271,21 @@ pool ID ["Label"]            # no block: a black-box pool
 - A lane's block declares the flow nodes that belong to that lane. Lanes may nest. If a pool has lanes, every top-level flow node of its process must be inside a lane (`R030`).
 - If a document contains at least one pool, flow nodes may not appear at top level (`R031`).
 
+**Participant multiplicity** (language 0.6):
+
+```
+pool recenzent "Recenzent" min=2 max=5
+pool autor "Autor" max=3
+```
+
+| tok | BPMN |
+|---|---|
+| `min=N`, `max=N` on a pool | `participantMultiplicity` with `minimum` and `maximum`: several participants of this kind take part in the collaboration |
+
+- When only `max=` is given the minimum is 2; when only `min=` is given the maximum is that of BPMN, 1. Both are whole numbers with `0 <= min <= max` and `max >= 1` (`R074`).
+- When the maximum is greater than 1 the pool is drawn with the multi-instance marker (three vertical bars) at the bottom, and so are the participant bands of the pool in choreographies.
+- In documents of 0.1, 0.3 and 0.5 `min=` and `max=` on a pool are unknown attributes (`R010`) and change nothing.
+
 ### 5.6 Global tasks, interfaces and operations (language 0.5)
 
 ```
@@ -288,6 +306,42 @@ service wyszukaj "Wyszukanie w katalogu" operation=szukaj
 | `operation=ID` on `service`, `send` and `receive` tasks | `operationRef`; the process that contains the task lists the interface in `supportedInterfaceRef` |
 
 Message and error names are those of the document (§5.1). `global` and `interface` are top-level statements; `operation` lines are allowed only in the block of an `interface` (`P004`).
+
+### 5.7 Choreographies (language 0.6)
+
+A choreography describes the order of the message exchanges between participants, without the processes of the participants. It is a top-level block; its participants are pools of the document, usually black-box pools.
+
+```
+pool klient "Klient"
+pool sklep "Sklep"
+
+choreography zakupy "Zakupy w sklepie"
+  start s
+  choreo zamow "Złożenie zamówienia" from=klient to=sklep message="Zamówienie" reply="Potwierdzenie"
+  xor dostepne "Czy towar dostępny?"
+  choreo wyslij "Wysyłka" from=sklep to=klient message="Paczka"
+  choreo odmowa "Odmowa" from=sklep to=klient message="Brak towaru"
+  end e1
+  end e2
+  flow s -> zamow -> dostepne
+  flow dostepne -> wyslij "tak" when="dostepne"
+  flow dostepne -> odmowa "nie" default
+  flow wyslij -> e1
+  flow odmowa -> e2
+```
+
+| Statement | BPMN |
+|---|---|
+| `choreography ID ["Label"]` + block | `choreography`, a root element of its own: its participants (the pools named by its activities, identifiers `CHOREOGRAPHY-POOL`), the message flows of its tasks, then its flow nodes and sequence flows |
+| `choreo ID ["Label"] from=P to=P [message="M"] [reply="M"]` | `choreographyTask` with two `participantRef`s, `initiatingParticipantRef` = `from`, the message flow `ID-message` from `from` to `to` (with the message `M`) and, with `reply=`, the message flow `ID-reply` back (`reply=""`: a reply without a message name) |
+| `subchoreo ID ["Label"] pools="P P …" from=P` + block | `subChoreography` with its participants and initiating participant; its block holds flow nodes and flows like the block of a choreography |
+| `callchoreo ID ["Label"] pools="P P …" from=P choreography=ID [map="inner:outer; …"]` | `callChoreography` with `calledChoreographyRef`; `map=` gives `participantAssociation`s: a pool taking part in the called choreography (inner) and one of `pools=` (outer) |
+| flags `loop`, `parallel`, `sequential` on `choreo`, `subchoreo`, `callchoreo` | `loopType` `Standard`, `MultiInstanceParallel`, `MultiInstanceSequential` |
+| `doc="Text"` on all of them | `documentation` |
+
+- `from=` and `to=` of a task name two different pools; `pools=` of a sub-choreography or call names at least two pools and `from=` one of them; the participants of an activity inside a sub-choreography are participants of the sub-choreography; `choreography=` names a choreography of the document (`R072`; unknown pools and choreographies are `R002`). A message name is declared like the message of an event (§5.1).
+- The block of a choreography holds choreography activities, gateways (`xor`, `and`, `or`, `eventgw`, `complex`), events and sequence flows (§6.1); data, notes and groups do not belong to it (`P004`). The events follow BPMN 2.0.2 §11.6: a start event without a trigger or with timer, conditional or signal triggers; an intermediate catch event with a timer, conditional, signal or link trigger; an intermediate throw event without a trigger or with a link trigger; a boundary event on a choreography activity with a timer, conditional or signal trigger; an end event without a trigger or with `terminate`. Other flow nodes and triggers are `R073`, and so is a choreography without flow nodes.
+- Each choreography is drawn in a diagram of its own, below the collaboration, laid out like a process: choreography activities are rounded rectangles with one band per participant (the initiating participant on top, white; the others at the bottom, shaded), an envelope above or below the band of the participant that sends a message (white for the initiating message, shaded for the reply) with the message name, the loop and multi-instance markers, a thick border for a call, and a `+` for a call and for a sub-choreography without content.
 
 ## 6. Flows
 
@@ -311,7 +365,7 @@ flow G -> E "nie" default               # default flow of G
 message A -> B ["Label"] [message="Name"] [doc="Text"]
 ```
 
-`A` and `B` are flow nodes or pools in different pools (`R022`). The label names the message flow; `message=` links it to a message declaration (default: the label).
+`A` and `B` are flow nodes or pools in different pools (`R022`). The label names the message flow; `message=` links it to a message declaration (default: the label). A message flow that a conversation names (§6.4) is printed with its identifier (`id=`), also when it is the derived one.
 
 ### 6.3 Correlation keys (language 0.5)
 
@@ -324,6 +378,38 @@ key zamowienie "Numer zamówienia"
 - `key ID ["Label"]` (top level) → `correlationKey` of the collaboration. BPMN 2.0.2 keeps correlation keys only in collaborations (`tCollaboration`), so a document with `key` needs pools (`R013`).
 - Each `prop NAME message="M" path="…"` line belongs to the key above it; both attributes are required (`R013`). Every distinct `NAME` becomes one `correlationProperty` (identifier `CorrelationProperty_NAME`, shared by all keys that use the name), with one `correlationPropertyRetrievalExpression` per line: `messageRef` of the message `M` (§5.1) and `messagePath` with the `path` text.
 - `correlation=` of executable documents (§10.1) is the Camunda form of correlation and is independent of `key`.
+
+### 6.4 Conversations (language 0.6)
+
+A conversation groups the message flows that belong to one logical exchange between pools; a conversation diagram shows the pools and the conversations between them.
+
+```
+pool czytelnik "Czytelnik"
+pool biblioteka "Biblioteka"
+pool hurtownia "Hurtownia"
+
+message czytelnik -> biblioteka "Zamówienie" id=m-zamowienie
+message biblioteka -> czytelnik "Odbiór" id=m-odbior
+
+conversation wypozyczenie "Wypożyczenie" pools="czytelnik biblioteka" messages="m-zamowienie m-odbior"
+subconversation zakup "Zakup książek" pools="biblioteka hurtownia"
+  conversation oferta "Oferta" pools="biblioteka hurtownia"
+  conversation zamowienie "Zamówienie" pools="biblioteka hurtownia"
+callconversation reklamacja "Reklamacja" pools="biblioteka hurtownia" collaboration=reklamacje
+```
+
+| Statement | BPMN |
+|---|---|
+| `conversation ID ["Label"] pools="P P …" [messages="F F …"]` | `conversation` with one `participantRef` per pool and one `messageFlowRef` per message flow |
+| `subconversation ID ["Label"] pools="…"` + block of conversation statements | `subConversation` holding the conversation nodes of its block |
+| `callconversation ID ["Label"] pools="…" collaboration=ID [map="inner:outer; …"]` | `callConversation` with `calledCollaborationRef` and one `participantAssociation` per `map=` pair (outer: one of `pools=`) |
+| `doc="Text"` | `documentation` |
+| a top-level conversation node | one `conversationLink` (identifier `NODE-link-POOL`) from each of its pools to the node |
+
+- `pools=` names at least two different pools of the document (`R070`; an unknown pool is `R002`); a node inside a sub-conversation links only pools of the sub-conversation (`R070`). `messages=` names message flows (§6.2) between two of its pools (`R071`). `messages=` is allowed on all three statements.
+- `collaboration=` names a choreography of the document (a choreography is a collaboration in BPMN; the inner participants of `map=` are then its pools) or a collaboration of another file, whose identifier is written as it is. `map=` belongs to calls only (elsewhere it is an unknown attribute, `R010`); a malformed pair is `R053`.
+- Conversation nodes stand only at top level and in the block of a `subconversation` (`P004`). The canonical form prints them after the message flows.
+- A conversation node is drawn as a hexagon (a thick border for a call, a `+` for a sub-conversation) in the gap below the first pool it links, where no message flow crosses the gap, with its name on the right; its links are double lines to the pools. The nodes inside a sub-conversation are not drawn.
 
 ## 7. Data
 
@@ -479,9 +565,9 @@ The second kind follows the convention of Camunda Modeler. A document that is no
 
 **Process version.** `version-tag="v1"` on the header (document without pools) or on a pool → `zeebe:versionTag`.
 
-### 10.4 Elements Camunda 8 does not execute (language 0.5)
+### 10.4 Elements Camunda 8 does not execute (languages 0.5 and 0.6)
 
-In executable documents for Camunda (`target=camunda`, the default for executable documents) every element of language 0.5 that Camunda 8.10 does not execute is reported with a code naming it; descriptive and analytic documents, and executable documents with another `target=`, are not affected.
+In executable documents for Camunda (`target=camunda`, the default for executable documents) every element of languages 0.5 and 0.6 that Camunda 8.10 does not execute is reported with a code naming it; descriptive and analytic documents, and executable documents with another `target=`, are not affected.
 
 | Code | Severity | Element |
 |---|---|---|
@@ -496,6 +582,10 @@ In executable documents for Camunda (`target=camunda`, the default for executabl
 | `C108` | error | call activity of a global task (`task=`) |
 | `C109` | warning | `operation=` (ignored: workers take jobs by `type=`) |
 | `C110` | warning | correlation key (ignored: messages are correlated by `correlation=`) |
+| `C120` | warning | conversation or sub-conversation (ignored: it describes the collaboration) |
+| `C121` | warning | call conversation (ignored) |
+| `C122` | error | choreography |
+| `C123` | warning | participant multiplicity of a pool (ignored: every process instance is one participant) |
 
 ## 11. Simulation
 
@@ -539,6 +629,8 @@ Durations are a number followed by a unit: `s`, `m` (minutes), `h`, `d`. In `uni
 
 **Semantics.** Each case starts at its arrival time with its `variable`s drawn. Tokens move along sequence flows. An activity with `by=` queues (first come, first served) until a performer is free, then holds it for its duration. At an `xor` gateway the first outgoing flow (in document order) whose `when` holds is taken, else the default flow; if the flows have `p=` instead, one is drawn. An `or` gateway activates every flow whose condition holds (or which is drawn with its `p`), else the default. An `and` gateway activates all outgoing flows and a joining `and` waits for all incoming tokens; a joining `or` waits for the tokens that were actually activated. An `eventgw` races its following catch events: timers fire after their duration, messages after their `delay`. A boundary timer fires if the activity is still running when the timer elapses: an interrupting one cancels the activity, a non-interrupting one starts an extra token. `rule` tasks evaluate their decision, `script` tasks their expression. Time in the log is simulated calendar time without working-hours calendars (version 0.1).
 
+**Language 0.6.** Conversations and choreographies describe interactions, not the work of one participant: the simulator ignores them and simulates the process of the document as before. A pool with `min=`/`max=` is simulated once per case.
+
 **Language 0.5.** Transactions run like sub-processes; a cancel end event stops the transaction, runs the compensation handlers of its completed activities (latest completed first) and then continues from the cancel boundary event of the transaction (without one, the token ends there). A complex gateway splits like an `or` gateway; as a join it lets one token through as soon as `activation` holds, with `_activationCount` the number of tokens arrived so far, absorbs the later tokens and resets when all expected tokens have arrived (without `activation` it joins like `or`). A standard loop repeats while `while` holds, at most `loop-max` times, with `loopCounter` the number of finished iterations, testing before the first iteration with `test-before` and otherwise after each one. A catching multiple event fires on the first of its triggers (on the last with `parallel`); its timers use their durations, its other triggers the event's `delay=`. When a process has no start event, an instantiating receive task or event-based gateway starts the cases. `docs/simulation.md` gives the details.
 
 The simulation produces an **event log** (one row per activity instance: case, activity, resource, enqueue, start, end) and **indicators**: number of cases per end event, cycle time (mean, median, 90th percentile), waiting and processing time per activity, utilization per resource.
@@ -568,9 +660,11 @@ The full list is in `diagnostics.md`. The `--level` option restricts the accepte
 |---|---|
 | `basic` | `start`, `end`, `task`, `user`, `service`, `manual`, `xor`, `and`, pools, lanes, message flows, data, notes; no attributes of the executable layer |
 | `analytic` | everything except the executable profile and layer (§10.1, §10.3), forms and decisions |
-| `full` (default) | everything, including all elements of language 0.5 |
+| `full` (default) | everything, including all elements of languages 0.5 and 0.6 |
 
-The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules. The descriptive additions `doc=`, `process-name=`, `object=`, `when=""` and the data of events are allowed at every level; the trigger flags without a value (§5.1) are rejected at the level `basic` like the other triggers.
+The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules. The descriptive additions `doc=`, `process-name=`, `object=`, `when=""` and the data of events are allowed at every level; the trigger flags without a value (§5.1) are rejected at the level `basic` like the other triggers. They also reject the statements of language 0.6 (`R040`): `conversation`, `subconversation`, `callconversation`, `choreography` (once for the statement; its content is not reported again) and `min=`/`max=` on pools.
+
+**BPMN conformance classes** (language 0.6). BPMN 2.0.2 (clause 2) defines three sub-classes of process modelling conformance: Descriptive (the visible elements of high-level modelling), Analytic (Descriptive and about half of the full language) and Common Executable (what an executable process needs: data inputs and outputs, item definitions, operations, but no pools, lanes or message flows). `tok check --class descriptive|analytic|common-executable|full` reports every element or attribute of the document outside the chosen class as `R075`, naming the BPMN element and the first class that contains it (in the order descriptive, analytic, common-executable, full). `full` is the whole modelling language, with conversations and choreographies, and contains everything. `tok check --json` always reports the smallest class the document fits, in the same order, as `"bpmn_class"`. The class of each tok construct is listed in `bpmn-rules.md`; the levels above are teaching levels and do not coincide with the classes.
 
 ## 14. Canonical form
 
@@ -579,9 +673,9 @@ The levels `basic` and `analytic` reject every element of language 0.5 (`R040`):
 1. the header;
 2. `item` and `global` statements, then each `interface` with its operations;
 3. top-level flow nodes in declaration order, then pools (each with its lanes and nodes in declaration order);
-   `data`, `store`, `input`, `output` and `property` statements are printed at the end of the block they were declared in (pool, sub-process or top level);
-4. all sequence flows, in declaration order, as chains: a chain continues while the next flow has no label or attributes, starts at the last node of the previous flow, and that node has exactly one outgoing flow;
-5. message flows; 6. each `key` with its `prop` lines; 7. `reads` and `writes`; 8. notes and groups; 9. decisions; 10. forms; 11. simulation statements (`simulate`, `resource`, `variable`);
+   `data`, `store`, `input`, `output` and `property` statements are printed at the end of the block they were declared in (pool, sub-process or top level); then each `choreography` with its nodes and, at the end of its block, the sequence flows of its nodes (as chains, as in item 4);
+4. all other sequence flows, in declaration order, as chains: a chain continues while the next flow has no label or attributes, starts at the last node of the previous flow, and that node has exactly one outgoing flow;
+5. message flows, then the conversation nodes (a sub-conversation with its block); 6. each `key` with its `prop` lines; 7. `reads` and `writes`; 8. notes and groups; 9. decisions; 10. forms; 11. simulation statements (`simulate`, `resource`, `variable`);
 12. two-space indentation, one space between tokens, labels always quoted, attributes in the order of the tables in this document (the values of a repeated key together, in written order), blank line between sections.
 
 Comments are kept. A comment line is attached to the statement that follows it and printed above it; a comment at the end of a line stays at the end of that statement's line. Comments at the end of the document are printed last.
@@ -598,11 +692,26 @@ An implementation conforms at level **core** if, for every document in `conforma
 
 Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export, FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
 
-Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33 and following cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects); their expected outputs are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
+Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33–46 cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects). Cases 47 and following cover language 0.6: conversations (47), choreographies with sub-choreographies, calls and loop markers (48), the events and gateways of choreographies (49), participant multiplicity (50), the Camunda codes `C120`–`C123` (51) and the errors `R070`–`R074` (52). The expected outputs of cases 33 and following are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
 
 The reference models of the BPMN Model Interchange Working Group in `conformance/miwg` are the conformance gate of BPMN import and export: their semantic content must survive import, printing and export; `miwg.md` lists, per model, what is kept and what is not.
 
-## 16. Example
+## 16. Layout sidecar
+
+The language has no coordinates (G5). To keep the drawing of a model that moves between a modelling tool and tok, the tools keep it next to the document, in a plain text file `FILE.tok.layout` that never changes the meaning of the model:
+
+```
+tok-layout 1
+Task_Zlozenie 176 30 100 80
+F1 126 70 176 70
+Start_Potrzeba/label 82 95 72 14
+```
+
+- The first line is `tok-layout 1`. Each further line names an element by its tok identifier: `ID x y w h` is the bounds of a shape, `ID x1 y1 x2 y2 …` the waypoints of an edge, `ID/label x y w h` the bounds of the label of a shape or an edge. Numbers are whole units of the BPMN file. A line with four numbers is a shape or an edge with two waypoints, as the element it names is a node or a flow. Empty lines and lines starting with `#` are ignored.
+- `tok import FILE.bpmn -o FILE.tok` writes `FILE.tok.layout` from the diagram of the file (`--no-layout`: not). A file with several diagrams keeps the first one where it is; each further diagram moves below the one before it.
+- `tok bpmn`, `tok svg` and `tok export` read `FILE.tok.layout` when it exists next to the document (`--no-sidecar`: not). Shapes whose identifiers are still in the model keep their geometry; new shapes are placed next to a neighbour that kept its place (as far from it as the automatic layout puts them, moved aside from other shapes), and pools, lanes and sub-processes grow to hold new content. An edge keeps its waypoints when both of its ends kept their geometry and it still touches them; other edges are routed again. Elements the sidecar names that are no longer in the model are ignored.
+
+## 17. Example
 
 ```
 tok 0.1 "Propozycja zakupu książki" executable

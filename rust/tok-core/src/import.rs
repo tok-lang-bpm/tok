@@ -207,10 +207,24 @@ struct Importer<'a, 'i> {
     object_refs: IndexMap<String, usize>,
     /// data objects that a data association names directly (not through a reference)
     direct_objects: HashSet<String>,
+    /// participant of a choreography -> the pool that stands for it (language 0.6)
+    choreo_pools: IndexMap<String, String>,
 }
+
+mod lang06;
+
+/// The imported document, the warnings and the identifiers of the BPMN file with the tok
+/// identifiers that stand for them.
+pub type Imported = (Document, Vec<String>, IndexMap<String, String>);
 
 /// Read BPMN 2.0 XML text. Returns the document and warning strings `"id: explanation"`.
 pub fn import_bpmn(xml: &str, keep_ids: bool) -> Result<(Document, Vec<String>), ImportError> {
+    import_bpmn_mapped(xml, keep_ids).map(|(doc, warnings, _)| (doc, warnings))
+}
+
+/// Like [`import_bpmn`], with the map from identifiers of the BPMN file to tok identifiers
+/// (for the layout sidecar of `tok import`).
+pub fn import_bpmn_mapped(xml: &str, keep_ids: bool) -> Result<Imported, ImportError> {
     let xml = xml.strip_prefix('\u{feff}').unwrap_or(xml);
     let opts = roxmltree::ParsingOptions {
         allow_dtd: true,
@@ -242,6 +256,7 @@ pub fn import_bpmn(xml: &str, keep_ids: bool) -> Result<(Document, Vec<String>),
         implicit: HashSet::new(),
         object_refs: IndexMap::new(),
         direct_objects: HashSet::new(),
+        choreo_pools: IndexMap::new(),
     };
     imp.run()
 }
@@ -335,14 +350,16 @@ impl<'a, 'i> Importer<'a, 'i> {
     }
 
     fn uses_03(&mut self) {
-        if self.doc.version.as_deref() != Some("0.5") {
+        if !matches!(self.doc.version.as_deref(), Some("0.5" | "0.6")) {
             self.doc.version = Some("0.3".into());
         }
     }
 
     /// The document uses elements of language 0.5.
     fn uses_05(&mut self) {
-        self.doc.version = Some("0.5".into());
+        if self.doc.version.as_deref() != Some("0.6") {
+            self.doc.version = Some("0.5".into());
+        }
     }
 
     /// Compensation boundary events with an association to a handler: tok writes them as
@@ -495,7 +512,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
     }
 
-    fn run(mut self) -> Result<(Document, Vec<String>), ImportError> {
+    fn run(mut self) -> Result<Imported, ImportError> {
         let root = self.root;
         self.compensation_boundaries();
         self.find_implicit();
@@ -526,13 +543,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         let collabs: Vec<X> = findall(root, "collaboration").collect();
         for e in children(root) {
             let t = local(e);
-            if [
-                "choreography",
-                "globalChoreographyTask",
-                "globalConversation",
-            ]
-            .contains(&t)
-            {
+            if ["globalChoreographyTask", "globalConversation"].contains(&t) {
                 self.warn(
                     e.attribute("id"),
                     &format!("{t} is not supported and was skipped"),
@@ -615,13 +626,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 let pid = self.tid_s(part.attribute("id"));
                 let mut attrs = Attrs::new();
                 self.doc(part, &mut attrs);
-                if find(part, "participantMultiplicity").is_some() {
-                    self.warn(
-                        part.attribute("id"),
-                        "participant multiplicity is not kept",
-                        None,
-                    );
-                }
+                self.multiplicity(part, &mut attrs);
                 let base = Base::new(
                     "pool",
                     Some(pid.clone()),
@@ -727,10 +732,6 @@ impl<'a, 'i> Importer<'a, 'i> {
             for e in children(*c) {
                 let t = local(e);
                 if [
-                    "conversation",
-                    "subConversation",
-                    "callConversation",
-                    "conversationLink",
                     "participantAssociation",
                     "conversationAssociation",
                     "messageFlowAssociation",
@@ -747,6 +748,9 @@ impl<'a, 'i> Importer<'a, 'i> {
                 }
             }
         }
+        self.choreography_participants();
+        self.conversations(&collabs);
+        self.choreographies();
         self.process_names(single);
         if !self.doc.pools.is_empty() {
             // the header documents the definitions of a document with pools
@@ -759,7 +763,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         self.unreferenced();
         self.sweep();
         self.derive_flow_ids();
-        Ok((self.doc, self.warnings))
+        Ok((self.doc, self.warnings, self.idmap))
     }
 
     fn attach_process(&mut self, pool_idx: usize, p: X<'a, 'i>, all_exec: bool) {
@@ -1176,6 +1180,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             lane: None,
             pool: pool.map(str::to_string),
             children: Vec::new(),
+            choreography: None,
         };
         if kind == "boundary" {
             let on = self
@@ -2134,6 +2139,9 @@ impl<'a, 'i> Importer<'a, 'i> {
                     ROOT_PARTS.contains(&t) || GLOBAL_KINDS.iter().any(|(_, g)| *g == t)
                 }
                 "collaboration" => COLLABORATION_PARTS.contains(&t),
+                "choreography" | "subChoreography" => {
+                    kind_of_tag(t).is_some() || lang06::CHOREOGRAPHY_PARTS.contains(&t)
+                }
                 _ => true,
             };
             if !known {
@@ -2884,10 +2892,18 @@ impl<'a, 'i> Importer<'a, 'i> {
                 },
             );
         }
+        // message flows that a conversation names keep their identifiers (language 0.6)
+        let referenced: HashSet<String> = d
+            .conversations
+            .values()
+            .flat_map(|c| words(c.base.attr("messages").unwrap_or("")))
+            .collect();
         for m in &mut d.messages {
             let (base, expected, n) = peek(&counter, &known, &format!("m-{}", m.source), &m.target);
             let expected = expected[2..].to_string();
-            if self.keep_ids && m.base.id() != expected {
+            if referenced.contains(m.base.id()) {
+                m.explicit_id = m.base.id() != expected;
+            } else if self.keep_ids && m.base.id() != expected {
                 m.explicit_id = true;
             } else {
                 m.base.id = Some(expected);
@@ -2916,6 +2932,11 @@ impl<'a, 'i> Importer<'a, 'i> {
             }
         }
         for (old, new) in renamed {
+            for v in self.idmap.values_mut() {
+                if *v == old {
+                    v.clone_from(&new);
+                }
+            }
             self.warn(
                 Some(&old),
                 &format!("renamed to '{new}' to avoid a clash with a derived flow identifier"),

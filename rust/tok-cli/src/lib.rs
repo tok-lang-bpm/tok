@@ -105,6 +105,8 @@ struct Args {
     output: Option<String>,
     no_layout: bool,
     no_flow_ids: bool,
+    class: Option<String>,
+    no_sidecar: bool,
 }
 
 fn usage(msg: &str) -> u8 {
@@ -170,6 +172,8 @@ fn run(argv: &[String]) -> Result<u8, u8> {
         output: p.value("output").map(str::to_string),
         no_layout: p.flag("no_layout"),
         no_flow_ids: p.flag("no_flow_ids"),
+        class: p.value("class").map(str::to_string),
+        no_sidecar: p.flag("no_sidecar"),
     };
     Ok(match a.cmd.as_str() {
         "check" => cmd_check(&a),
@@ -223,16 +227,26 @@ fn load(a: &Args, bpmn: bool) -> (tok_core::Document, Vec<Diag>) {
 }
 
 fn report(a: &Args, diags: &[Diag]) -> usize {
+    report_class(a, diags, None)
+}
+
+/// Diagnostics as text or JSON; `class` is the BPMN conformance class of the document
+/// (`tok check --json`).
+fn report_class(a: &Args, diags: &[Diag], class: Option<&str>) -> usize {
     let errors = diags.iter().filter(|d| d.is_error()).count();
     if a.json {
-        let out = obj(vec![
+        let mut fields = vec![
             ("file", Json::Str(a.file.clone())),
             ("errors", Json::Int(errors as i64)),
-            (
-                "diagnostics",
-                Json::Arr(diags.iter().map(|d| d.to_json(&a.lang)).collect()),
-            ),
-        ]);
+        ];
+        if let Some(c) = class {
+            fields.push(("bpmn_class", Json::Str(c.to_string())));
+        }
+        fields.push((
+            "diagnostics",
+            Json::Arr(diags.iter().map(|d| d.to_json(&a.lang)).collect()),
+        ));
+        let out = obj(fields);
         outln!("{}", out.pretty());
     } else {
         for d in diags {
@@ -259,8 +273,13 @@ fn report(a: &Args, diags: &[Diag]) -> usize {
 }
 
 fn cmd_check(a: &Args) -> u8 {
-    let (_, diags) = load(a, true);
-    if report(a, &diags) > 0 {
+    let (doc, mut diags) = load(a, true);
+    if let Some(class) = &a.class {
+        diags.extend(tok_core::classes::check_class(&doc, class));
+        tok_core::diagnostics::sort(&mut diags);
+    }
+    let class = tok_core::classes::bpmn_class(&doc);
+    if report_class(a, &diags, Some(class)) > 0 {
         EXIT_ERRORS
     } else {
         EXIT_OK
@@ -309,11 +328,35 @@ fn with_ext(file: &str, ext: &str) -> String {
     }
 }
 
-/// BPMN XML with layout (or without, `--no-layout`), as `tok.io.write_bpmn` writes it.
-fn bpmn_text(doc: &tok_core::Document, layout: bool) -> Result<String, String> {
+/// The layout sidecar `FILE.layout` next to the document (`tok import` writes it), unless
+/// `--no-sidecar` is given or there is none.
+fn sidecar(a: &Args) -> Result<Option<tok_bpmn::Sidecar>, String> {
+    if a.no_sidecar {
+        return Ok(None);
+    }
+    let path = format!("{}.layout", a.file);
+    match std::fs::read_to_string(&path) {
+        Ok(text) => tok_bpmn::Sidecar::parse(&text)
+            .map(Some)
+            .map_err(|e| format!("{path}: {e}")),
+        Err(_) => Ok(None),
+    }
+}
+
+/// BPMN XML with layout (or without, `--no-layout`), as `tok.io.write_bpmn` writes it; the
+/// geometry of the sidecar is kept.
+fn bpmn_text(
+    doc: &tok_core::Document,
+    layout: bool,
+    side: Option<&tok_bpmn::Sidecar>,
+) -> Result<String, String> {
     let xml = export::export_xml(doc, None);
     if layout {
-        return tok_bpmn::layout(&xml).map_err(|e| e.to_string());
+        return match side {
+            Some(s) => tok_bpmn::layout_with(&xml, s),
+            None => tok_bpmn::layout(&xml),
+        }
+        .map_err(|e| e.to_string());
     }
     let mut root = export::export_tree(doc, None);
     root.indent(0);
@@ -323,10 +366,18 @@ fn bpmn_text(doc: &tok_core::Document, layout: bool) -> Result<String, String> {
     ))
 }
 
-fn svg_text(doc: &tok_core::Document, path: &Path) -> Result<String, String> {
+fn svg_text(
+    doc: &tok_core::Document,
+    path: &Path,
+    side: Option<&tok_bpmn::Sidecar>,
+) -> Result<String, String> {
     let xml = export::export_xml(doc, None);
     let title = path.file_name().map(|n| n.to_string_lossy().to_string());
-    tok_bpmn::render_svg(&xml, title.as_deref()).map_err(|e| e.to_string())
+    match side {
+        Some(s) => tok_bpmn::render_svg_with(&xml, title.as_deref(), s),
+        None => tok_bpmn::render_svg(&xml, title.as_deref()),
+    }
+    .map_err(|e| e.to_string())
 }
 
 fn fail(msg: &str) -> u8 {
@@ -360,7 +411,11 @@ fn cmd_bpmn(a: &Args) -> u8 {
         .output
         .clone()
         .unwrap_or_else(|| with_ext(&a.file, ".bpmn"));
-    match bpmn_text(&doc, !a.no_layout)
+    let side = match sidecar(a) {
+        Ok(s) => s,
+        Err(e) => return fail(&e),
+    };
+    match bpmn_text(&doc, !a.no_layout, side.as_ref())
         .and_then(|t| write_platform(Path::new(&path), &t).map_err(|e| e.to_string()))
     {
         Ok(()) => {
@@ -384,7 +439,11 @@ fn cmd_svg(a: &Args) -> u8 {
         .output
         .clone()
         .unwrap_or_else(|| with_ext(&a.file, ".svg"));
-    match svg_text(&doc, Path::new(&path))
+    let side = match sidecar(a) {
+        Ok(s) => s,
+        Err(e) => return fail(&e),
+    };
+    match svg_text(&doc, Path::new(&path), side.as_ref())
         .and_then(|t| write_platform(Path::new(&path), &t).map_err(|e| e.to_string()))
     {
         Ok(()) => {
@@ -463,9 +522,13 @@ fn cmd_export(a: &Args) -> u8 {
     let bpmn_path = folder.join(format!("{stem}.bpmn"));
     let svg_path = folder.join(format!("{stem}.svg"));
     let mut written = vec![bpmn_path.clone(), svg_path.clone()];
-    let res = bpmn_text(&doc, true)
+    let side = match sidecar(a) {
+        Ok(s) => s,
+        Err(e) => return fail(&e),
+    };
+    let res = bpmn_text(&doc, true, side.as_ref())
         .and_then(|t| write_platform(&bpmn_path, &t).map_err(|e| e.to_string()))
-        .and_then(|_| svg_text(&doc, &svg_path))
+        .and_then(|_| svg_text(&doc, &svg_path, side.as_ref()))
         .and_then(|t| write_platform(&svg_path, &t).map_err(|e| e.to_string()));
     if let Err(e) = res {
         return fail(&e);
@@ -498,7 +561,7 @@ fn cmd_import(a: &Args) -> u8 {
             return EXIT_USAGE;
         }
     };
-    let (doc, warnings) = match import::import_bpmn(&xml, !a.no_flow_ids) {
+    let (doc, warnings, ids) = match import::import_bpmn_mapped(&xml, !a.no_flow_ids) {
         Ok(r) => r,
         Err(e) => return fail(&e.to_string()),
     };
@@ -512,6 +575,22 @@ fn cmd_import(a: &Args) -> u8 {
                 return fail(&e.to_string());
             }
             outln!("tok: {o}");
+            if !a.no_layout {
+                // the diagram of the file, kept next to the document (`FILE.tok.layout`)
+                let map: std::collections::HashMap<String, String> = ids.into_iter().collect();
+                let exported = export::export_xml(&doc, None);
+                match tok_bpmn::extract_sidecar(&xml, &exported, &map) {
+                    Ok(side) if !side.is_empty() => {
+                        let path = format!("{o}.layout");
+                        if let Err(e) = write_lf(Path::new(&path), &side.to_text()) {
+                            return fail(&e.to_string());
+                        }
+                        outln!("layout: {path}");
+                    }
+                    Ok(_) => {}
+                    Err(e) => return fail(&e.to_string()),
+                }
+            }
         }
         None => out!("{out}"),
     }
@@ -527,8 +606,10 @@ const LEVELS: &[&str] = &["basic", "analytic", "full"];
 
 const CMD_CHECK: argparse::Spec = argparse::Spec {
     name: "check",
-    usage: "usage: tok check [-h] [--level {basic,analytic,full}] [--lang {en,pl}] [--json] file",
-    help: "usage: tok check [-h] [--level {basic,analytic,full}] [--lang {en,pl}] [--json] file
+    usage: "usage: tok check [-h] [--level {basic,analytic,full}] \
+            [--class {descriptive,analytic,common-executable,full}] [--lang {en,pl}] [--json] file",
+    help: "usage: tok check [-h] [--level {basic,analytic,full}] \
+           [--class {descriptive,analytic,common-executable,full}] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -536,6 +617,8 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --level {basic,analytic,full}
+  --class {descriptive,analytic,common-executable,full}
+                        BPMN 2.0.2 conformance class to check against (R075)
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -543,6 +626,10 @@ options:
         ("-h", Opt::Help),
         ("--help", Opt::Help),
         ("--level", Opt::Value("level", Conv::Choice(LEVELS))),
+        (
+            "--class",
+            Opt::Value("class", Conv::Choice(tok_core::classes::CLASSES)),
+        ),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -578,8 +665,8 @@ options:
 
 const CMD_BPMN: argparse::Spec = argparse::Spec {
     name: "bpmn",
-    usage: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--lang {en,pl}] [--json] file",
-    help: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--lang {en,pl}] [--json] file
+    usage: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--lang {en,pl}] [--json] file",
+    help: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -588,6 +675,7 @@ options:
   -h, --help            show this help message and exit
   -o OUTPUT, --output OUTPUT
   --no-layout           semantic model only, no BPMNDI
+  --no-sidecar          ignore the layout sidecar FILE.layout
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -597,6 +685,7 @@ options:
         ("-o", Opt::Value("output", Conv::Text)),
         ("--output", Opt::Value("output", Conv::Text)),
         ("--no-layout", Opt::Flag("no_layout")),
+        ("--no-sidecar", Opt::Flag("no_sidecar")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -605,8 +694,8 @@ options:
 
 const CMD_SVG: argparse::Spec = argparse::Spec {
     name: "svg",
-    usage: "usage: tok svg [-h] [-o OUTPUT] [--lang {en,pl}] [--json] file",
-    help: "usage: tok svg [-h] [-o OUTPUT] [--lang {en,pl}] [--json] file
+    usage: "usage: tok svg [-h] [-o OUTPUT] [--no-sidecar] [--lang {en,pl}] [--json] file",
+    help: "usage: tok svg [-h] [-o OUTPUT] [--no-sidecar] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -614,6 +703,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -o OUTPUT, --output OUTPUT
+  --no-sidecar          ignore the layout sidecar FILE.layout
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -622,6 +712,7 @@ options:
         ("--help", Opt::Help),
         ("-o", Opt::Value("output", Conv::Text)),
         ("--output", Opt::Value("output", Conv::Text)),
+        ("--no-sidecar", Opt::Flag("no_sidecar")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -630,8 +721,8 @@ options:
 
 const CMD_EXPORT: argparse::Spec = argparse::Spec {
     name: "export",
-    usage: "usage: tok export [-h] [-o OUTPUT] [--lang {en,pl}] [--json] file",
-    help: "usage: tok export [-h] [-o OUTPUT] [--lang {en,pl}] [--json] file
+    usage: "usage: tok export [-h] [-o OUTPUT] [--no-sidecar] [--lang {en,pl}] [--json] file",
+    help: "usage: tok export [-h] [-o OUTPUT] [--no-sidecar] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -640,6 +731,7 @@ options:
   -h, --help            show this help message and exit
   -o OUTPUT, --output OUTPUT
                         output folder (default: folder of the file)
+  --no-sidecar          ignore the layout sidecar FILE.layout
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -648,6 +740,7 @@ options:
         ("--help", Opt::Help),
         ("-o", Opt::Value("output", Conv::Text)),
         ("--output", Opt::Value("output", Conv::Text)),
+        ("--no-sidecar", Opt::Flag("no_sidecar")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -656,8 +749,8 @@ options:
 
 const CMD_IMPORT: argparse::Spec = argparse::Spec {
     name: "import",
-    usage: "usage: tok import [-h] [-o OUTPUT] [--no-flow-ids] [--lang {en,pl}] file",
-    help: "usage: tok import [-h] [-o OUTPUT] [--no-flow-ids] [--lang {en,pl}] file
+    usage: "usage: tok import [-h] [-o OUTPUT] [--no-flow-ids] [--no-layout] [--lang {en,pl}] file",
+    help: "usage: tok import [-h] [-o OUTPUT] [--no-flow-ids] [--no-layout] [--lang {en,pl}] file
 
 positional arguments:
   file
@@ -666,6 +759,7 @@ options:
   -h, --help            show this help message and exit
   -o OUTPUT, --output OUTPUT
   --no-flow-ids         drop the identifiers of sequence flows so they print as compact chains
+  --no-layout           do not write the diagram into the layout sidecar OUTPUT.layout
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
 ",
     options: &[
@@ -674,6 +768,7 @@ options:
         ("-o", Opt::Value("output", Conv::Text)),
         ("--output", Opt::Value("output", Conv::Text)),
         ("--no-flow-ids", Opt::Flag("no_flow_ids")),
+        ("--no-layout", Opt::Flag("no_layout")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
     ],
     positionals: &[("file", false)],

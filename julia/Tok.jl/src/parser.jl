@@ -6,7 +6,8 @@ const NODE_LIKE = Set{String}([NODE_KINDS..., "flow", "message", "data", "store"
                                 "input", "output", "property"])
 const ALLOWED = Dict{String,Set{String}}(
     "top" => union(NODE_LIKE, Set(["pool", "group", "decision", "form", "simulate", "resource", "variable",
-                                   "item", "global", "interface", "key"])),
+                                   "item", "global", "interface", "key",
+                                   "conversation", "subconversation", "callconversation", "choreography"])),
     "pool" => union(NODE_LIKE, Set(["lane"])),
     "lane" => union(NODE_LIKE, Set(["lane"])),
     "sub" => NODE_LIKE,
@@ -17,6 +18,10 @@ const ALLOWED = Dict{String,Set{String}}(
     "form" => Set(["text", "field"]),
     "interface" => Set(["operation"]),
     "key" => Set(["prop"]),
+    # language 0.6
+    "subconversation" => Set([CONVERSATION_KINDS...]),
+    "choreography" => Set([NODE_KINDS..., CHOREO_KINDS..., "flow"]),
+    "subchoreo" => Set([NODE_KINDS..., CHOREO_KINDS..., "flow"]),
 )
 const KEYWORDS = union(values(ALLOWED)..., Set(["tok"]))
 
@@ -26,8 +31,11 @@ struct Ctx
     lane::MaybeStr
     pool::MaybeStr
     owner::Union{Nothing,Elem}
+    # the choreography whose block this is (language 0.6)
+    choreography::MaybeStr
 end
-Ctx(kind; scope=nothing, lane=nothing, pool=nothing, owner=nothing) = Ctx(kind, scope, lane, pool, owner)
+Ctx(kind; scope=nothing, lane=nothing, pool=nothing, owner=nothing, choreography=nothing) =
+    Ctx(kind, scope, lane, pool, owner, choreography)
 
 # result of a statement: element, whether it accepts a block, context of that block
 const StResult = Tuple{Elem,Bool,Union{Nothing,Ctx}}
@@ -227,6 +235,8 @@ function statement!(p::Parser, line::Line, ctx::Ctx)::StResult
     kw in ("item", "global") && return st_declaration!(p, line, kw)
     kw in ("interface", "key") && return st_block_declaration!(p, line, kw)
     kw in ("operation", "prop") && return st_member!(p, line, ctx, kw)
+    kw in CONVERSATION_KINDS && return st_conversation!(p, line, ctx, kw)
+    kw == "choreography" && return st_choreography!(p, line)
     kw == "reads" && return st_assoc!(p, line, ctx, "reads")
     kw == "writes" && return st_assoc!(p, line, ctx, "writes")
     kw == "note" && return st_simple!(p, line, "note", p.doc.notes)
@@ -253,16 +263,17 @@ end
 function add_child!(p::Parser, ctx::Ctx, id::String)
     if ctx.kind == "top"
         push!(p.doc.top, id)
-    elseif ctx.kind in ("pool", "lane", SUB_KINDS...) && ctx.owner !== nothing
+    elseif ctx.kind in ("pool", "lane", SUB_KINDS..., "choreography", "subchoreo") && ctx.owner !== nothing
         push!(ctx.owner.children, id)
     end
 end
 
 function st_node!(p::Parser, line::Line, ctx::Ctx)::StResult
     kind = line.tokens[1].value
+    block = kind in SUB_KINDS || kind == "subchoreo"
     nid = need_id(p, line)
     if nid === nothing
-        return (Elem(kind, nothing), kind in SUB_KINDS, nothing)
+        return (Elem(kind, nothing), block, nothing)
     end
     # a key written twice in a 0.1 or 0.3 document keeps its last value, as before
     label, attrs, flags, _, extra = parse_tail(p, line.tokens, 3, line.number; repeat=lang_05(p.doc))
@@ -272,13 +283,45 @@ function st_node!(p::Parser, line::Line, ctx::Ctx)::StResult
     node.scope = ctx.scope
     node.pool = ctx.pool
     node.lane = ctx.kind == "lane" ? ctx.lane : nothing
-    register!(p, node, line.number) || return (node, kind in SUB_KINDS, nothing)
+    node.choreography = ctx.choreography
+    register!(p, node, line.number) || return (node, block, nothing)
     p.doc.nodes[nid] = node
     add_child!(p, ctx, nid)
-    if kind in SUB_KINDS
-        return (node, true, Ctx(kind; scope=nid, lane=nothing, pool=ctx.pool, owner=node))
+    if block
+        return (node, true, Ctx(kind; scope=nid, lane=nothing, pool=ctx.pool, owner=node,
+                                choreography=ctx.choreography))
     end
     return (node, false, nothing)
+end
+
+"`conversation`, `subconversation` (with a block of conversation nodes), `callconversation` (language 0.6)."
+function st_conversation!(p::Parser, line::Line, ctx::Ctx, kind::String)::StResult
+    block = kind == "subconversation"
+    id = need_id(p, line)
+    id === nothing && return (Elem(kind, nothing), block, nothing)
+    label, attrs, flags, _ = parse_tail(p, line.tokens, 3, line.number)
+    e = Elem(kind, id; label=label, attrs=attrs, flags=flags, line=line.number)
+    take_comments!(p, e, line)
+    register!(p, e, line.number) || return (e, block, nothing)
+    if ctx.kind == "subconversation"
+        e.parent = ctx.owner.id
+        push!(ctx.owner.children, id)
+    end
+    p.doc.conversations[id] = e
+    block || return (e, false, nothing)
+    return (e, true, Ctx("subconversation"; owner=e))
+end
+
+"`choreography ID [\"Label\"]` with a block of flow nodes and flows (language 0.6)."
+function st_choreography!(p::Parser, line::Line)::StResult
+    id = need_id(p, line)
+    id === nothing && return (Elem("choreography", nothing), true, nothing)
+    label, attrs, flags, _ = parse_tail(p, line.tokens, 3, line.number)
+    e = Elem("choreography", id; label=label, attrs=attrs, flags=flags, line=line.number)
+    take_comments!(p, e, line)
+    register!(p, e, line.number) || return (e, true, nothing)
+    p.doc.choreographies[id] = e
+    return (e, true, Ctx("choreography"; scope=id, owner=e, choreography=id))
 end
 
 function st_pool!(p::Parser, line::Line, ctx::Ctx)::StResult

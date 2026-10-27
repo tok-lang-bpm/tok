@@ -9,17 +9,21 @@
 //! than in the classic layout. A model that brings its own diagram is drawn exactly
 //! as by `bpmn.py`. See `PARITY.md` for the verification.
 
+mod choreo;
 mod layout;
 mod model;
 mod pyfmt;
 mod refine;
+mod sidecar;
 mod steps;
 mod svg;
+mod svg06;
 mod validate;
 mod xml;
 
 use std::path::Path;
 
+pub use sidecar::{Sidecar, extract as extract_sidecar, layout_with, render_svg_with};
 pub use steps::read_opis;
 pub use validate::{Issue, Level, ValidateOptions};
 
@@ -32,6 +36,9 @@ pub enum Error {
     /// The model has no diagram interchange (shapes) to render.
     #[error("Model nie ma współrzędnych (BPMNDI). Najpierw uruchom: bpmn.py layout")]
     NoDiagram,
+    /// A layout sidecar (`FILE.tok.layout`) cannot be read.
+    #[error("layout sidecar: {0}")]
+    Sidecar(String),
 }
 
 fn model(xml: &str) -> Result<model::Model, Error> {

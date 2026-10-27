@@ -26,9 +26,17 @@ fn allowed(ctx: &str, kw: &str) -> bool {
                     "global",
                     "interface",
                     "key",
+                    "conversation",
+                    "subconversation",
+                    "callconversation",
+                    "choreography",
                 ]
                 .contains(&kw)
         }
+        // language 0.6: the block of a sub-conversation, of a choreography and of a
+        // sub-choreography (the checker reports flow nodes a choreography cannot contain)
+        "subconversation" => is_conversation(kw),
+        "choreography" | "subchoreo" => is_node(kw) || is_choreo(kw) || kw == "flow",
         "pool" | "lane" => node_like || kw == "lane",
         "sub" | "eventsub" | "adhoc" | "transaction" => node_like,
         "form" => kw == "text" || kw == "field",
@@ -45,6 +53,7 @@ fn is_keyword(kw: &str) -> bool {
         || allowed("form", kw)
         || allowed("interface", kw)
         || allowed("key", kw)
+        || allowed("choreography", kw)
 }
 
 /// `[A-Za-z_][A-Za-z0-9_-]*`
@@ -67,6 +76,8 @@ enum Owner {
     Form(String),
     Interface(String),
     Key(String),
+    Conversation(String),
+    Choreography(String),
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +87,8 @@ struct Ctx {
     lane: Option<String>,
     pool: Option<String>,
     owner: Owner,
+    /// The choreography whose block this is (language 0.6).
+    choreography: Option<String>,
 }
 
 impl Ctx {
@@ -87,7 +100,9 @@ impl Ctx {
             | Owner::Decision(i)
             | Owner::Form(i)
             | Owner::Interface(i)
-            | Owner::Key(i) => Some(i),
+            | Owner::Key(i)
+            | Owner::Conversation(i)
+            | Owner::Choreography(i) => Some(i),
             Owner::None => None,
         }
     }
@@ -276,6 +291,7 @@ impl Parser {
             lane: None,
             pool: None,
             owner: Owner::None,
+            choreography: None,
         };
         self.block(i, -1, &ctx);
         self.doc.end_comments = std::mem::take(&mut self.pending);
@@ -414,6 +430,10 @@ impl Parser {
             "item" | "global" => self.st_declaration(line, kw),
             "interface" | "key" => self.st_block_declaration(line, kw),
             "operation" | "prop" => self.st_member(line, ctx, kw),
+            "conversation" | "subconversation" | "callconversation" => {
+                self.st_conversation(line, ctx, kw)
+            }
+            "choreography" => self.st_choreography(line),
             "reads" | "writes" => self.st_assoc(line, kw),
             "note" | "group" => self.st_note_group(line, kw),
             "decision" => self.st_decision(line),
@@ -456,13 +476,18 @@ impl Parser {
                     node.children.push(id.to_string());
                 }
             }
+            (_, Owner::Choreography(c)) => {
+                if let Some(ch) = self.doc.choreographies.get_mut(c) {
+                    ch.children.push(id.to_string());
+                }
+            }
             _ => {}
         }
     }
 
     fn st_node(&mut self, line: &Line, ctx: &Ctx) -> Prev {
         let kind = line.tokens[0].value.clone();
-        let sub = is_sub(&kind);
+        let sub = is_sub(&kind) || kind == "subchoreo";
         let Some(nid) = self.need_id(line, 1) else {
             return Prev {
                 kind,
@@ -496,6 +521,7 @@ impl Parser {
                 None
             },
             children: Vec::new(),
+            choreography: ctx.choreography.clone(),
         };
         if !self.register(&kind, &nid, line.number) {
             return Prev {
@@ -512,12 +538,14 @@ impl Parser {
                     "sub" => "sub",
                     "adhoc" => "adhoc",
                     "transaction" => "transaction",
+                    "subchoreo" => "subchoreo",
                     _ => "eventsub",
                 },
                 scope: Some(nid.clone()),
                 lane: None,
                 pool: ctx.pool.clone(),
                 owner: Owner::Node(nid),
+                choreography: ctx.choreography.clone(),
             };
             return Prev {
                 kind,
@@ -562,6 +590,7 @@ impl Parser {
             lane: None,
             pool: Some(pid.clone()),
             owner: Owner::Pool(pid),
+            choreography: None,
         };
         Prev {
             kind: "pool".into(),
@@ -619,6 +648,7 @@ impl Parser {
             lane: Some(lid.clone()),
             pool: ctx.pool.clone(),
             owner: Owner::Lane(lid),
+            choreography: None,
         };
         Prev {
             kind: "lane".into(),
@@ -913,6 +943,7 @@ impl Parser {
             lane: None,
             pool: None,
             owner: Owner::Decision(did),
+            choreography: None,
         };
         Prev {
             kind: "decision".into(),
@@ -1043,6 +1074,7 @@ impl Parser {
             lane: None,
             pool: None,
             owner: Owner::Form(fid),
+            choreography: None,
         };
         Prev {
             kind: "form".into(),
@@ -1238,6 +1270,116 @@ impl Parser {
                 lane: None,
                 pool: None,
                 owner,
+                choreography: None,
+            }),
+        }
+    }
+
+    /// `conversation`, `subconversation` (with a block of conversation nodes) and
+    /// `callconversation` (language 0.6).
+    fn st_conversation(&mut self, line: &Line, ctx: &Ctx, kind: &str) -> Prev {
+        let block = kind == "subconversation";
+        let Some(id) = self.need_id(line, 1) else {
+            return Prev {
+                kind: kind.to_string(),
+                accepts: block,
+                ctx: None,
+            };
+        };
+        let tail = self.parse_tail(&line.tokens, 2, line.number, true);
+        let mut base = Base::new(
+            kind,
+            Some(id.clone()),
+            tail.label,
+            tail.attrs,
+            tail.flags,
+            line.number,
+        );
+        self.take_comments(&mut base, line);
+        if !self.register(kind, &id, line.number) {
+            return Prev {
+                kind: kind.to_string(),
+                accepts: block,
+                ctx: None,
+            };
+        }
+        let parent = match &ctx.owner {
+            Owner::Conversation(p) => Some(p.clone()),
+            _ => None,
+        };
+        if let Some(p) = &parent
+            && let Some(x) = self.doc.conversations.get_mut(p)
+        {
+            x.children.push(id.clone());
+        }
+        self.doc.conversations.insert(
+            id.clone(),
+            Conversation {
+                base,
+                parent,
+                children: Vec::new(),
+            },
+        );
+        if !block {
+            return Prev::plain(kind);
+        }
+        Prev {
+            kind: kind.to_string(),
+            accepts: true,
+            ctx: Some(Ctx {
+                kind: "subconversation",
+                scope: None,
+                lane: None,
+                pool: None,
+                owner: Owner::Conversation(id),
+                choreography: None,
+            }),
+        }
+    }
+
+    /// `choreography ID ["Label"]` with a block of flow nodes and flows (language 0.6).
+    fn st_choreography(&mut self, line: &Line) -> Prev {
+        let Some(id) = self.need_id(line, 1) else {
+            return Prev {
+                kind: "choreography".into(),
+                accepts: true,
+                ctx: None,
+            };
+        };
+        let tail = self.parse_tail(&line.tokens, 2, line.number, true);
+        let mut base = Base::new(
+            "choreography",
+            Some(id.clone()),
+            tail.label,
+            tail.attrs,
+            tail.flags,
+            line.number,
+        );
+        self.take_comments(&mut base, line);
+        if !self.register("choreography", &id, line.number) {
+            return Prev {
+                kind: "choreography".into(),
+                accepts: true,
+                ctx: None,
+            };
+        }
+        self.doc.choreographies.insert(
+            id.clone(),
+            Choreography {
+                base,
+                children: Vec::new(),
+            },
+        );
+        Prev {
+            kind: "choreography".into(),
+            accepts: true,
+            ctx: Some(Ctx {
+                kind: "choreography",
+                scope: Some(id.clone()),
+                lane: None,
+                pool: None,
+                owner: Owner::Choreography(id.clone()),
+                choreography: Some(id),
             }),
         }
     }

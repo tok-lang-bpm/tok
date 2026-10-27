@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.6" id="definitions" name="Wypożyczenia międzybiblioteczne" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Odbior" name="Odbiór" />
+  <bpmn:message id="Message_Zapytanie_ofertowe" name="Zapytanie ofertowe" />
+  <bpmn:message id="Message_Oferta" name="Oferta" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="czytelnik" name="Czytelnik" />
+    <bpmn:participant id="biblioteka" name="Biblioteka">
+      <bpmn:documentation>Biblioteka uczelniana</bpmn:documentation>
+    </bpmn:participant>
+    <bpmn:participant id="hurtownia" name="Hurtownia" />
+    <bpmn:messageFlow id="m-zamowienie" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="czytelnik" targetRef="biblioteka" />
+    <bpmn:messageFlow id="m-odbior" messageRef="Message_Odbior" name="Odbiór" sourceRef="biblioteka" targetRef="czytelnik" />
+    <bpmn:messageFlow id="m-biblioteka-hurtownia" messageRef="Message_Zapytanie_ofertowe" name="Zapytanie ofertowe" sourceRef="biblioteka" targetRef="hurtownia" />
+    <bpmn:messageFlow id="m-hurtownia-biblioteka" messageRef="Message_Oferta" name="Oferta" sourceRef="hurtownia" targetRef="biblioteka" />
+    <bpmn:conversation id="wypozyczenie" name="Wypożyczenie">
+      <bpmn:participantRef>czytelnik</bpmn:participantRef>
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:messageFlowRef>m-zamowienie</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>m-odbior</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:subConversation id="zakup" name="Zakup książek">
+      <bpmn:documentation>Zakup brakujących książek</bpmn:documentation>
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:participantRef>hurtownia</bpmn:participantRef>
+      <bpmn:conversation id="oferta" name="Oferta">
+        <bpmn:participantRef>biblioteka</bpmn:participantRef>
+        <bpmn:participantRef>hurtownia</bpmn:participantRef>
+        <bpmn:messageFlowRef>m-biblioteka-hurtownia</bpmn:messageFlowRef>
+        <bpmn:messageFlowRef>m-hurtownia-biblioteka</bpmn:messageFlowRef>
+      </bpmn:conversation>
+      <bpmn:conversation id="zamowienie" name="Zamówienie">
+        <bpmn:participantRef>biblioteka</bpmn:participantRef>
+        <bpmn:participantRef>hurtownia</bpmn:participantRef>
+      </bpmn:conversation>
+    </bpmn:subConversation>
+    <bpmn:callConversation calledCollaborationRef="reklamacje" id="reklamacja" name="Reklamacja">
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:participantRef>hurtownia</bpmn:participantRef>
+      <bpmn:participantAssociation>
+        <bpmn:innerParticipantRef>sprzedawca</bpmn:innerParticipantRef>
+        <bpmn:outerParticipantRef>hurtownia</bpmn:outerParticipantRef>
+      </bpmn:participantAssociation>
+      <bpmn:participantAssociation>
+        <bpmn:innerParticipantRef>klient</bpmn:innerParticipantRef>
+        <bpmn:outerParticipantRef>biblioteka</bpmn:outerParticipantRef>
+      </bpmn:participantAssociation>
+    </bpmn:callConversation>
+    <bpmn:conversationLink id="wypozyczenie-link-czytelnik" sourceRef="czytelnik" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="wypozyczenie-link-biblioteka" sourceRef="biblioteka" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="zakup-link-biblioteka" sourceRef="biblioteka" targetRef="zakup" />
+    <bpmn:conversationLink id="zakup-link-hurtownia" sourceRef="hurtownia" targetRef="zakup" />
+    <bpmn:conversationLink id="reklamacja-link-biblioteka" sourceRef="biblioteka" targetRef="reklamacja" />
+    <bpmn:conversationLink id="reklamacja-link-hurtownia" sourceRef="hurtownia" targetRef="reklamacja" />
+  </bpmn:collaboration>
+</bpmn:definitions>

@@ -48,14 +48,25 @@ pub fn is_evt(t: &str) -> bool {
 pub fn is_gw(t: &str) -> bool {
     GWS.contains(&t)
 }
+/// Choreography activities (BPMN 2.0.2 §11.5): flow nodes of a choreography.
+pub const CHOREO_ACT: &[&str] = &["choreographyTask", "subChoreography", "callChoreography"];
+/// Conversation nodes of a collaboration (BPMN 2.0.2 §9.4).
+pub const CONV: &[&str] = &["conversation", "subConversation", "callConversation"];
+
+pub fn is_choreo_act(t: &str) -> bool {
+    CHOREO_ACT.contains(&t)
+}
+pub fn is_conv(t: &str) -> bool {
+    CONV.contains(&t)
+}
 pub fn is_flownode(t: &str) -> bool {
-    is_act(t) || is_evt(t) || is_gw(t)
+    is_act(t) || is_evt(t) || is_gw(t) || is_choreo_act(t)
 }
 pub fn is_data(t: &str) -> bool {
     DATA.contains(&t)
 }
 pub fn is_container(t: &str) -> bool {
-    t == "process" || is_subp(t)
+    t == "process" || is_subp(t) || t == "choreography" || t == "subChoreography"
 }
 /// Data drawn as a shape: data object and store references and the data inputs and
 /// outputs of a process (those of activities are not drawn; they never get a shape).
@@ -123,8 +134,21 @@ pub fn tag_pl_or(t: &str) -> String {
     tag_pl(t).map_or_else(|| t.to_string(), str::to_string)
 }
 
+/// Layout hints for diagrams that are not drawn like processes (choreographies): sizes of
+/// nodes, top and bottom padding of containers, the gap between rows, the corner of
+/// boundary events. Empty for processes.
+#[derive(Debug, Clone, Default)]
+pub struct Hints {
+    pub size: HashMap<String, (i64, i64)>,
+    pub pad: HashMap<String, (i64, i64)>,
+    pub row_gap: Option<i64>,
+    /// Hosts whose boundary events stand at the bottom-left corner.
+    pub boundary_left: std::collections::HashSet<String>,
+}
+
 pub struct Model {
     pub doc: Doc,
+    pub hints: Hints,
     pub parent: HashMap<Id, Id>,
     pub ids: HashMap<String, Id>,
     pub dups: Vec<String>,
@@ -144,6 +168,7 @@ impl Model {
     pub fn new(doc: Doc) -> Model {
         let mut m = Model {
             doc,
+            hints: Hints::default(),
             parent: HashMap::new(),
             ids: HashMap::new(),
             dups: Vec::new(),

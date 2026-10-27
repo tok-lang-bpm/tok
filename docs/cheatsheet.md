@@ -1,11 +1,11 @@
-# tok 0.5 — cheat sheet
+# tok 0.6 — cheat sheet
 
 One statement per line. Blocks by indentation (spaces). `#` starts a comment.
 Every statement starts with a keyword. Identifiers: `[A-Za-z_][A-Za-z0-9_-]*`, unique. Labels: "quoted text".
 Attributes: `key=value` (value: word, number or "text") and bare flags.
 
 ```
-tok 0.5 "Title" [executable]                       # header, first line (0.1 and 0.3 documents stay valid)
+tok 0.6 "Title" [executable]                       # header, first line (0.1, 0.3 and 0.5 documents stay valid)
     [process-name="Name"] (process of a document without pools)   doc="Text" on any statement: documentation
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
@@ -33,12 +33,21 @@ complex ID "?" activation="_activationCount >= 2"        eventgw ID instantiate 
 
 pool ID "Label" [process=P] [process-name="Name"] [executable]    # with a block: participant + process
   lane ID "Label"                           # lanes nest; nodes go inside lanes
-pool ID "Label"                             # no block: black-box pool
+pool ID "Label" [min=2] [max=5]             # no block: black-box pool; min/max: several participants (0.6)
 
 flow A -> B -> C                            # chain of sequence flows
 flow G -> D "tak" when="amount > 100"       # one flow: label, FEEL condition
 flow G -> E "nie" default                   # default flow; when="" = condition not written yet
-message A -> B "Label"                      # message flow between pools (nodes or pools)
+message A -> B "Label" [id=ID]              # message flow between pools (nodes or pools)
+
+conversation ID "Label" pools="P Q" [messages="M1 M2"]       # conversation between pools (message flow ids)
+subconversation ID "Label" pools="P Q"                       # block: conversation nodes
+callconversation ID "Label" pools="P Q" collaboration=ID [map="inner:outer; …"]
+
+choreography ID "Label"                     # block: start/end/catch/throw/boundary, xor and or eventgw complex, flows
+  choreo ID "Label" from=P to=Q [message="M"] [reply="R"] [loop|parallel|sequential]
+  subchoreo ID "Label" pools="P Q R" from=P   # block like a choreography
+  callchoreo ID "Label" pools="P Q" from=P choreography=ID [map="inner:outer; …"]
 
 data ID "Label" [state="złożony"] [type=ITEM] [object="Data object"] [collection]
 store ID "Label" [type=ITEM]
@@ -92,8 +101,10 @@ tok 0.3 "T" executable version-tag="v1"   pool p … version-tag="v1"
 ```
 
 Language 0.5 elements (transaction, cancel, complex, loop conditions, multiple events, instantiate, process data,
-global tasks, operations, keys) are BPMN only: `--level basic|analytic` rejects them, and in executable documents
-for Camunda they are reported as `C100`–`C110`. In 0.5 documents `resource` and `by=` also export BPMN performers.
+global tasks, operations, keys) and 0.6 elements (conversations, choreographies, min/max) are BPMN only:
+`--level basic|analytic` rejects them, and in executable documents for Camunda they are reported as `C100`–`C123`.
+In 0.5 documents `resource` and `by=` also export BPMN performers.
 
-Commands: `tok check F` · `tok fmt F [-w]` · `tok bpmn F` · `tok svg F` · `tok export F [-o DIR]` ·
-`tok import F.bpmn` · `tok sim F` · `tok eval F DECISION name=value …` · `--lang pl` · `--json`
+Commands: `tok check F [--class descriptive|analytic|common-executable|full]` · `tok fmt F [-w]` · `tok bpmn F` ·
+`tok svg F` · `tok export F [-o DIR]` · `tok import F.bpmn [-o F.tok]` (writes F.tok.layout: the drawing,
+reused by bpmn/svg/export; `--no-sidecar`) · `tok sim F` · `tok eval F DECISION name=value …` · `--lang pl` · `--json`

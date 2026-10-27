@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.6" id="definitions" name="Rezerwacja sali" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:message id="Message_Wolne_terminy" name="Wolne terminy" />
+  <bpmn:message id="Message_Potwierdzenie" name="Potwierdzenie" />
+  <bpmn:message id="Message_Umowa" name="Umowa" />
+  <bpmn:message id="Message_Faktura" name="Faktura" />
+  <bpmn:signal id="Signal_Cennik" name="Cennik" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="wynajmujacy" name="Wynajmujący" />
+    <bpmn:participant id="zarzadca" name="Zarządca" />
+  </bpmn:collaboration>
+  <bpmn:choreography id="rezerwacja" name="Rezerwacja sali">
+    <bpmn:participant id="rezerwacja-wynajmujacy" name="Wynajmujący" />
+    <bpmn:participant id="rezerwacja-zarzadca" name="Zarządca" />
+    <bpmn:messageFlow id="zapytanie-message" messageRef="Message_Zapytanie" sourceRef="rezerwacja-wynajmujacy" targetRef="rezerwacja-zarzadca" />
+    <bpmn:messageFlow id="zapytanie-reply" messageRef="Message_Wolne_terminy" sourceRef="rezerwacja-zarzadca" targetRef="rezerwacja-wynajmujacy" />
+    <bpmn:messageFlow id="potwierdzenie-message" messageRef="Message_Potwierdzenie" sourceRef="rezerwacja-zarzadca" targetRef="rezerwacja-wynajmujacy" />
+    <bpmn:messageFlow id="umowa-message" messageRef="Message_Umowa" sourceRef="rezerwacja-zarzadca" targetRef="rezerwacja-wynajmujacy" />
+    <bpmn:messageFlow id="faktura-message" messageRef="Message_Faktura" sourceRef="rezerwacja-zarzadca" targetRef="rezerwacja-wynajmujacy" />
+    <bpmn:startEvent id="s" name="Początek miesiąca">
+      <bpmn:timerEventDefinition id="s-def">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R/2027-01-01T08:00/P1M</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:choreographyTask id="zapytanie" initiatingParticipantRef="rezerwacja-wynajmujacy" name="Zapytanie o termin">
+      <bpmn:participantRef>rezerwacja-wynajmujacy</bpmn:participantRef>
+      <bpmn:participantRef>rezerwacja-zarzadca</bpmn:participantRef>
+      <bpmn:messageFlowRef>zapytanie-message</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>zapytanie-reply</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:boundaryEvent attachedToRef="zapytanie" id="limit" name="Brak odpowiedzi">
+      <bpmn:timerEventDefinition id="limit-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P2D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:eventBasedGateway id="co" name="Co nastąpi?" />
+    <bpmn:intermediateCatchEvent id="decyzja" name="Decyzja zapisana">
+      <bpmn:conditionalEventDefinition id="decyzja-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">decyzja != null</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="zmiana" name="Zmiana cennika">
+      <bpmn:signalEventDefinition id="zmiana-def" signalRef="Signal_Cennik" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:choreographyTask id="potwierdzenie" initiatingParticipantRef="rezerwacja-zarzadca" name="Potwierdzenie">
+      <bpmn:participantRef>rezerwacja-zarzadca</bpmn:participantRef>
+      <bpmn:participantRef>rezerwacja-wynajmujacy</bpmn:participantRef>
+      <bpmn:messageFlowRef>potwierdzenie-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:parallelGateway id="razem" />
+    <bpmn:parallelGateway id="zlaczenie" />
+    <bpmn:choreographyTask id="umowa" initiatingParticipantRef="rezerwacja-zarzadca" name="Umowa">
+      <bpmn:participantRef>rezerwacja-zarzadca</bpmn:participantRef>
+      <bpmn:participantRef>rezerwacja-wynajmujacy</bpmn:participantRef>
+      <bpmn:messageFlowRef>umowa-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:choreographyTask id="faktura" initiatingParticipantRef="rezerwacja-zarzadca" name="Faktura">
+      <bpmn:participantRef>rezerwacja-zarzadca</bpmn:participantRef>
+      <bpmn:participantRef>rezerwacja-wynajmujacy</bpmn:participantRef>
+      <bpmn:messageFlowRef>faktura-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:intermediateThrowEvent id="dalej" name="Do archiwum">
+      <bpmn:linkEventDefinition id="dalej-def" name="archiwum" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="archiwum" name="Archiwum">
+      <bpmn:linkEventDefinition id="archiwum-def" name="archiwum" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="koniec" />
+    <bpmn:endEvent id="przerwano" name="Przerwano">
+      <bpmn:terminateEventDefinition id="przerwano-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-zapytanie" sourceRef="s" targetRef="zapytanie" />
+    <bpmn:sequenceFlow id="f-zapytanie-co" sourceRef="zapytanie" targetRef="co" />
+    <bpmn:sequenceFlow id="f-co-decyzja" sourceRef="co" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-potwierdzenie" sourceRef="decyzja" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-razem" sourceRef="potwierdzenie" targetRef="razem" />
+    <bpmn:sequenceFlow id="f-co-zmiana" sourceRef="co" targetRef="zmiana" />
+    <bpmn:sequenceFlow id="f-zmiana-przerwano" sourceRef="zmiana" targetRef="przerwano" />
+    <bpmn:sequenceFlow id="f-razem-umowa" sourceRef="razem" targetRef="umowa" />
+    <bpmn:sequenceFlow id="f-umowa-zlaczenie" sourceRef="umowa" targetRef="zlaczenie" />
+    <bpmn:sequenceFlow id="f-razem-faktura" sourceRef="razem" targetRef="faktura" />
+    <bpmn:sequenceFlow id="f-faktura-zlaczenie" sourceRef="faktura" targetRef="zlaczenie" />
+    <bpmn:sequenceFlow id="f-zlaczenie-dalej" sourceRef="zlaczenie" targetRef="dalej" />
+    <bpmn:sequenceFlow id="f-archiwum-koniec" sourceRef="archiwum" targetRef="koniec" />
+    <bpmn:sequenceFlow id="f-limit-przerwano" sourceRef="limit" targetRef="przerwano" />
+  </bpmn:choreography>
+</bpmn:definitions>

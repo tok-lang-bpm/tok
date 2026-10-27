@@ -235,6 +235,8 @@ function run!(ex::Exporter)
         for p in d.pools
             part = bsub!(collab, "participant", "id" => p.id, "name" => p.label)
             documentation!(part, get(p.attrs, "doc", nothing))
+            m = multiplicity(d, p)
+            m === nothing || push!(part.children, m)
             if !p.blackbox
                 setattr!(part, "processRef", process_id(p))
                 pname = if haskey(p.attrs, "process-name")
@@ -291,6 +293,7 @@ function run!(ex::Exporter)
         end
     end
 
+    export_choreographies!(ex)
     export_flows!(ex)
     export_data!(ex)
     export_artifacts!(ex)
@@ -300,6 +303,7 @@ function run!(ex::Exporter)
     performers!(ex)
     supported_interfaces!(ex)
     first_decls, last_decls = declarations_05!(ex)
+    export_conversations!(ex)
 
     decl = first_decls
     for kind in ("message", "signal", "error", "escalation")
@@ -1163,11 +1167,24 @@ function export_artifacts!(ex::Exporter)
             cont = ex.collab !== nothing ? ex.collab : first_container(ex)
         end
         cont === nothing && continue
-        t = bsub!(cont, "textAnnotation", "id" => note.id)
+        t = XElem(BPMN_NS, "textAnnotation")
+        setattr!(t, "id", note.id)
         documentation!(t, get(note.attrs, "doc", nothing))
         bsub!(t, "text").text = something(note.label, "")
+        # the artifacts of a choreography precede its flow elements (`tCollaboration`)
+        at = length(cont.children)
+        if cont.name == "choreography"
+            k = findfirst(x -> !(x.name in ("documentation", "participant", "messageFlow", "textAnnotation",
+                                            "association")), cont.children)
+            k === nothing || (at = k - 1)
+        end
+        insert_at!(cont, at, t)
         if nonempty(target)
-            bsub!(cont, "association", "id" => "$(note.id)-assoc", "sourceRef" => note.id, "targetRef" => target)
+            a = XElem(BPMN_NS, "association")
+            setattr!(a, "id", "$(note.id)-assoc")
+            setattr!(a, "sourceRef", note.id)
+            setattr!(a, "targetRef", target)
+            insert_at!(cont, at + 1, a)
         end
     end
     if !isempty(d.groups)
@@ -1181,6 +1198,199 @@ function export_artifacts!(ex::Exporter)
         end
         insert_at!(ex.root, 0, cat)
     end
+end
+
+# ------------------------------------------------------------------ language 0.6
+
+choreography_participant_id(choreography, pool) = "$(choreography)-$(pool)"
+conversation_link_id(node, pool) = "$(node)-link-$(pool)"
+
+"`participantMultiplicity` of a pool with `min=` or `max=` (minimum 2 when only the maximum is given)."
+function multiplicity(d::Document, p::Elem)
+    lang_06(d) || return nothing
+    mn, mx = get(p.attrs, "min", nothing), get(p.attrs, "max", nothing)
+    (mn === nothing && mx === nothing) && return nothing
+    m = XElem(BPMN_NS, "participantMultiplicity")
+    setattr!(m, "minimum", mn === nothing ? "2" : mn)
+    mx === nothing || setattr!(m, "maximum", mx)
+    return m
+end
+
+"`map=\"inner:outer; …\"` as pairs; `nothing` when an item is malformed."
+function participant_map(text::AbstractString)
+    out = Tuple{String,String}[]
+    for item in split(text, ";")
+        item = strip(item)
+        isempty(item) && continue
+        parts = split(item, ":")
+        length(parts) == 2 || return nothing
+        a, b = strip(parts[1]), strip(parts[2])
+        (isempty(a) || isempty(b)) && return nothing
+        push!(out, (String(a), String(b)))
+    end
+    return out
+end
+
+"Pools that take part in the activities of a choreography, in document order."
+function choreography_participants(d::Document, cid)
+    used = String[]
+    for n in ovalues(d.nodes)
+        (n.choreography == cid && n.kind in CHOREO_KINDS) || continue
+        for k in ("from", "to")
+            haskey(n.attrs, k) && push!(used, n.attrs[k])
+        end
+        append!(used, words(get(n.attrs, "pools", "")))
+    end
+    return [p.id for p in d.pools if p.id in used]
+end
+
+function loop_type(n::Elem)
+    has(n, "loop") && return "Standard"
+    has(n, "parallel") && return "MultiInstanceParallel"
+    has(n, "sequential") && return "MultiInstanceSequential"
+    return nothing
+end
+
+ref_elem(name, id) = text_elem(name, id)
+
+function export_choreographies!(ex::Exporter)
+    d = ex.doc
+    for c in ovalues(d.choreographies)
+        cid = c.id
+        e = bsub!(ex.root, "choreography", "id" => cid, "name" => c.label)
+        documentation!(e, get(c.attrs, "doc", nothing))
+        for p in choreography_participants(d, cid)
+            pool = d.pools[findfirst(x -> x.id == p, d.pools)]
+            pe = bsub!(e, "participant", "id" => choreography_participant_id(cid, p), "name" => pool.label)
+            m = multiplicity(d, pool)
+            m === nothing || push!(pe.children, m)
+        end
+        for n in ovalues(d.nodes)
+            (n.choreography == cid && n.kind == "choreo") || continue
+            from, to = get(n.attrs, "from", ""), get(n.attrs, "to", "")
+            for (suffix, src, tgt, key) in (("message", from, to, "message"), ("reply", to, from, "reply"))
+                name = get(n.attrs, key, nothing)
+                (key == "reply" && name === nothing) && continue
+                mf = bsub!(e, "messageFlow", "id" => "$(n.id)-$(suffix)",
+                           "sourceRef" => choreography_participant_id(cid, src),
+                           "targetRef" => choreography_participant_id(cid, tgt))
+                nonempty(name) && setattr!(mf, "messageRef", declare!(ex, "message", name).id)
+            end
+        end
+        ex.containers[cid] = e
+        export_choreography_block!(ex, e, cid, c.children)
+    end
+end
+
+function export_choreography_block!(ex::Exporter, container::XElem, cid, ids)
+    for i in ids
+        n = get(ex.doc.nodes, i, nothing)
+        n === nothing && continue
+        if !(n.kind in CHOREO_KINDS)
+            export_node!(ex, container, n)
+            continue
+        end
+        e = choreography_activity(ex, cid, n)
+        push!(container.children, e)
+        if n.kind == "subchoreo"
+            ex.containers[i] = e
+            export_choreography_block!(ex, e, cid, n.children)
+        end
+    end
+end
+
+function choreography_activity(ex::Exporter, cid, n::Elem)
+    tag = n.kind == "choreo" ? "choreographyTask" : n.kind == "subchoreo" ? "subChoreography" : "callChoreography"
+    part(p) = choreography_participant_id(cid, p)
+    e = XElem(BPMN_NS, tag)
+    setattr!(e, "id", n.id)
+    n.label === nothing || setattr!(e, "name", n.label)
+    if n.kind == "callchoreo" && haskey(n.attrs, "choreography")
+        setattr!(e, "calledChoreographyRef", n.attrs["choreography"])
+    end
+    haskey(n.attrs, "from") && setattr!(e, "initiatingParticipantRef", part(n.attrs["from"]))
+    lt = loop_type(n)
+    lt === nothing || setattr!(e, "loopType", lt)
+    documentation!(e, get(n.attrs, "doc", nothing))
+    pools = n.kind == "choreo" ? [n.attrs[k] for k in ("from", "to") if haskey(n.attrs, k)] :
+            words(get(n.attrs, "pools", ""))
+    for p in pools
+        push!(e.children, ref_elem("participantRef", part(p)))
+    end
+    if n.kind == "choreo"
+        push!(e.children, ref_elem("messageFlowRef", "$(n.id)-message"))
+        haskey(n.attrs, "reply") && push!(e.children, ref_elem("messageFlowRef", "$(n.id)-reply"))
+    end
+    if n.kind == "callchoreo" && haskey(n.attrs, "map")
+        called = get(n.attrs, "choreography", "")
+        pairs = participant_map(n.attrs["map"])
+        for (i, o) in (pairs === nothing ? Tuple{String,String}[] : pairs)
+            pa = bsub!(e, "participantAssociation")
+            push!(pa.children, ref_elem("innerParticipantRef", choreography_participant_id(called, i)))
+            push!(pa.children, ref_elem("outerParticipantRef", part(o)))
+        end
+    end
+    return e
+end
+
+"Conversation nodes of the collaboration before its correlation keys, conversation links last."
+function export_conversations!(ex::Exporter)
+    d = ex.doc
+    (isempty(d.conversations) || ex.collab === nothing) && return
+    collab = ex.collab
+    nodes = XElem[]
+    links = XElem[]
+    for c in ovalues(d.conversations)
+        c.parent === nothing || continue
+        push!(nodes, conversation_node(ex, c))
+        for p in words(get(c.attrs, "pools", ""))
+            l = XElem(BPMN_NS, "conversationLink")
+            setattr!(l, "id", conversation_link_id(c.id, p))
+            setattr!(l, "sourceRef", p)
+            setattr!(l, "targetRef", c.id)
+            push!(links, l)
+        end
+    end
+    k = findfirst(x -> x.name == "correlationKey", collab.children)
+    at = k === nothing ? length(collab.children) : k - 1
+    for n in nodes
+        insert_at!(collab, at, n)
+        at += 1
+    end
+    append!(collab.children, links)
+end
+
+function conversation_node(ex::Exporter, c::Elem)
+    d = ex.doc
+    tag = c.kind == "subconversation" ? "subConversation" : c.kind == "callconversation" ? "callConversation" :
+          "conversation"
+    e = XElem(BPMN_NS, tag)
+    setattr!(e, "id", c.id)
+    c.label === nothing || setattr!(e, "name", c.label)
+    called = get(c.attrs, "collaboration", nothing)
+    called === nothing || setattr!(e, "calledCollaborationRef", called)
+    documentation!(e, get(c.attrs, "doc", nothing))
+    for p in words(get(c.attrs, "pools", ""))
+        push!(e.children, ref_elem("participantRef", p))
+    end
+    for m in words(get(c.attrs, "messages", ""))
+        push!(e.children, ref_elem("messageFlowRef", m))
+    end
+    for k in c.children
+        push!(e.children, conversation_node(ex, d.conversations[k]))
+    end
+    if c.kind == "callconversation" && haskey(c.attrs, "map")
+        inner_of(i) = (called !== nothing && haskey(d.choreographies, called)) ?
+                      choreography_participant_id(called, i) : i
+        pairs = participant_map(c.attrs["map"])
+        for (i, o) in (pairs === nothing ? Tuple{String,String}[] : pairs)
+            pa = XElem(BPMN_NS, "participantAssociation")
+            push!(pa.children, ref_elem("innerParticipantRef", inner_of(i)))
+            push!(pa.children, ref_elem("outerParticipantRef", o))
+            push!(e.children, pa)
+        end
+    end
+    return e
 end
 
 # ------------------------------------------------------------------ writer

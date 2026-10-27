@@ -4,13 +4,14 @@ use std::f64::consts::PI;
 
 use crate::Error;
 use crate::layout::{OMap, Pt, key};
-use crate::model::{Model, is_act, is_evt, is_gw, is_subp, m};
+use crate::model::{Model, is_act, is_choreo_act, is_conv, is_evt, is_gw, is_subp, m};
 use crate::pyfmt::{f0, f1};
+use crate::svg06;
 use crate::xml::{BPMNDI_NS, DC_NS, DI_NS, Id, qn};
 
-const STROKE: &str = "#1f2328";
+pub(crate) const STROKE: &str = "#1f2328";
 
-fn esc(s: &str) -> String {
+pub(crate) fn esc(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
@@ -54,7 +55,7 @@ pub fn wrap(text: &str, maxw: f64, fs: f64) -> Vec<String> {
     lines
 }
 
-fn text(lines: &[String], x: f64, y: f64, fs: i64, anchor: &str, extra: &str) -> String {
+pub(crate) fn text(lines: &[String], x: f64, y: f64, fs: i64, anchor: &str, extra: &str) -> String {
     if lines.is_empty() {
         return String::new();
     }
@@ -532,6 +533,11 @@ fn markers(md: &Model, e: Id, x: f64, y: f64, w: f64, h: f64) -> String {
     if md.attr(e, "isForCompensation") == Some("true") {
         mk.push("comp");
     }
+    draw_markers(&mk, x, y, w, h)
+}
+
+/// Activity markers centred at the bottom of the box (x, y, w, h).
+pub(crate) fn draw_markers(mk: &[&str], x: f64, y: f64, w: f64, h: f64) -> String {
     if mk.is_empty() {
         return String::new();
     }
@@ -723,10 +729,30 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
     let r = d.root;
     let mut shapes: OMap<[f64; 4]> = OMap::default();
     let mut lbounds: OMap<[f64; 4]> = OMap::default();
+    // participant bands of choreography activities (language 0.6), by activity shape
+    let mut bands: svg06::Bands = std::collections::HashMap::new();
+    let mut shape_ids: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for s in d.iter_tag(r, &qn(BPMNDI_NS, "BPMNShape")) {
         let Some(b) = d.find(s, &qn(DC_NS, "Bounds")) else {
             continue;
         };
+        if let Some(act) = md.attr(s, "choreographyActivityShape") {
+            bands.entry(act.to_string()).or_default().push(svg06::Band {
+                participant: key(md.attr(s, "bpmnElement")),
+                bounds: [
+                    parse_f(md.attr(b, "x")),
+                    parse_f(md.attr(b, "y")),
+                    parse_f(md.attr(b, "width")),
+                    parse_f(md.attr(b, "height")),
+                ],
+                kind: md.attr(s, "participantBandKind").unwrap_or("").to_string(),
+                visible: md.attr(s, "isMessageVisible") == Some("true"),
+            });
+            continue;
+        }
+        if let Some(di) = md.attr(s, "id") {
+            shape_ids.insert(key(md.attr(s, "bpmnElement")), di.to_string());
+        }
         if let Some(lb) = label_bounds(md, s) {
             lbounds.insert(&key(md.attr(s, "bpmnElement")), lb);
         }
@@ -837,6 +863,9 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
                 "middle",
                 "font-weight=\"bold\"",
             ));
+            if svg06::multiple(md, e) {
+                p.push(svg06::multiplicity_marker(x + w / 2.0, y + h));
+            }
             continue;
         }
         p.push(format!(
@@ -879,7 +908,17 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             tx.push_str("</g>");
             p.push(tx);
         }
+        if t == "participant" && svg06::multiple(md, e) {
+            p.push(svg06::multiplicity_marker(x + w / 2.0, y + h));
+        }
     }
+    let bands_of = |i: &str| -> Vec<svg06::Band> {
+        shape_ids
+            .get(i)
+            .and_then(|di| bands.get(di))
+            .cloned()
+            .unwrap_or_default()
+    };
 
     // expanded sub-processes (backgrounds)
     for (i, [x, y, w, h]) in shapes.items() {
@@ -887,6 +926,17 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             continue;
         };
         let t = md.tag(e);
+        if t == "subChoreography" && md.has_flow_children(e) {
+            p.push(svg06::choreography_activity(
+                md,
+                e,
+                &t,
+                [x, y, w, h],
+                &bands_of(&i),
+                &mut labels,
+            ));
+            continue;
+        }
         if !is_subp(&t) || !md.has_flow_children(e) {
             continue;
         }
@@ -1007,6 +1057,8 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
                     "font-style=\"italic\"",
                 ));
             }
+        } else if t == "conversationLink" {
+            p.push(svg06::link(&pts));
         } else if t == "association" {
             let me = if matches!(md.attr(e, "associationDirection"), Some("One" | "Both")) {
                 " marker-end=\"url(#assocEnd)\""
@@ -1039,7 +1091,26 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
             boundary_draw.push((e, bx, lbounds.get(&i).copied()));
             continue;
         }
-        if is_subp(&t) && md.has_flow_children(e) {
+        if (is_subp(&t) || t == "subChoreography") && md.has_flow_children(e) {
+            continue;
+        }
+        if is_conv(&t) {
+            p.push(svg06::conversation(md, e, &t, bx, &mut labels));
+            continue;
+        }
+        if t == "group" {
+            p.push(svg06::group(md, e, bx, &mut labels));
+            continue;
+        }
+        if is_choreo_act(&t) {
+            p.push(svg06::choreography_activity(
+                md,
+                e,
+                &t,
+                bx,
+                &bands_of(&i),
+                &mut labels,
+            ));
             continue;
         }
         let lb = lbounds.get(&i).copied();
@@ -1047,6 +1118,26 @@ pub fn render_model(md: &Model, title: Option<&str>) -> Result<String, Error> {
     }
     for (e, bx, lb) in boundary_draw {
         p.push(draw_node(md, e, "boundaryEvent", bx, lb, &mut labels));
+    }
+    // the name of each choreography above its diagram (language 0.6)
+    for plane in d.iter_tag(r, &qn(BPMNDI_NS, "BPMNPlane")) {
+        let Some(c) = md.get(md.attr(plane, "bpmnElement")) else {
+            continue;
+        };
+        if md.tag(c) != "choreography" {
+            continue;
+        }
+        let nm = md.name(Some(c));
+        let mut top: Option<(f64, f64)> = None;
+        for s in d.findall(plane, &qn(BPMNDI_NS, "BPMNShape")) {
+            if let Some(b) = d.find(s, &qn(DC_NS, "Bounds")) {
+                let (x, y) = (parse_f(md.attr(b, "x")), parse_f(md.attr(b, "y")));
+                top = Some(top.map_or((x, y), |(tx, ty)| (tx.min(x), ty.min(y))));
+            }
+        }
+        if let (false, Some((x, y))) = (nm.is_empty(), top) {
+            labels.push(svg06::title(&nm, x, y));
+        }
     }
     p.extend(labels);
     p.push("</svg>".to_string());

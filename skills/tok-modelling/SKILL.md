@@ -39,6 +39,12 @@ When the document is `executable` (header flag), every `user` task should have `
 
 With the header `tok 0.5` the model may use the rest of BPMN 2.0.2 process modelling: `transaction` with `end … cancel` and `boundary … cancel`, `complex` gateways (`activation=`), standard loops (`loop while="…" test-before loop-max=N`), events with several triggers (`parallel` for all of them), `receive`/`eventgw … instantiate`, process data (`item`, `input`, `output`, `property`, `type=`), `global` tasks, `interface`/`operation` and correlation `key` blocks (in documents with pools). They belong to the level `full` (the levels `basic` and `analytic` reject them) and are not executed by Camunda 8: in executable documents they are reported as `C100`–`C110`.
 
+## Collaboration and choreography (language 0.6)
+
+With the header `tok 0.6` the model may describe the interactions between participants: `conversation`, `subconversation` and `callconversation` nodes between pools (`pools="a b"`, `messages="m1 m2"` naming message flows with `id=`), `choreography` blocks with `choreo ID "Label" from=a to=b message="M" reply="R"`, `subchoreo` and `callchoreo` activities, and `min=`/`max=` on pools for several participants of one kind. Their participants are pools, usually black-box pools. They belong to the level `full`; in executable documents they are reported as `C120`–`C123`. `tok check FILE --class descriptive|analytic|common-executable|full` checks the model against a conformance class of BPMN 2.0.2.
+
+When the model comes from a BPMN file drawn in a modelling tool, import it with `tok import FILE.bpmn -o FILE.tok`: the drawing is kept in `FILE.tok.layout`, and `tok bpmn`, `tok svg` and `tok export` reuse it for every element you do not change. Keep that file next to the model.
+
 ## Simulation
 
 Add `simulate`, `resource` and `variable` statements and `by=`, `duration=`, `p=` attributes; run `tok sim FILE --seed 1`. Report indicators with the seed you used.

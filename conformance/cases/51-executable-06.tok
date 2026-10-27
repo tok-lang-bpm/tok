@@ -1,0 +1,20 @@
+tok 0.6 "Elements of language 0.6 in an executable document" executable
+
+pool biblioteka "Biblioteka"
+  start s "Zamówienie" message="Zamówienie" correlation="numer"
+  service przyjmij "Przyjęcie zamówienia" type="przyjecie"
+  end e "Przyjęto"
+  flow s -> przyjmij -> e
+pool czytelnik "Czytelnik" max=10
+pool hurtownia "Hurtownia"
+
+message czytelnik -> s "Zamówienie" id=m-zamowienie
+
+conversation wypozyczenie "Wypożyczenie" pools="czytelnik biblioteka" messages="m-zamowienie"
+callconversation reklamacja "Reklamacja" pools="biblioteka hurtownia" collaboration=reklamacje
+
+choreography zakup "Zakup"
+  start zs
+  choreo zamowienie "Zamówienie" from=biblioteka to=hurtownia message="Zamówienie hurtowe"
+  end ze
+  flow zs -> zamowienie -> ze

@@ -21,6 +21,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.3.0** — language 0.3: complete Camunda 8 coverage as an optional executable layer (multi-instance, ad-hoc sub-processes, call activities, variable mappings, user task assignment and scheduling, jobs and REST connector, compensation, catch-all errors and escalations, conditional filters, listeners, version tags); Python, Rust and the Julia core at parity; executable conformance on Camunda 8 Run.
 - **0.4.0** — the Rust engine is the only engine: `eval` and `sim` in Rust, XES event logs, improved layout; `tok-lang` wheels on the engine with the module `tok.api`; R package `tokr`; release gates in `tools/check.sh`.
 - **0.5.0** — language 0.5: the BPMN 2.0.2 process elements Camunda 8 does not execute (transaction and cancel, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks, interfaces, correlation keys), documentation, MIWG round-trip gate with coverage per model (`docs/miwg.md`).
+- **0.6.0** — language 0.6: conversations, choreographies, participant multiplicity; BPMN conformance classes (`tok check --class`); layout sidecar keeping the drawing of imported files.
 
 ## State at 0.1
 
@@ -96,7 +97,7 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 - Choreographies: choreography tasks, sub-choreographies, call choreographies, initiating and non-initiating participants.
 - Participant multiplicity and participant associations.
 - Diagram interchange round trip: `tok import` keeps the layout of a file drawn in a modelling tool in a sidecar file (`model.tok.layout`), and `tok bpmn` reuses it for unchanged elements, so a model can move between text and Camunda Modeler without losing its drawing.
-- BPMN Descriptive, Analytic, Common Executable and Full conformance classes reported by `tok check --level`.
+- BPMN Descriptive, Analytic, Common Executable and Full conformance classes reported by `tok check --class` (and the smallest class of a document in `tok check --json`).
 
 ## 0.7 — decisions and expressions
 

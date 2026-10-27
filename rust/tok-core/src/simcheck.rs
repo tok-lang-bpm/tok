@@ -371,7 +371,8 @@ pub fn check_sim(doc: &Document) -> Vec<SimCheck> {
             }
         }
     }
-    for n in doc.nodes.values() {
+    // the gateways of choreographies are not simulated (language 0.6)
+    for n in doc.nodes.values().filter(|n| n.choreography.is_none()) {
         let kind = n.base.kind.as_str();
         if kind != "xor" && kind != "or" {
             continue;

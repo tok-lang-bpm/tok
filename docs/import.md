@@ -14,7 +14,7 @@ for w in warnings:
 
 Import is the inverse of BPMN export. A document written by tok survives the round trip tok → XML → tok → XML unchanged, apart from diagram coordinates. A model from another tool keeps its structure, names, identifiers and documentation. Everything tok cannot express is reported as a warning: every element, attribute, extension and documentation the import does not keep is named (an extension element or attribute of another tool once per document). The BPMN MIWG reference models are the gate of this promise (`miwg.md`).
 
-Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The exporter generates a new layout.
+Diagram interchange (`bpmndi`) is not part of the text, because tok has no coordinates. `tok import model.bpmn -o model.tok` writes the diagram of the file into the layout sidecar `model.tok.layout` next to the document (`--no-layout`: not), and `tok bpmn`, `tok svg` and `tok export` draw the document with it: unchanged elements keep their geometry, new ones are placed around them (see [Layout sidecar](#layout-sidecar)). Without a sidecar the exporter generates a new layout.
 
 ## Mapping
 
@@ -70,6 +70,14 @@ Diagram interchange (`bpmndi`) is ignored, because tok has no coordinates. The e
 | data associations of events | `reads EVENT DATA` (throwing events), `writes EVENT DATA` (catching events) |
 | `textAnnotation` + `association` | `note ID "text" on=TARGET` |
 | `group` + `categoryValue/@value` | `group ID "label"` (members must be added by hand, see below) |
+| `participantMultiplicity` (`minimum`, `maximum`) | `min=`, `max=` on the pool (`min=` is left out when it is 2 and a maximum is given) |
+| `conversation`, `subConversation`, `callConversation` of a collaboration (`participantRef`, `messageFlowRef`, `calledCollaborationRef`, `participantAssociation`) | `conversation`, `subconversation` with its block, `callconversation` with `pools=`, `messages=`, `collaboration=`, `map=` |
+| `conversationLink` between a participant and a conversation node | the pool joins `pools=` of the node (tok writes one link per pool) |
+| `choreography` | `choreography ID "name"` with its block |
+| participants of a choreography | the pools they stand for: the pool whose identifier follows `CHOREOGRAPHY-` (as tok exports them), else the only pool with the participant's name, else a new black-box pool |
+| `choreographyTask` (`initiatingParticipantRef`, `participantRef`, `messageFlowRef`) | `choreo ID "name" from= to=`; the message of the flow from the initiating participant → `message=`, of the flow back → `reply=` |
+| `subChoreography`, `callChoreography` (`calledChoreographyRef`, `participantAssociation`) | `subchoreo … pools= from=` with its block, `callchoreo … pools= from= choreography= map=` |
+| `loopType` of a choreography activity | flags `loop`, `parallel`, `sequential` |
 
 Camunda 8 extensions (namespace `http://camunda.org/schema/zeebe/1.0`):
 
@@ -96,13 +104,13 @@ Camunda 8 extensions (namespace `http://camunda.org/schema/zeebe/1.0`):
 | `zeebe:executionListeners`, `zeebe:taskListeners` | `listeners=` |
 | `zeebe:versionTag` of a process | `version-tag=` on the header or the pool |
 
-A file that uses any of these constructs is printed with the header `tok 0.3`; a file that uses an element of language 0.5 (transaction, cancel, complex gateway, loop attributes, multiple events, instantiation, process data, resources and performers, global tasks, interfaces, correlation keys, documentation, triggers without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events, shared data objects, empty conditions) is printed with `tok 0.5`; other files keep `tok 0.1`.
+A file that uses any of these constructs is printed with the header `tok 0.3`; a file that uses an element of language 0.5 (transaction, cancel, complex gateway, loop attributes, multiple events, instantiation, process data, resources and performers, global tasks, interfaces, correlation keys, documentation, triggers without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events, shared data objects, empty conditions) is printed with `tok 0.5`; a file with conversations, choreographies or participant multiplicity is printed with `tok 0.6`; other files keep `tok 0.1`.
 
 ## Identifiers
 
 XML identifiers are kept when they are valid tok identifiers (ASCII letters, digits, `_` and `-`, starting with a letter or `_`). Others are converted: Polish letters lose their diacritics, other characters become `_`, and a leading digit gets a `_` prefix (`1end` → `_1end`). All references are rewritten consistently, and each conversion is reported.
 
-Sequence and message flows keep their XML identifier through `id=` only when it differs from the identifier tok derives (`f-SOURCE-TARGET`, see spec §6.1). Models drawn in other tools usually have identifiers like `Flow_0x1y2z3`, so every flow gets its own `flow` line with `id=`. Python callers can pass `keep_ids=False` to drop these identifiers and get compact chains. The gateways' default flows are kept either way, because tok records them with the `default` flag rather than by identifier.
+Sequence and message flows keep their XML identifier through `id=` only when it differs from the identifier tok derives (`f-SOURCE-TARGET`, see spec §6.1). Models drawn in other tools usually have identifiers like `Flow_0x1y2z3`, so every flow gets its own `flow` line with `id=`. `tok import --no-flow-ids` (Python: `keep_ids=False`) drops these identifiers and gives compact chains; message flows that a conversation names keep theirs. The gateways' default flows are kept either way, because tok records them with the `default` flag rather than by identifier.
 
 ## Limits
 
@@ -110,7 +118,9 @@ These elements are reported and skipped, or simplified:
 
 | Element | Behaviour |
 |---|---|
-| choreographies, conversations, participant associations | skipped; sequence flows to a skipped node are dropped |
+| participant associations, conversation associations and message flow associations of a collaboration, correlation keys of conversation nodes and choreographies, global choreography tasks and global conversations | reported and skipped |
+| identifiers of conversation links and of the message flows of choreography tasks | generated by tok (`NODE-link-POOL`, `TASK-message`, `TASK-reply`); other identifiers are reported |
+| tasks and other activities of processes inside a choreography | reported and skipped; sequence flows to a skipped node are dropped |
 | input and output sets of an `ioSpecification` other than one set of all inputs and one of all outputs | reported; tok writes one set of all inputs and one of all outputs |
 | `eventDefinitionRef` (reusable event definitions) | skipped |
 | lanes inside a sub-process | ignored; the sub-process nodes stay in the sub-process |
@@ -132,6 +142,17 @@ The test suite (`python/tests/test_import.py`) checks:
 1. for every example in `examples/` and for a document using pools, lanes, a sub-process, an event sub-process, escalation, an event-based gateway, data and notes: parse → export → import → print → parse → export gives the same semantic XML as the first export;
 2. every BPMN model of the companion course imports, prints, parses again without diagnostics, formats stably and re-exports without BPMN errors.
 
-For language 0.5 the Rust test `rust/tok-core/tests/import_05.rs` checks that every conformance case of 0.5 without errors survives export → import → print → parse → export with the same semantic XML, without warnings, and is printed as `tok 0.5`.
+For languages 0.5 and 0.6 the Rust test `rust/tok-core/tests/import_05.rs` checks that every conformance case of these languages without errors survives export → import → print → parse → export with the same semantic XML, without warnings, and is printed with the header of the case (`tok 0.5`, `tok 0.6`).
 
 The Rust test `rust/tok-core/tests/miwg.rs` compares the semantic content of the BPMN MIWG reference models and of the models in `conformance/import` with that of their export after import and printing; `miwg.md` describes it and lists what is kept.
+
+## Layout sidecar
+
+`tok import model.bpmn -o model.tok` also writes `model.tok.layout` (spec §16): one line per shape (`ID x y w h`), per edge (`ID x1 y1 x2 y2 …`) and per label (`ID/label x y w h`) of the diagram, by tok identifier, in whole units of the file, after the header line `tok-layout 1`.
+
+- Elements whose identifiers the import keeps are written under them. Elements tok identifies otherwise (data associations, associations of notes, flows with derived identifiers, generated compensation boundary events, renamed notes) are matched by what they connect. Participant bands of choreography activities are not written; they follow from the bounds of the activity.
+- A file with several diagrams (several collaborations, a sub-process drawn in a diagram of its own, choreographies): the first diagram keeps its coordinates and every further one moves below the one before it.
+- `tok bpmn`, `tok svg` and `tok export` read the sidecar next to the document (`--no-sidecar`: not). A shape whose identifier is still in the model keeps its bounds and label; an edge keeps its waypoints when both of its ends kept their bounds and it still touches them (within 25 units). New shapes are placed at the distance the automatic layout puts them from a neighbour that kept its place, moved aside from other shapes; pools and lanes grow to the right and sub-processes in both directions to hold them; other edges are routed again. Groups, which the automatic layout does not draw, are drawn with the bounds of the sidecar.
+- The sidecar never changes the meaning of the model; deleting it gives the automatic layout again.
+
+The Rust test `rust/tok-bpmn/tests/sidecar.rs` imports every file of `conformance/import` and every MIWG reference model, draws the document with its sidecar and checks that every shape, edge and label of the file that the import keeps is drawn with the geometry of the file (in whole units; the further diagrams of a file moved by one offset each), and that a task added to an imported model is placed next to its predecessor without moving the other shapes.

@@ -4,6 +4,7 @@
 //! module by module; the conformance corpus in `tok/conformance` is the contract.
 
 pub mod check;
+pub mod classes;
 pub mod dec;
 pub mod diagnostics;
 pub mod dmn;
@@ -30,7 +31,7 @@ pub use parser::parse;
 pub use printer::fmt;
 
 /// Newest language version read by this implementation (0.1 documents stay valid).
-pub const LANGUAGE_VERSION: &str = "0.5";
+pub const LANGUAGE_VERSION: &str = "0.6";
 
 /// Parse and, when the parser found no errors, check a document (`tok check`).
 /// Diagnostics are sorted by line and code like the Python command line.

@@ -51,4 +51,14 @@ sed -i 's|path = "../../../../rust/|path = "engine/|' "$PKG/src/rust/Cargo.toml"
 
 mkdir -p "$ROOT/dist"
 (cd "$ROOT/dist" && R CMD build --no-manual "$PKG")
+# R CMD build leaves out some directory names (for example check/); every engine source
+# file must still be in the archive
+VER="$(sed -n 's/^Version: //p' "$PKG/DESCRIPTION")"
+missing="$(comm -23 \
+  <(cd "$PKG/src/rust/engine" && find . -name '*.rs' | sed 's|^\./|tokr/src/rust/engine/|' | sort) \
+  <(tar -tzf "$ROOT/dist/tokr_$VER.tar.gz" | sort))"
+if [ -n "$missing" ]; then
+  printf 'missing from the archive:\n%s\n' "$missing" >&2
+  exit 1
+fi
 ls "$ROOT"/dist/tokr_*.tar.gz

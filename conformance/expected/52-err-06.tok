@@ -1,0 +1,49 @@
+tok 0.6 "Errors of language 0.6"
+
+pool a "A" min=3 max=2
+
+pool b "B" min=-1
+
+pool c "C" max=1
+
+pool d "D" max=dwa
+
+pool e "E"
+  start es
+  end ee
+
+choreography ch "Błędy choreografii"
+  start s "Wiadomość" message="M"
+  choreo t1 "Bez odbiorcy" from=a
+  choreo t2 "Ten sam basen" from=a to=a message="M"
+  subchoreo t3 "Jeden uczestnik" pools="a" from=b
+    choreo t4 "Spoza" from=a to=c
+  callchoreo t5 "Bez choreografii" pools="a b" from=a
+  callchoreo t6 "Zła mapa" pools="a b" from=a choreography=inna map="c:d"
+  user t7 "Zadanie"
+  throw t8 "Sygnał" signal="S"
+  catch t9 "Wiadomość" message="N"
+  end t10 "Błąd" error="E"
+  flow s -> t1 -> t2 -> t3 -> t5 -> t6 -> t7 -> t8 -> t9 -> t10
+
+choreography inna "Inna"
+  start is
+  choreo it "Zadanie" from=a to=b
+  end ie
+  flow is -> it -> ie
+
+choreography pusta "Pusta"
+
+flow es -> ee
+
+message a -> b "Wiadomość" id=m-ab
+message a -> e "Druga" id=m-ae
+
+# R070: one pool; R002 for an unknown pool; R071: a message flow between other pools
+conversation k1 "Jeden basen" pools="a"
+conversation k2 "Nieznany basen" pools="a x"
+conversation k3 "Inne baseny" pools="b c" messages="m-ab m-ae"
+conversation k4 "Nie przepływ" pools="a b" messages="es"
+subconversation k5 "Podkonwersacja" pools="a b"
+  conversation k6 "Poza podkonwersacją" pools="a c"
+callconversation k7 "Wywołanie" pools="a b" map="x:c; zle"

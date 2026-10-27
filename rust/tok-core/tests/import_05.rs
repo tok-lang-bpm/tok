@@ -1,7 +1,7 @@
-//! Round trip of language 0.5 through BPMN: every conformance case of language 0.5 without
-//! errors is exported, imported again and exported once more; the semantic BPMN must not
-//! change, the import must not warn (except that group members are not stored in BPMN), and
-//! the imported document declares `tok 0.5`.
+//! Round trip of languages 0.5 and 0.6 through BPMN: every conformance case of these
+//! languages without errors is exported, imported again and exported once more; the semantic
+//! BPMN must not change, the import must not warn (except that group members are not stored
+//! in BPMN), and the imported document declares the language of the case.
 
 use std::fs;
 use std::path::PathBuf;
@@ -58,7 +58,7 @@ fn language_05_survives_import() {
                     "{name} (keep ids {keep_ids}): warnings {warnings:?}"
                 ));
             }
-            if imported.version.as_deref() != Some("0.5") {
+            if imported.version != doc.version {
                 failures.push(format!(
                     "{name} (keep ids {keep_ids}): imported as tok {:?}",
                     imported.version

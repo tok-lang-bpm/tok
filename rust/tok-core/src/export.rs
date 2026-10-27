@@ -340,6 +340,9 @@ impl<'a> Exporter<'a> {
                     &mut self.root.children[ci].children[part],
                     p.base.attr(DOC_KEY),
                 );
+                if let Some(m) = multiplicity(d, p) {
+                    self.root.children[ci].children[part].push(m);
+                }
                 if !p.blackbox {
                     let pid = p.process_id();
                     self.root.children[ci].children[part].set("processRef", pid.clone());
@@ -463,6 +466,7 @@ impl<'a> Exporter<'a> {
             }
         }
 
+        self.choreographies();
         self.flows();
         self.data();
         self.artifacts();
@@ -472,6 +476,7 @@ impl<'a> Exporter<'a> {
         self.performers();
         self.supported_interfaces();
         let roots_05 = self.declarations_05();
+        self.conversations();
 
         let mut decl: Vec<XElem> = roots_05.0;
         for (k, kind) in DECL_KINDS.iter().enumerate() {
@@ -1473,13 +1478,32 @@ impl<'a> Exporter<'a> {
             tx.text = Some(note.label.clone().unwrap_or_default());
             t.push(tx);
             let c = self.at(&path);
-            c.push(t);
+            // the artifacts of a choreography precede its flow elements (`tCollaboration`)
+            let mut at = if c.name == "choreography" {
+                c.children
+                    .iter()
+                    .position(|x| {
+                        !matches!(
+                            x.name.as_str(),
+                            "documentation"
+                                | "participant"
+                                | "messageFlow"
+                                | "textAnnotation"
+                                | "association"
+                        )
+                    })
+                    .unwrap_or(c.children.len())
+            } else {
+                c.children.len()
+            };
+            c.insert(at, t);
+            at += 1;
             if let Some(tg) = target.filter(|t| !t.is_empty()) {
                 let mut a = XElem::new(BPMN_NS, "association");
                 a.set("id", format!("{}-assoc", note.id()));
                 a.set("sourceRef", note.id().to_string());
                 a.set("targetRef", tg);
-                c.push(a);
+                c.insert(at, a);
             }
         }
         if !d.groups.is_empty() {
@@ -1938,6 +1962,272 @@ impl Exporter<'_> {
             last.push(e);
         }
         (first, last)
+    }
+}
+
+/// Identifier of the participant that stands for pool `pool` in choreography
+/// `choreography` (language 0.6).
+pub fn choreography_participant_id(choreography: &str, pool: &str) -> String {
+    format!("{choreography}-{pool}")
+}
+
+/// Identifier of the conversation link between a conversation node and a pool.
+pub fn conversation_link_id(node: &str, pool: &str) -> String {
+    format!("{node}-link-{pool}")
+}
+
+/// `loopType` of a choreography activity.
+fn choreography_loop(b: &Base) -> Option<&'static str> {
+    if b.has("loop") {
+        Some("Standard")
+    } else if b.has("parallel") {
+        Some("MultiInstanceParallel")
+    } else if b.has("sequential") {
+        Some("MultiInstanceSequential")
+    } else {
+        None
+    }
+}
+
+/// `participantMultiplicity` of a pool with `min=` or `max=` (language 0.6); the
+/// minimum is 2 when only the maximum is given.
+fn multiplicity(d: &Document, p: &Pool) -> Option<XElem> {
+    if !d.lang_06() {
+        return None;
+    }
+    let (min, max) = (p.base.attr("min"), p.base.attr("max"));
+    if min.is_none() && max.is_none() {
+        return None;
+    }
+    let mut m = XElem::new(BPMN_NS, "participantMultiplicity");
+    m.set("minimum", min.unwrap_or("2").to_string());
+    if let Some(x) = max {
+        m.set("maximum", x.to_string());
+    }
+    Some(m)
+}
+
+fn ref_elem(name: &str, id: &str) -> XElem {
+    text_elem(name, id)
+}
+
+impl Exporter<'_> {
+    /// Conversation nodes and conversation links of the collaboration (language 0.6):
+    /// the nodes before the correlation keys, the links last (`tCollaboration`).
+    fn conversations(&mut self) {
+        let d = self.doc;
+        if d.conversations.is_empty() {
+            return;
+        }
+        let Some(path) = self.collab.clone() else {
+            return;
+        };
+        let mut nodes = Vec::new();
+        let mut links = Vec::new();
+        for (id, c) in d.conversations.iter().filter(|(_, c)| c.parent.is_none()) {
+            nodes.push(self.conversation_node(id));
+            for p in c.pools() {
+                let mut l = XElem::new(BPMN_NS, "conversationLink");
+                l.set("id", conversation_link_id(id, &p));
+                l.set("sourceRef", p.clone());
+                l.set("targetRef", id.clone());
+                links.push(l);
+            }
+        }
+        let collab = self.at(&path);
+        let at = collab
+            .children
+            .iter()
+            .position(|x| x.name == "correlationKey")
+            .unwrap_or(collab.children.len());
+        for (k, n) in nodes.into_iter().enumerate() {
+            collab.insert(at + k, n);
+        }
+        for l in links {
+            collab.push(l);
+        }
+    }
+
+    fn conversation_node(&self, id: &str) -> XElem {
+        let d = self.doc;
+        let c = &d.conversations[id];
+        let kind = c.base.kind.as_str();
+        let tag = match kind {
+            "subconversation" => "subConversation",
+            "callconversation" => "callConversation",
+            _ => "conversation",
+        };
+        let mut e = XElem::new(BPMN_NS, tag);
+        e.set("id", id.to_string());
+        if let Some(l) = &c.base.label {
+            e.set("name", l.clone());
+        }
+        let called = c.base.attr("collaboration");
+        if let Some(cc) = called {
+            e.set("calledCollaborationRef", cc.to_string());
+        }
+        documentation(&mut e, c.base.attr(DOC_KEY));
+        for p in c.pools() {
+            e.push(ref_elem("participantRef", &p));
+        }
+        for m in words(c.base.attr("messages").unwrap_or("")) {
+            e.push(ref_elem("messageFlowRef", &m));
+        }
+        for k in &c.children {
+            e.push(self.conversation_node(k));
+        }
+        if kind == "callconversation"
+            && let Some(text) = c.base.attr("map")
+        {
+            let inner_of = |i: &str| match called {
+                Some(cc) if d.choreographies.contains_key(cc) => choreography_participant_id(cc, i),
+                _ => i.to_string(),
+            };
+            for (i, o) in participant_map(text).unwrap_or_default() {
+                let mut pa = XElem::new(BPMN_NS, "participantAssociation");
+                pa.push(ref_elem("innerParticipantRef", &inner_of(&i)));
+                pa.push(ref_elem("outerParticipantRef", &o));
+                e.push(pa);
+            }
+        }
+        e
+    }
+
+    /// Each choreography as a root element (language 0.6): its participants (the pools of
+    /// its activities), the message flows of its tasks, then its flow elements.
+    fn choreographies(&mut self) {
+        let d = self.doc;
+        for (cid, c) in &d.choreographies {
+            let mut e = XElem::new(BPMN_NS, "choreography");
+            e.set("id", cid.clone());
+            if let Some(l) = &c.base.label {
+                e.set("name", l.clone());
+            }
+            documentation(&mut e, c.base.attr(DOC_KEY));
+            for p in crate::check::choreography_participants(d, cid) {
+                let mut pe = XElem::new(BPMN_NS, "participant");
+                pe.set("id", choreography_participant_id(cid, &p));
+                if let Some(pool) = d.pool(&p) {
+                    if let Some(l) = &pool.base.label {
+                        pe.set("name", l.clone());
+                    }
+                    if let Some(m) = multiplicity(d, pool) {
+                        pe.push(m);
+                    }
+                }
+                e.push(pe);
+            }
+            for n in d
+                .nodes
+                .values()
+                .filter(|n| n.choreography.as_deref() == Some(cid) && n.base.kind == "choreo")
+            {
+                let (from, to) = (
+                    n.base.attr("from").unwrap_or(""),
+                    n.base.attr("to").unwrap_or(""),
+                );
+                for (suffix, src, tgt, key) in [
+                    ("message", from, to, "message"),
+                    ("reply", to, from, "reply"),
+                ] {
+                    let name = n.base.attr(key);
+                    if key == "reply" && name.is_none() {
+                        continue;
+                    }
+                    let mut mf = XElem::new(BPMN_NS, "messageFlow");
+                    mf.set("id", format!("{}-{suffix}", n.base.id()));
+                    mf.set("sourceRef", choreography_participant_id(cid, src));
+                    mf.set("targetRef", choreography_participant_id(cid, tgt));
+                    if let Some(m) = name.filter(|m| !m.is_empty()) {
+                        let mid = self.declare("message", m, None);
+                        mf.set("messageRef", mid);
+                    }
+                    e.push(mf);
+                }
+            }
+            let ci = self.root.push(e);
+            self.containers.insert(cid.clone(), vec![ci]);
+            self.choreography_block(vec![ci], cid, &c.children);
+        }
+    }
+
+    fn choreography_block(&mut self, container: Path, cid: &str, ids: &[String]) {
+        for i in ids {
+            let Some(n) = self.doc.nodes.get(i) else {
+                continue;
+            };
+            if !is_choreo(&n.base.kind) {
+                self.node(container.clone(), n);
+                continue;
+            }
+            let e = self.choreography_activity(cid, n);
+            let k = self.at(&container).push(e);
+            if n.base.kind == "subchoreo" {
+                let mut path = container.clone();
+                path.push(k);
+                self.containers.insert(i.clone(), path.clone());
+                let kids = n.children.clone();
+                self.choreography_block(path, cid, &kids);
+            }
+        }
+    }
+
+    fn choreography_activity(&mut self, cid: &str, n: &Node) -> XElem {
+        let b = &n.base;
+        let kind = b.kind.as_str();
+        let tag = match kind {
+            "choreo" => "choreographyTask",
+            "subchoreo" => "subChoreography",
+            _ => "callChoreography",
+        };
+        let part = |p: &str| choreography_participant_id(cid, p);
+        let mut e = XElem::new(BPMN_NS, tag);
+        e.set("id", b.id().to_string());
+        if let Some(l) = &b.label {
+            e.set("name", l.clone());
+        }
+        if let Some(c) = b.attr("choreography").filter(|_| kind == "callchoreo") {
+            e.set("calledChoreographyRef", c.to_string());
+        }
+        if let Some(f) = b.attr("from") {
+            e.set("initiatingParticipantRef", part(f));
+        }
+        if let Some(lt) = choreography_loop(b) {
+            e.set("loopType", lt);
+        }
+        documentation(&mut e, b.attr(DOC_KEY));
+        let pools: Vec<String> = if kind == "choreo" {
+            ["from", "to"]
+                .iter()
+                .filter_map(|k| b.attr(k).map(str::to_string))
+                .collect()
+        } else {
+            words(b.attr("pools").unwrap_or(""))
+        };
+        for p in &pools {
+            e.push(ref_elem("participantRef", &part(p)));
+        }
+        if kind == "choreo" {
+            e.push(ref_elem("messageFlowRef", &format!("{}-message", b.id())));
+            if b.attrs.contains_key("reply") {
+                e.push(ref_elem("messageFlowRef", &format!("{}-reply", b.id())));
+            }
+        }
+        if kind == "callchoreo"
+            && let Some(text) = b.attr("map")
+        {
+            let called = b.attr("choreography").unwrap_or("");
+            for (i, o) in participant_map(text).unwrap_or_default() {
+                let mut pa = XElem::new(BPMN_NS, "participantAssociation");
+                pa.push(ref_elem(
+                    "innerParticipantRef",
+                    &choreography_participant_id(called, &i),
+                ));
+                pa.push(ref_elem("outerParticipantRef", &part(&o)));
+                e.push(pa);
+            }
+        }
+        e
     }
 }
 

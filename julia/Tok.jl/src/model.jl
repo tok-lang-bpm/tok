@@ -41,7 +41,21 @@ const TRANSACTION_METHODS = Dict("compensate" => "##Compensate", "store" => "##S
 const GLOBAL_KINDS = Dict("task" => "globalTask", "user" => "globalUserTask", "manual" => "globalManualTask",
                           "script" => "globalScriptTask", "rule" => "globalBusinessRuleTask")
 
-const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5")
+const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5", "0.6")
+
+# language 0.6: conversation nodes of a collaboration and choreography activities
+const CONVERSATION_KINDS = ("conversation", "subconversation", "callconversation")
+const CONVERSATION_KEYS = ("pools", "messages", "doc")
+const CALLCONVERSATION_KEYS = ("pools", "messages", "collaboration", "map", "doc")
+const CHOREO_KINDS = ("choreo", "subchoreo", "callchoreo")
+const CHOREOGRAPHY_KEYS = ("doc",)
+const CHOREO_KEYS = ("from", "to", "message", "reply", "doc")
+const SUBCHOREO_KEYS = ("pools", "from", "doc")
+const CALLCHOREO_KEYS = ("pools", "from", "choreography", "map", "doc")
+const CHOREO_FLAGS = ("loop", "parallel", "sequential")
+conversation_keys(kind) = kind == "callconversation" ? CALLCONVERSATION_KEYS : CONVERSATION_KEYS
+"Words of a list attribute (`pools=\"a b\"`)."
+words(text::AbstractString) = [String(w) for w in split(text, r"[\s,]+") if !isempty(w)]
 
 is_activity(kind) = kind in TASK_KINDS || kind in SUB_KINDS
 
@@ -50,6 +64,9 @@ function node_keys(kind)
     is_activity(kind) && return TASK_KEYS
     kind == "complex" && return COMPLEX_KEYS
     kind in GATEWAY_KINDS && return GATEWAY_KEYS
+    kind == "choreo" && return CHOREO_KEYS
+    kind == "subchoreo" && return SUBCHOREO_KEYS
+    kind == "callchoreo" && return CALLCHOREO_KEYS
     return ()
 end
 
@@ -57,6 +74,7 @@ function node_flags(kind)
     kind in EVENT_KINDS && return EVENT_FLAGS
     is_activity(kind) && return TASK_FLAGS
     kind == "eventgw" && return EVENTGW_FLAGS
+    kind in CHOREO_KINDS && return CHOREO_FLAGS
     return ()
 end
 
@@ -64,6 +82,8 @@ const HEADER_KEYS = ("id", "process", "target", "namespace", "collaboration", "v
 const HEADER_FLAGS = ("executable",)
 const POOL_KEYS = ("process", "version-tag", "process-name", "doc")
 const POOL_FLAGS = ("executable",)
+# pools of a document of language 0.6 have a participant multiplicity
+const POOL_KEYS_06 = ("process", "version-tag", "process-name", "min", "max", "doc")
 const LANE_KEYS = ("doc",)
 const FLOW_KEYS = ("id", "when", "p", "doc")
 const FLOW_FLAGS = ("default",)
@@ -136,6 +156,8 @@ mutable struct Elem
     header_done::Bool
     # form items, operations of an interface, props of a correlation key
     items::Vector{Elem}
+    # the choreography of a flow node (language 0.6)
+    choreography::MaybeStr
 end
 
 function Elem(kind, id; label=nothing, attrs=Dict{String,String}(), flags=String[], line=0)
@@ -144,7 +166,7 @@ function Elem(kind, id; label=nothing, attrs=Dict{String,String}(), flags=String
          nothing, nothing, nothing, nothing, nothing, String[], true,
          "", "", false, true,
          Tuple{String,String}[], Tuple{String,String}[], Rule[], false, nothing, false,
-         Elem[])
+         Elem[], nothing)
 end
 
 has(e::Elem, flag) = flag in e.flags
@@ -189,6 +211,8 @@ mutable struct Document
     globals::ODict{Elem}
     interfaces::ODict{Elem}
     keys::ODict{Elem}
+    conversations::ODict{Elem}
+    choreographies::ODict{Elem}
     end_comments::Vector{String}
     ids::Dict{String,Elem}
 end
@@ -196,11 +220,16 @@ end
 Document() = Document(nothing, nothing, Dict{String,String}(), String[], 0, String[], nothing,
                       String[], ODict{Elem}(), Elem[], Elem[], ODict{Elem}(), Elem[], Elem[], Elem[], Elem[],
                       ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), nothing, ODict{Elem}(), Elem[],
-                      ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), String[],
+                      ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(),
+                      String[],
                       Dict{String,Elem}())
 
 "The header declares language 0.5 (or later): several triggers per event, BPMN resources."
 lang_05(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3"))
+
+"The header declares language 0.6 (or later): pools have a multiplicity."
+lang_06(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3", "0.5"))
+pool_keys(d::Document) = lang_06(d) ? POOL_KEYS_06 : POOL_KEYS
 
 is_executable(d::Document) = "executable" in d.flags
 executable_any(d::Document) = is_executable(d) || any(p -> has(p, "executable"), d.pools)

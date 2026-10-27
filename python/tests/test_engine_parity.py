@@ -332,6 +332,17 @@ def run_tok(args, engine):
             res.stderr.replace(b"\r\n", b"\n"))
 
 
+def engine_additions_removed(result):
+    """Output of the engine without what the frozen pure-Python command does not print: the
+    BPMN conformance class of ``tok check --json`` and the ``--class`` option of ``tok check``
+    (language 0.6)."""
+    code, out, err = result
+    def strip(b):
+        b = re.sub(rb'\n  "bpmn_class": "[a-z-]+",', b"", b)
+        return b.replace(b" [--class {descriptive,analytic,common-executable,full}]", b"")
+    return code, strip(out), strip(err)
+
+
 def written(args):
     """Structure of the drawing written by ``tok svg ... -o FILE`` (removed after reading)."""
     if args[0] != "svg" or not os.path.exists(args[-1]):
@@ -490,7 +501,7 @@ class EngineParity(unittest.TestCase):
                             ["check", path, "--level", "basic"], ["fmt", path],
                             ["svg", path, "-o", os.path.join(tmp, "m.svg")]]
                 for args in commands:
-                    got = run_tok(args, engine=True) + (written(args),)
+                    got = engine_additions_removed(run_tok(args, engine=True)) + (written(args),)
                     want = run_tok(args, engine=False) + (written(args),)
                     with self.subTest(command=" ".join(args[:1] + [os.path.basename(path)] + args[2:])):
                         self.assertEqual(got, want)
@@ -502,7 +513,8 @@ class EngineParity(unittest.TestCase):
             usage_cases.append(["nonsense"])
         for args in usage_cases:
             with self.subTest(command=" ".join(args)):
-                self.assertEqual(run_tok(args, engine=True), run_tok(args, engine=False))
+                self.assertEqual(engine_additions_removed(run_tok(args, engine=True)),
+                                 run_tok(args, engine=False))
         self.assertGreater(compared, 100)
 
     def test_api_on_both_implementations(self):

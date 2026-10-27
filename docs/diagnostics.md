@@ -1,6 +1,6 @@
 # Diagnostics
 
-Every diagnostic has a stable code, a severity and a line number. `tok check --lang pl` prints the Polish text; `--json` gives `code`, `severity`, `line`, `id` and `message` for programs and agents.
+Every diagnostic has a stable code, a severity and a line number. `tok check --lang pl` prints the Polish text; `--json` gives `code`, `severity`, `line`, `id` and `message` for programs, and the smallest BPMN conformance class of the document as `"bpmn_class"` (spec §13).
 
 ## Tokens and lines (T)
 
@@ -62,6 +62,17 @@ Language 0.5 (spec §5–§7). `R060`–`R063` and `R065` carry a detail text; t
 | R064 | warning | activity '{activity}' reads and writes data object '{data}' in the same state '{state}'; a state transition writes another state | czynność „{activity}” odczytuje i zapisuje obiekt danych „{data}” w tym samym stanie „{state}”; przejście stanu zapisuje inny stan |
 | R065 | error | call activity '{id}' has both process= and task=; it calls one of them · kind="{kind}" of global task '{id}' must be task, user, manual, script or rule | czynność wywołania „{id}” ma jednocześnie process= i task=; wywołuje jedno z nich · kind="{kind}" zadania globalnego „{id}” musi mieć wartość task, user, manual, script albo rule |
 | R066 | error | unknown {what} '{id}'; declare it with '{keyword}' (type= → item, task= → global, operation= → operation) | nieznany element ({what_pl}): „{id}”; zadeklaruj go słowem „{keyword}” |
+
+Language 0.6 (spec §5.5, §5.7, §6.4, §13). `R070`, `R072` and `R073` carry a detail text; the table gives its forms.
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| R070 | error | '{id}' must link at least two different pools (pools=) · pool '{p}' of '{id}' is not linked by the sub-conversation '{sub}' · map= of '{id}': '{outer}' is not one of its pools · map= of '{id}': '{inner}' is not a participant of the called element | „{id}” musi łączyć co najmniej dwa różne baseny (pools=) · basen „{p}” w „{id}” nie należy do podkonwersacji „{sub}” · map= w „{id}”: „{outer}” nie należy do jego basenów (pools=) · map= w „{id}”: „{inner}” nie jest uczestnikiem wywoływanego elementu |
+| R071 | error | message flow '{flow}' named by '{id}' does not connect two of its pools | przepływ komunikatów „{flow}” wskazany w „{id}” nie łączy dwóch basenów tej konwersacji |
+| R072 | error | choreography task '{id}' needs from= and to=, two different pools · '{id}' needs pools= with at least two pools and from= one of them · pool '{p}' of '{id}' is not a participant of the sub-choreography '{sub}' · call choreography '{id}' needs choreography=ID · map= of '{id}': '{outer}' is not one of its pools · map= of '{id}': '{inner}' is not a participant of the called element | zadanie choreografii „{id}” wymaga from= i to=, dwóch różnych basenów · „{id}” wymaga pools= z co najmniej dwoma basenami i from= wskazującego jeden z nich · basen „{p}” w „{id}” nie jest uczestnikiem podchoreografii „{sub}” · wywołanie choreografii „{id}” wymaga choreography=ID · map= w „{id}”: „{outer}” nie należy do jego basenów (pools=) · map= w „{id}”: „{inner}” nie jest uczestnikiem wywoływanego elementu |
+| R073 | error | '{id}' ({kind}) cannot stand in a choreography; a choreography contains events, gateways and choreography activities · '{id}': the trigger {triggers} is not allowed on {kind} events in a choreography · '{id}': {kind} events in a choreography need a timer, conditional or signal trigger · choreography '{id}' has no flow nodes | „{id}” ({kind}) nie może wystąpić w choreografii; choreografia zawiera zdarzenia, bramki i czynności choreografii · „{id}”: wyzwalacz {triggers} nie może wystąpić w zdarzeniach {kind} w choreografii · „{id}”: zdarzenia {kind} w choreografii wymagają wyzwalacza czasowego, warunkowego albo sygnału · choreografia „{id}” nie zawiera elementów przepływu |
+| R074 | error | participant multiplicity of pool '{id}' needs whole numbers with 0 <= min <= max and max >= 1 (min is 2 when only max is given, max is 1 when only min is given) | krotność uczestnika w basenie „{id}” wymaga liczb całkowitych, dla których 0 <= min <= max i max >= 1 (gdy podano tylko max, min wynosi 2; gdy podano tylko min, max wynosi 1) |
+| R075 | error | '{id}' ({what}) is outside the BPMN conformance class {class}; it belongs to the class {needed} (only with `tok check --class`) | „{id}” ({what}) wykracza poza klasę zgodności BPMN {class}; należy do klasy {needed} |
 
 ## Decision tables (D)
 
@@ -127,6 +138,15 @@ Elements of language 0.5 that Camunda 8.10 does not execute (spec §10.4); repor
 | C108 | error | call activity '{id}' calls the global task '{task}', which Camunda 8.10 does not execute | czynność wywołania „{id}” wywołuje zadanie globalne „{task}”, którego Camunda 8.10 nie wykonuje |
 | C109 | warning | operation '{operation}' of '{id}' is ignored by Camunda 8.10 (workers take jobs by type=) | operacja „{operation}” w „{id}” jest pomijana przez Camunda 8.10 (workery pobierają zadania według type=) |
 | C110 | warning | correlation key '{id}' is ignored by Camunda 8.10 (messages are correlated by correlation=) | klucz korelacji „{id}” jest pomijany przez Camunda 8.10 (wiadomości koreluje correlation=) |
+
+Elements of language 0.6 in executable documents for Camunda (spec §10.4); reported only with `target=camunda` (the default).
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| C120 | warning | conversation '{id}' is ignored by Camunda 8.10 (conversations describe the collaboration, not its execution) | konwersacja „{id}” jest pomijana przez Camunda 8.10 (konwersacje opisują współpracę, a nie jej wykonanie) |
+| C121 | warning | call conversation '{id}' is ignored by Camunda 8.10 | wywołanie konwersacji „{id}” jest pomijane przez Camunda 8.10 |
+| C122 | error | choreography '{id}' is not executed by Camunda 8.10 | choreografia „{id}” nie jest wykonywana przez Camunda 8.10 |
+| C123 | warning | participant multiplicity of pool '{id}' is ignored by Camunda 8.10 | krotność uczestnika w basenie „{id}” jest pomijana przez Camunda 8.10 |
 
 ## BPMN 2.0 rules (E, W, L)
 

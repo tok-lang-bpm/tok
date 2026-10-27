@@ -37,6 +37,30 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | In a model with several pools a message task or event should have a message flow | 9.4 | W054 |
 | Correlation keys belong to a collaboration (`tCollaboration`; a process has none) | 8.4.2, 9.5.8 | R013 (`key` without pools) |
 | Each correlation property retrieves its value from a message with a message path | 8.4.2 (Tables 8.31–8.33) | R013 (`prop` without `message=` or `path=`) |
+| A participant multiplicity has whole numbers with `minimum` ≤ `maximum` and `maximum` ≥ 1 (default maximum 1) | 9.2 (Participant Multiplicity, Table 9.4) | R074 |
+
+## Conversations
+
+| Rule | Clause | Code |
+|---|---|---|
+| A conversation node links two or more participants of the collaboration | 9.4 (Conversation Node), 9.4.1 | R070 (R002 for an unknown pool) |
+| The nodes of a sub-conversation link participants of the sub-conversation | 9.4.2 (Sub-Conversation) | R070 |
+| The message flows of a conversation node are exchanged between its participants | 9.4.1 (Conversation, `messageFlowRefs`) | R071 |
+| A participant association of a call relates a participant of the called collaboration (inner) with one of the call (outer) | 9.4.3 (Call Conversation), 9.5.6 (Participant Association) | R070 |
+| A conversation link connects a participant and a conversation node | 9.4.4 (Conversation Link) | exporter (one link per pool of a top-level node) |
+
+## Choreographies
+
+| Rule | Clause | Code |
+|---|---|---|
+| A choreography task has two participants, one of them initiating, and at least one message flow from the initiating participant | 11.5.1 (Choreography Task, Table 11.2) | R072; exporter (`TASK-message`) |
+| A sub-choreography or call choreography has two or more participants, one of them initiating | 11.5.2, 11.5.3 (Tables 11.4, 11.5) | R072 |
+| The participants of the activities inside a sub-choreography are participants of the sub-choreography | 11.5.2 | R072 |
+| A call choreography calls a choreography; its participant associations relate participants of the called choreography with its own | 11.5.3 | R072 |
+| A choreography contains choreography activities, events, gateways and sequence flows, no activities of processes and no data | 11.3, 11.4, 11.5 | R073 (P004 for data, notes and groups) |
+| Start events: none, timer, conditional, signal (or several of these); intermediate events in normal flow: none, timer, conditional, link, catching signal; boundary events: timer, conditional, signal; end events: none, terminate | 11.6.1–11.6.3 (Tables 11.6–11.8) | R073 |
+| A choreography has flow nodes | 11.1 | R073 |
+| The message flows of a choreography are shown by the participant bands of its activities, not as edges | 12.2.3 (Choreography Activity shapes, participant bands) | D02 does not apply |
 
 ## Lanes
 
@@ -127,3 +151,36 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | Shapes and edges refer to existing elements | 12.2 | D02 |
 
 The `D` codes are not reported by `tok check` (tok generates the diagram); `bpmn.py check` reports them for files drawn elsewhere. The Camunda codes (`C…`) belong to the execution profile of Camunda 8, not to BPMN (`diagnostics.md`).
+
+## Conformance classes
+
+BPMN 2.0.2 (clause 2, Tables 2.1–2.4) defines three sub-classes of process modelling conformance. `tok check --class CLASS` reports every element outside `CLASS` as `R075` with the first class (in the order descriptive, analytic, common-executable, full) that contains it; `tok check --json` reports the smallest class of the document as `"bpmn_class"`. Elements and attributes the tables do not list are only in `full`, which is the whole modelling language including conversations and choreographies.
+
+| Class | BPMN 2.0.2 | Contains |
+|---|---|---|
+| `descriptive` | Table 2.1 | visible elements of high-level modelling |
+| `analytic` | Tables 2.1 and 2.2 | Descriptive and about half of the language: conditions, default flows, loops, more events and gateways, messages |
+| `common-executable` | Tables 2.3 and 2.4 | what an executable process needs (not a superset of the other two: no pools, lanes or message flows) |
+| `full` | the whole of clause 2 | everything |
+
+The levels of `tok check --level` are teaching levels of the course and do not coincide with the classes:
+
+| tok level | Accepts | Smallest BPMN class of a document at this level |
+|---|---|---|
+| `basic` | start, end, task, user, service, manual task, exclusive and parallel gateways, pools, lanes, message flows, data, notes | `descriptive` when it has no manual task, no labelled message flow and no data state; else `analytic` (labelled message flows declare messages) or `full` (manual tasks, `state=`) |
+| `analytic` | everything except the executable layer, forms and decisions (and the elements of languages 0.5 and 0.6) | `analytic` for the constructs of Table 2.2; `full` for script, business rule and manual tasks, event sub-processes, ad-hoc sub-processes, compensation, data states, intermediate events without a trigger and the other elements outside Tables 2.1–2.2 |
+| `full` | everything | any class |
+
+Class of each construct of tok (`D` descriptive, `A` analytic, `E` common executable; a construct in no sub-class belongs to `full` only):
+
+| tok | BPMN | Classes |
+|---|---|---|
+| `pool`, `lane`, `group`, `store`, `note … on=` (association), `doc=` | participant, lane, group, data store reference, association, documentation | D A |
+| `user`, `service`, `call … process=`, `sub`, `xor`, `and`, `start` (no trigger or `message`), `end` (no trigger, `message`, `terminate`), `data`, `reads`, `writes`, `note`, `flow` | userTask, serviceTask, callActivity, subProcess, exclusive and parallel gateways, none and message start and end events, terminate end event, data object, data associations, text annotation, sequence flow | D A E |
+| `task`, `start … timer=`, `message` without a label | task, timer start event, message flow | D A |
+| `send`, `receive`, `or`, `message … "Label"` or `message=`, `start … signal=`/`condition=`, `end … signal=`/`error=`/`escalation=`, `catch … signal=`/`condition=`/`link=`, `throw … signal=`/`escalation=`/`link=`, boundary message, timer, signal and conditional events (interrupting or not), non-interrupting boundary escalation event, `default` flow of an `or` gateway | Table 2.2 | A |
+| `catch … message=`/`timer=`, `throw … message=`, boundary error event, `eventgw`, `loop`, `parallel`/`sequential` (multi-instance), `when=` and `default` on flows leaving `xor`, `when=` on flows leaving `or` | Tables 2.2 and 2.3 | A E |
+| `while=` (loop condition), `collection`/`type=` on `data`, `input`, `output`, `item`, `interface` and `operation`, `operation=` on a service task, `resource` and `by=` on a user task (language 0.5), data of events and named data inputs and outputs of associations | Tables 2.3 and 2.4 | E |
+| `manual`, `script`, `rule`, `eventsub`, `adhoc`, `transaction`, `complex`, `call … task=`, `global`, `throw` without a trigger, interrupting boundary escalation, compensation, cancel, error and escalation starts, multiple and parallel multiple events, `instantiate`, `test-before`, `loop-max=`, `state=`, `property`, `key`, `type=` on `store`, `operation=` on send and receive tasks, `by=` on other activities, conditions and default flags on flows leaving activities or `complex`, `min=`/`max=`, conversations, choreographies | outside Tables 2.1–2.4 | full |
+
+Execution attributes of Camunda, decisions, forms and simulation statements are not BPMN elements and belong to no class.

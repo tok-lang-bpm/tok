@@ -13,7 +13,7 @@ Every implementation of tok must reproduce these outputs exactly.
 | `import/` | BPMN 2.0 files drawn in Camunda Modeler for the course *Modelowanie procesów informacyjnych*; `tok import` must convert each of them to tok and back without BPMN errors |
 | `camunda/` | executable conformance (language 0.3): tok documents that `run.py` deploys to a running Camunda 8 and drives to their expected end events |
 
-Cases 01–32 are written for languages 0.1 and 0.3; cases 33 and following for language 0.5 (one or more per section of the language: transaction and cancel events, complex gateway, standard loop, multiple events, instantiation, process data, resources and performers, global tasks and interfaces, correlation keys, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and the additions of `docs/design-0.5.md` §13 in cases 44–46).
+Cases 01–32 are written for languages 0.1 and 0.3; cases 33–46 for language 0.5 (one or more per section of the language: transaction and cancel events, complex gateway, standard loop, multiple events, instantiation, process data, resources and performers, global tasks and interfaces, correlation keys, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and the additions of `docs/design-0.5.md` §13 in cases 44–46); cases 47 and following for language 0.6 (conversations, choreographies, the events of choreographies, participant multiplicity, the Camunda codes `C120`–`C123` and the errors `R070`–`R074`).
 
 The expected files are produced by two generators. Run them after a deliberate change of the language and review the differences before committing:
 

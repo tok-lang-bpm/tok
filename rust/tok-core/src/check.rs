@@ -8,6 +8,11 @@ use crate::feel;
 use crate::model::*;
 use crate::simcheck;
 
+#[path = "check_06.rs"]
+mod lang06;
+
+pub use lang06::choreography_participants;
+
 /// One finding of the BPMN rule validator (`bpmnlib.validate`).
 #[derive(Debug, Clone)]
 pub struct BpmnIssue {
@@ -160,6 +165,8 @@ fn kind_name(what: &str) -> (&'static str, &'static str) {
         "form" => ("form", "formularz"),
         "decision" => ("decision", "decyzja"),
         "resource" => ("resource", "zasób"),
+        "choreography" => ("choreography", "choreografia"),
+        "message flow" => ("message flow", "przepływ komunikatów"),
         _ => ("pool", "basen"),
     }
 }
@@ -191,6 +198,8 @@ pub fn check(doc: &mut Document, level: &str, bpmn: Option<&dyn BpmnRules>) -> V
     }
     c.layer_03();
     c.layer_05();
+    let camunda = c.doc.attrs.get("target").is_none_or(|t| t == "camunda");
+    c.layer_06(camunda);
     c.decisions_and_forms();
     c.feel();
     c.simulation();
@@ -362,7 +371,7 @@ impl Checker<'_> {
             (d.groups.iter().collect(), GROUP_KEYS, &[]),
             (
                 d.pools.iter().map(|p| &p.base).collect(),
-                POOL_KEYS,
+                d.pool_keys(),
                 POOL_FLAGS,
             ),
             (d.lanes.values().map(|l| &l.base).collect(), LANE_KEYS, &[]),
@@ -486,6 +495,8 @@ impl Checker<'_> {
 
     fn references(&mut self) {
         let is_act = |k: &str| is_activity(k);
+        // a boundary event of a choreography is attached to a choreography activity
+        let host = |k: &str| is_activity(k) || is_choreo(k);
         let node_ids: Vec<String> = self.doc.nodes.keys().cloned().collect();
         for nid in node_ids {
             let n = self.doc.nodes[&nid].clone();
@@ -495,7 +506,7 @@ impl Checker<'_> {
                 match a.get("on") {
                     None => self.add("R032", line, Some(&nid), &[("id", nid.clone())]),
                     Some(on) => {
-                        if self.reference(on, line, "activity", &is_act).is_some() {
+                        if self.reference(on, line, "activity", &host).is_some() {
                             let scope = self.doc.nodes.get(on).and_then(|x| x.scope.clone());
                             if let Some(node) = self.doc.nodes.get_mut(&nid) {
                                 node.scope = scope;
@@ -768,8 +779,8 @@ impl Checker<'_> {
             })
             .collect();
         for (src, tgt, line, id) in flows {
-            let a = self.reference(&src, line, "node", &|k| is_node(k));
-            let b = self.reference(&tgt, line, "node", &|k| is_node(k));
+            let a = self.reference(&src, line, "node", &|k| is_node(k) || is_choreo(k));
+            let b = self.reference(&tgt, line, "node", &|k| is_node(k) || is_choreo(k));
             if a.is_some() && b.is_some() {
                 let ss = self.doc.nodes.get(&src).and_then(|n| n.scope.clone());
                 let ts = self.doc.nodes.get(&tgt).and_then(|n| n.scope.clone());
@@ -829,7 +840,7 @@ impl Checker<'_> {
         for f in &d.flows {
             outs.entry(f.source.as_str()).or_default().push(f);
         }
-        for n in d.nodes.values() {
+        for n in d.nodes.values().filter(|n| n.choreography.is_none()) {
             let a = &n.base.attrs;
             let id = n.base.id();
             let kind = n.base.kind.as_str();
@@ -925,6 +936,10 @@ impl Checker<'_> {
 
     fn node_executable(&self, n: &Node) -> bool {
         let d = &*self.doc;
+        if n.choreography.is_some() {
+            // a choreography is not a process (C122 reports it)
+            return false;
+        }
         d.executable()
             || d.pools
                 .iter()
@@ -2069,8 +2084,9 @@ impl Checker<'_> {
         }
         let level = self.level;
         let mut found = Vec::new();
+        self.levels_06(level, &mut found);
         let d = &*self.doc;
-        for n in d.nodes.values() {
+        for n in d.nodes.values().filter(|n| n.choreography.is_none()) {
             let b = &n.base;
             let exec_layer = EXEC_KEYS
                 .iter()

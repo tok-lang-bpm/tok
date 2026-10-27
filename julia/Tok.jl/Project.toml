@@ -1,7 +1,7 @@
 name = "Tok"
 uuid = "5f0c7a52-3e8d-4b9a-9c1e-2a6d4e8b7f31"
 authors = ["Marek Deja"]
-version = "0.5.0"
+version = "0.6.0"
 
 [compat]
 julia = "1.10"

@@ -3,7 +3,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::model::{Model, is_act, is_data, is_data_shape, is_flownode, is_gw, is_subp, m};
+use crate::model::{
+    Model, is_act, is_conv, is_data, is_data_shape, is_flownode, is_gw, is_subp, m,
+};
 use crate::pyfmt::round_str;
 use crate::refine;
 use crate::svg::wrap;
@@ -19,6 +21,11 @@ const SUB_PAD_T: i64 = 40;
 const MIN_LANE_H: i64 = 130;
 const POOL_GAP: i64 = 40;
 const BB_H: i64 = 70;
+/// Gap below a pool where conversation nodes stand, and the size of a conversation node.
+const CONV_GAP: i64 = 110;
+const CONV_W: i64 = 40;
+const CONV_H: i64 = 35;
+const CONV_HALF: f64 = 20.0;
 
 /// Python `None` for a missing id or reference, as a dictionary key.
 const NONE: &str = "\u{0}";
@@ -76,6 +83,9 @@ fn even10(v: i64) -> i64 {
 }
 
 fn node_size(md: &Model, e: Id) -> (i64, i64) {
+    if let Some(s) = md.id_of(e).and_then(|i| md.hints.size.get(i)) {
+        return *s;
+    }
     let t = md.tag(e);
     if is_act(&t) {
         return (100, 80);
@@ -145,7 +155,8 @@ fn layout_container(
     for &n in nodes.iter().chain(evsubs.iter()) {
         let nid = kid(n);
         if is_subp(&md.tag(n)) && md.has_flow_children(n) {
-            let cb = layout_container(md, n, None, SUB_PAD_T, reorder);
+            let top = md.hints.pad.get(&nid).map_or(SUB_PAD_T, |p| p.0);
+            let cb = layout_container(md, n, None, top, reorder);
             bx.back.extend(cb.back.iter().cloned());
             bx.reordered |= cb.reordered;
             sizes.insert(nid.clone(), (cb.w, cb.h));
@@ -553,13 +564,15 @@ fn layout_container(
         let top = y + top_pad;
         let mut rtop: HashMap<i64, i64> = HashMap::new();
         let mut yy = top;
+        let row_gap = md.hints.row_gap.unwrap_or(ROW_GAP);
         for rr in &rows {
             rtop.insert(*rr, yy);
-            yy += rowh_get(k, *rr) + ROW_GAP;
+            yy += rowh_get(k, *rr) + row_gap;
         }
-        let bottom = if rows.is_empty() { top } else { yy - ROW_GAP };
+        let bottom = if rows.is_empty() { top } else { yy - row_gap };
         let min_h = if lane_list.is_some() { MIN_LANE_H } else { 0 };
-        let lane_h = even10((bottom - y + PAD_B).max(min_h));
+        let pad_b = md.hints.pad.get(&kid(cont)).map_or(PAD_B, |p| p.1);
+        let lane_h = even10((bottom - y + pad_b).max(min_h));
         lane_geo.push((y, lane_h, rtop));
         y += lane_h;
     }
@@ -1096,7 +1109,9 @@ pub fn layout_model(md: &mut Model) -> usize {
         Some(p) if p.quality.better_than(&classic.quality) => p,
         _ => classic,
     };
-    write_di(md, chosen)
+    let n = write_di(md, chosen);
+    crate::choreo::layout_choreographies(md);
+    n
 }
 
 /// Lay the model out; with `reorder`, the nodes are ordered by barycentre sweeps and the
@@ -1111,6 +1126,9 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
     let mut pools: HashMap<String, Rect> = HashMap::new();
     let mut content_x: HashMap<String, i64> = HashMap::new();
     let plane_ref: Option<String>;
+    // conversation nodes: (collaboration, centre line of the gap, width, nodes with the
+    // participants they link); placed after the refinement, away from the message flows
+    let mut conv_rows: Vec<ConvRow> = Vec::new();
     if let Some(&collab) = md.collabs.first() {
         plane_ref = md.id_of(collab).map(str::to_string);
         struct Entry {
@@ -1169,13 +1187,37 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
                 w_all = w_all.max(30 + en.maxd * 30 + lb.w);
             }
         }
+        // a conversation node stands in the gap below the first pool it links
+        let index: HashMap<String, usize> = entries
+            .iter()
+            .enumerate()
+            .map(|(k, en)| (key(md.id_of(en.p)), k))
+            .collect();
+        let conv = conversation_nodes(md, collab);
+        let mut gaps: Vec<(usize, Vec<LinkedNode>)> = Vec::new();
+        for (node, linked) in conv {
+            let Some(first) = linked.iter().filter_map(|p| index.get(p)).min().copied() else {
+                continue;
+            };
+            match gaps.iter_mut().find(|(g, _)| *g == first) {
+                Some((_, v)) => v.push((node, linked)),
+                None => gaps.push((first, vec![(node, linked)])),
+            }
+        }
+        let gap_after = |k: usize| {
+            if gaps.iter().any(|(g, _)| *g == k) {
+                CONV_GAP
+            } else {
+                POOL_GAP
+            }
+        };
         let mut y = 0;
-        for en in &entries {
+        for (k, en) in entries.iter().enumerate() {
             let pid = key(md.id_of(en.p));
             let Some(lb) = &en.lb else {
                 out.insert(&pid, [0, y, w_all, BB_H]);
                 pools.insert(pid.clone(), [0, y, w_all, BB_H]);
-                y += BB_H + POOL_GAP;
+                y += BB_H + gap_after(k);
                 continue;
             };
             out.insert(&pid, [0, y, w_all, lb.h]);
@@ -1221,7 +1263,29 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
                     );
                 }
             }
-            y += lb.h + POOL_GAP;
+            y += lb.h + gap_after(k);
+        }
+        for (g, nodes) in gaps {
+            let Some(above) = pools.get(&key(md.id_of(entries[g].p))).copied() else {
+                continue;
+            };
+            let cy = above[1] + above[3] + CONV_GAP / 2;
+            let linked = nodes
+                .into_iter()
+                .map(|(node, linked)| {
+                    let rects = linked
+                        .iter()
+                        .filter_map(|p| pools.get(p).map(|r| (p.clone(), *r)))
+                        .collect();
+                    (key(md.id_of(node)), rects)
+                })
+                .collect();
+            conv_rows.push(ConvRow {
+                collab,
+                cy,
+                width: w_all,
+                nodes: linked,
+            });
         }
     } else {
         plane_ref = md
@@ -1250,7 +1314,13 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
         };
         for (k, b) in bl.iter().enumerate() {
             let k = i64::try_from(k).unwrap_or(0);
-            let cx = (hx + hw - 30 - 44 * k).max(hx + 18);
+            // on a choreography activity the bottom-right is the place of the envelope of the
+            // returned message: its boundary events stand at the bottom-left
+            let cx = if md.hints.boundary_left.contains(&host) {
+                hx + 24 + 40 * k
+            } else {
+                (hx + hw - 30 - 44 * k).max(hx + 18)
+            };
             out.insert(&key(md.id_of(*b)), [cx - 18, hy + hh - 18, 36, 36]);
         }
     }
@@ -1273,6 +1343,20 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
         allbox.insert(&k, v);
     }
     let mut mcount: HashMap<(String, String), i64> = HashMap::new();
+    // message flows between two black-box pools, per unordered pair: drawn side by side
+    let is_pool = |id: &str| md.get(Some(id)).is_some_and(|e| md.tag(e) == "participant");
+    let pool_pair = |f: Id| {
+        let a = key(md.attr(f, "sourceRef"));
+        let b = key(md.attr(f, "targetRef"));
+        (is_pool(&a) && is_pool(&b)).then(|| if a <= b { (a, b) } else { (b, a) })
+    };
+    let mut pair_total: HashMap<(String, String), i64> = HashMap::new();
+    for &f in &md.msg {
+        if let Some(pp) = pool_pair(f) {
+            *pair_total.entry(pp).or_insert(0) += 1;
+        }
+    }
+    let mut pair_seen: HashMap<(String, String), i64> = HashMap::new();
     for &f in &md.msg {
         let s_id = key(md.attr(f, "sourceRef"));
         let t_id = key(md.attr(f, "targetRef"));
@@ -1319,6 +1403,17 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
         }
         if t_is_pool {
             txc = sxc.max(tx + 40.0).min(tx + tw - 10.0);
+        }
+        if let Some(pp) = pool_pair(f) {
+            let n = pair_total[&pp];
+            let j = pair_seen.get(&pp).copied().unwrap_or(0);
+            pair_seen.insert(pp, j + 1);
+            #[allow(clippy::cast_precision_loss)]
+            let x = sxc + (j as f64 - (n - 1) as f64 / 2.0) * 30.0;
+            let lo = sx.max(tx) + 40.0;
+            let hi = (sx + sw).min(tx + tw) - 10.0;
+            sxc = x.max(lo).min(hi);
+            txc = sxc;
         }
         #[allow(clippy::cast_precision_loss)]
         let (kf, gap) = (k as f64, POOL_GAP as f64);
@@ -1440,6 +1535,9 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
         .map(|l| (l.owner.clone(), l.di))
         .collect();
     let quality = scene.quality(area0, drawing_area(&out, &lanes_out, &wp));
+    for row in conv_rows {
+        place_conversations(md, &row, &labels, &mut out, &mut wp);
+    }
     Some(Plan {
         out,
         lanes_out,
@@ -1567,6 +1665,160 @@ fn write_di(md: &mut Model, plan: Plan) -> usize {
     }
     md.reindex();
     order.len()
+}
+
+/// A conversation node with the participants it links.
+type LinkedNode = (Id, Vec<String>);
+
+/// Conversation nodes in the gap below one pool.
+struct ConvRow {
+    collab: Id,
+    cy: i64,
+    width: i64,
+    /// node -> (participant, its bounds)
+    nodes: Vec<(String, Vec<(String, Rect)>)>,
+}
+
+/// Place the conversation nodes of a gap where no vertical line (message flows, other
+/// links) crosses it, and draw their links to the pools straight up and down.
+fn place_conversations(
+    md: &Model,
+    row: &ConvRow,
+    labels: &HashMap<String, [i64; 4]>,
+    out: &mut OMap<Rect>,
+    wp: &mut OMap<Vec<Pt>>,
+) {
+    #[allow(clippy::cast_precision_loss)]
+    let cy = row.cy as f64;
+    // occupied stretches of the gap: vertical lines crossing it, placed nodes and labels
+    let mut taken: Vec<(f64, f64)> = Vec::new();
+    for pts in wp.map.values() {
+        for s in pts.windows(2) {
+            let ((x1, y1), (x2, y2)) = (s[0], s[1]);
+            if (x1 - x2).abs() < 1.0 && y1.min(y2) <= cy && y1.max(y2) >= cy {
+                taken.push((x1 - 1.0, x1 + 1.0));
+            }
+        }
+    }
+    for l in labels.values() {
+        if l[1] <= row.cy + CONV_H / 2 && l[1] + l[3] >= row.cy - CONV_H / 2 {
+            #[allow(clippy::cast_precision_loss)]
+            taken.push((l[0] as f64, (l[0] + l[2]) as f64));
+        }
+    }
+    let half = CONV_W / 2;
+    for (nid, linked) in &row.nodes {
+        // the name stands to the right of the hexagon
+        let name = md
+            .get(Some(nid))
+            .map(|e| md.name(Some(e)))
+            .unwrap_or_default();
+        let label_w = crate::svg::wrap(&name, 110.0, 11.0)
+            .iter()
+            .map(|l| l.chars().count())
+            .max()
+            .unwrap_or(0);
+        #[allow(clippy::cast_precision_loss)]
+        let label_w = label_w as f64 * 6.2;
+        // the candidate nearest to the middle whose stretch is free, else the one with the
+        // most room around it (the leftmost on a tie)
+        let mid = row.width / 2;
+        let mut best: Option<(bool, i64, f64, i64)> = None;
+        let mut x = 30 + half + 20;
+        while x <= row.width - half - 20 {
+            #[allow(clippy::cast_precision_loss)]
+            let xf = x as f64;
+            let (a, b) = (xf - CONV_HALF - 20.0, xf + CONV_HALF + label_w + 16.0);
+            let clear = taken
+                .iter()
+                .map(|(l, r)| {
+                    if *r < a {
+                        a - r
+                    } else if *l > b {
+                        l - b
+                    } else {
+                        0.0
+                    }
+                })
+                .fold(f64::INFINITY, f64::min);
+            let roomy = clear > 0.0;
+            let near = -(x - mid).abs();
+            let better = match best {
+                None => true,
+                Some((r, n, c, _)) => {
+                    (roomy && !r) || (roomy && r && near > n) || (!roomy && !r && clear > c + 0.5)
+                }
+            };
+            if better {
+                best = Some((roomy, near, clear, x));
+            }
+            x += 10;
+        }
+        let cx = best.map_or(mid, |b| b.3);
+        let r = [cx - half, row.cy - CONV_H / 2, CONV_W, CONV_H];
+        out.insert(nid, r);
+        #[allow(clippy::cast_precision_loss)]
+        let xf = cx as f64;
+        taken.push((xf - CONV_HALF, xf + CONV_HALF + label_w + 6.0));
+        for (p, pr) in linked {
+            #[allow(clippy::cast_precision_loss)]
+            let pts = if pr[1] > r[1] {
+                vec![(xf, (r[1] + r[3]) as f64), (xf, pr[1] as f64)]
+            } else {
+                vec![(xf, r[1] as f64), (xf, (pr[1] + pr[3]) as f64)]
+            };
+            if let Some(l) = link_id(md, row.collab, nid, p) {
+                wp.insert(&l, pts);
+            }
+        }
+    }
+}
+
+/// Top-level conversation nodes of a collaboration with the participants they link
+/// (by conversation links, else by their participant references).
+fn conversation_nodes(md: &Model, collab: Id) -> Vec<(Id, Vec<String>)> {
+    let d = &md.doc;
+    let links: Vec<Id> = d.findall(collab, &m("conversationLink"));
+    let mut out = Vec::new();
+    for &c in d.children(collab) {
+        if !is_conv(&md.tag(c)) {
+            continue;
+        }
+        let cid = md.id_of(c);
+        let mut linked: Vec<String> = links
+            .iter()
+            .filter(|l| md.attr(**l, "targetRef") == cid || md.attr(**l, "sourceRef") == cid)
+            .map(|l| {
+                if md.attr(*l, "targetRef") == cid {
+                    key(md.attr(*l, "sourceRef"))
+                } else {
+                    key(md.attr(*l, "targetRef"))
+                }
+            })
+            .collect();
+        if linked.is_empty() {
+            linked = d
+                .findall(c, &m("participantRef"))
+                .iter()
+                .map(|r| strip_text(md, *r))
+                .collect();
+        }
+        out.push((c, linked));
+    }
+    out
+}
+
+/// The conversation link between a conversation node and a participant.
+fn link_id(md: &Model, collab: Id, node: &str, participant: &str) -> Option<String> {
+    md.doc
+        .findall(collab, &m("conversationLink"))
+        .into_iter()
+        .find(|l| {
+            let (s, t) = (md.attr(*l, "sourceRef"), md.attr(*l, "targetRef"));
+            (s == Some(participant) && t == Some(node))
+                || (t == Some(participant) && s == Some(node))
+        })
+        .and_then(|l| md.id_of(l).map(str::to_string))
 }
 
 /// `<bpmndi:BPMNLabel><dc:Bounds .../></bpmndi:BPMNLabel>` inside a shape or an edge.

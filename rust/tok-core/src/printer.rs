@@ -52,6 +52,11 @@ const QUOTED_KEYS: &[&str] = &[
     "doc",
     "process-name",
     "object",
+    // language 0.6
+    "reply",
+    "pools",
+    "messages",
+    "map",
 ];
 
 const EXECUTION_LISTENER_EVENTS: &[&str] = &["start", "end"];
@@ -347,16 +352,46 @@ impl Printer<'_> {
                 0,
                 &join(
                     &["pool", p.base.id()],
-                    tail(&p.base, POOL_KEYS, POOL_FLAGS, false),
+                    tail(&p.base, d.pool_keys(), POOL_FLAGS, false),
                 ),
                 &p.base,
             );
             self.children(&p.children, 1);
         }
-        if !d.flows.is_empty() {
+        // language 0.6: each choreography with its nodes and its sequence flows
+        for c in d.choreographies.values() {
             self.blank();
-            self.flows();
+            self.emit_base(
+                0,
+                &join(
+                    &["choreography", c.base.id()],
+                    tail(&c.base, CHOREOGRAPHY_KEYS, &[], false),
+                ),
+                &c.base,
+            );
+            self.children(&c.children, 1);
+            let own: Vec<&Flow> = d
+                .flows
+                .iter()
+                .filter(|f| self.flow_choreography(f) == Some(c.base.id()))
+                .collect();
+            self.flows(&own, 1);
         }
+        let process_flows: Vec<&Flow> = d
+            .flows
+            .iter()
+            .filter(|f| self.flow_choreography(f).is_none())
+            .collect();
+        if !process_flows.is_empty() {
+            self.blank();
+            self.flows(&process_flows, 0);
+        }
+        // message flows named by a conversation print their identifier (language 0.6)
+        let referenced: std::collections::HashSet<String> = d
+            .conversations
+            .values()
+            .flat_map(|c| words(c.base.attr("messages").unwrap_or("")))
+            .collect();
         if !d.messages.is_empty() {
             self.blank();
             for m in &d.messages {
@@ -367,10 +402,22 @@ impl Printer<'_> {
                     m.target.clone(),
                 ];
                 parts.extend(tail(&m.base, MESSAGE_KEYS, &[], false));
-                if m.explicit_id {
+                if m.explicit_id || referenced.contains(m.base.id()) {
                     parts.push(format!("id={}", m.base.id()));
                 }
                 self.emit_base(0, &parts.join(" "), &m.base);
+            }
+        }
+        let top: Vec<&String> = d
+            .conversations
+            .iter()
+            .filter(|(_, c)| c.parent.is_none())
+            .map(|(k, _)| k)
+            .collect();
+        if !top.is_empty() {
+            self.blank();
+            for k in top {
+                self.conversation(k, 0);
             }
         }
         for k in d.keys.values() {
@@ -488,8 +535,35 @@ impl Printer<'_> {
             tail(&n.base, node_keys(kind), node_flags(kind), true),
         );
         self.emit_base(indent, &text, &n.base);
-        if is_sub(kind) {
+        if is_sub(kind) || kind == "subchoreo" {
             self.children(&n.children, indent + 1);
+        }
+    }
+
+    /// A conversation node and, for a sub-conversation, the nodes of its block.
+    fn conversation(&mut self, id: &str, indent: usize) {
+        let d = self.doc;
+        let Some(c) = d.conversations.get(id) else {
+            return;
+        };
+        let kind = c.base.kind.as_str();
+        let text = join(
+            &[kind, c.base.id()],
+            tail(&c.base, conversation_keys(kind), &[], false),
+        );
+        self.emit_base(indent, &text, &c.base);
+        for k in &c.children {
+            self.conversation(k, indent + 1);
+        }
+    }
+
+    /// The choreography a sequence flow belongs to: that of its source, else of its target.
+    fn flow_choreography(&self, f: &Flow) -> Option<&str> {
+        let d = self.doc;
+        let of = |id: &str| d.nodes.get(id).and_then(|n| n.choreography.as_deref());
+        match d.nodes.get(&f.source) {
+            Some(n) => n.choreography.as_deref(),
+            None => of(&f.target),
         }
     }
 
@@ -520,8 +594,7 @@ impl Printer<'_> {
         }
     }
 
-    fn flows(&mut self) {
-        let flows = &self.doc.flows;
+    fn flows(&mut self, flows: &[&Flow], indent: usize) {
         let mut out_count: std::collections::HashMap<&str, usize> = Default::default();
         for f in flows {
             *out_count.entry(f.source.as_str()).or_insert(0) += 1;
@@ -533,7 +606,7 @@ impl Printer<'_> {
                 && !f.explicit_id
         };
         let mut chain: Option<(Vec<String>, &Flow)> = None;
-        for f in flows {
+        for &f in flows {
             if let Some((c, _)) = &mut chain
                 && plain(f)
                 && c.last() == Some(&f.source)
@@ -545,7 +618,7 @@ impl Printer<'_> {
                 continue;
             }
             if let Some((c, el)) = chain.take() {
-                self.emit_base(0, &format!("flow {}", c.join(" -> ")), &el.base);
+                self.emit_base(indent, &format!("flow {}", c.join(" -> ")), &el.base);
             }
             if plain(f) {
                 chain = Some((vec![f.source.clone(), f.target.clone()], f));
@@ -560,11 +633,11 @@ impl Printer<'_> {
                 if f.explicit_id {
                     parts.push(format!("id={}", f.base.id()));
                 }
-                self.emit_base(0, &parts.join(" "), &f.base);
+                self.emit_base(indent, &parts.join(" "), &f.base);
             }
         }
         if let Some((c, el)) = chain {
-            self.emit_base(0, &format!("flow {}", c.join(" -> ")), &el.base);
+            self.emit_base(indent, &format!("flow {}", c.join(" -> ")), &el.base);
         }
     }
 

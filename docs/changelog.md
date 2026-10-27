@@ -2,6 +2,28 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version may change the language; a patch version never does.
 
+## [0.6.0] — 2026-10-28
+
+Language 0.6 (`tok 0.6` in the header; documents written for 0.1, 0.3 and 0.5 stay valid and mean the same): conversations, choreographies and participant multiplicity; BPMN conformance classes in the checker; a layout sidecar that keeps the drawing of imported files. Reference: `docs/spec.md` §4, §5.5, §5.7, §6.4, §10.4, §11, §13–§16; design notes and the decisions taken during implementation in `docs/design-0.6.md`.
+
+### Added
+
+- Conversations: `conversation`, `subconversation` (with a block of conversation nodes) and `callconversation … collaboration=ID` with `pools=`, `messages=` and `map="inner:outer; …"` (BPMN `conversation`, `subConversation`, `callConversation` with participant and message flow references, participant associations, and one `conversationLink` per pool). Drawn as hexagons in the gap between the linked pools (a thick border for a call, a `+` for a sub-conversation), with double lines to the pools.
+- Choreographies: `choreography ID` blocks with start, intermediate, boundary and end events, `xor`, `and`, `or`, `eventgw`, `complex` gateways and sequence flows; `choreo … from= to= message= reply=` (`choreographyTask` with its participants, initiating participant and message flows), `subchoreo … pools= from=` with a block (`subChoreography`), `callchoreo … choreography=ID map=` (`callChoreography`); the flags `loop`, `parallel`, `sequential` (`loopType`). Exported as separate `choreography` root elements; each drawn in a diagram of its own, with participant bands (initiating white, others shaded), message envelopes and loop markers.
+- Participant multiplicity: `min=` and `max=` on pools in 0.6 documents (`participantMultiplicity`), drawn with the multi-instance marker.
+- Checker codes `R070`–`R074` (conversations, choreographies, multiplicity) and `C120`–`C123` for conversations, call conversations, choreographies and multiplicity in executable documents for Camunda; the levels `basic` and `analytic` reject the new statements (`R040`).
+- BPMN conformance classes: `tok check --class descriptive|analytic|common-executable|full` reports every element outside the chosen class of BPMN 2.0.2 (clause 2) as `R075`; `tok check --json` reports the smallest class the document fits as `"bpmn_class"`. `docs/bpmn-rules.md` relates the tok levels and every construct to the classes.
+- BPMN import reads conversations, conversation links, call conversations with participant associations, choreographies with their participants, tasks, sub-choreographies, calls and loop types, and participant multiplicity (a file that uses them is printed as `tok 0.6`); message flows that a conversation names keep their identifiers.
+- Layout sidecar: `tok import FILE.bpmn -o FILE.tok` writes the diagram of the file to `FILE.tok.layout` (`tok-layout 1`; shapes, edges and labels by tok identifier, in whole units; `--no-layout` suppresses it). `tok bpmn`, `tok svg` and `tok export` read it when it exists next to the document (`--no-sidecar` ignores it): unchanged elements keep their geometry, new elements are placed next to their neighbours, containers grow around them and edges whose ends moved are routed again. Tested on the course files of `conformance/import` and the MIWG reference models: every shape, edge and label the import keeps is drawn as in the file.
+- Conformance cases 47–52 (conversations, choreographies, choreography events, multiplicity, the Camunda codes `C120`–`C123`, the errors `R070`–`R074`); the Julia core parses, prints and exports them (core level, 206 checks).
+
+### Changed
+
+- The BPMN validator treats choreography activities as flow nodes and choreographies as containers of sequence flows (boundary events may be attached to choreography activities), and does not ask for diagram edges of the message flows of choreographies (`D02`).
+- The cheat sheet printed by `tok cheatsheet` describes language 0.6.
+- Layout: message flows between the same two black-box pools are drawn side by side instead of on one line.
+- The command-line parity test with the pure-Python implementation (frozen at language 0.3) ignores `"bpmn_class"` of `tok check --json` and the option `--class`.
+
 ## [0.5.0] — 2026-10-27
 
 Language 0.5 (`tok 0.5` in the header; documents written for 0.1 and 0.3 stay valid and mean the same): the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute. Reference: `docs/spec.md` §4, §5.1.1, §5.2.1, §5.3, §5.4, §5.6, §6.3, §7.1, §7.2, §10.4, §13–§15; design notes and the decisions taken during implementation in `docs/design-0.5.md`; the BPMN rules the checker enforces, with their clauses, in `docs/bpmn-rules.md`.

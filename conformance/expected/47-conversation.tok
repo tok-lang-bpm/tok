@@ -1,0 +1,19 @@
+tok 0.6 "Wypożyczenia międzybiblioteczne"
+
+# conversation diagram: three black-box pools and the conversations between them
+pool czytelnik "Czytelnik"
+
+pool biblioteka "Biblioteka" doc="Biblioteka uczelniana"
+
+pool hurtownia "Hurtownia"
+
+message czytelnik -> biblioteka "Zamówienie" id=m-zamowienie
+message biblioteka -> czytelnik "Odbiór" id=m-odbior
+message biblioteka -> hurtownia "Zapytanie ofertowe" id=m-biblioteka-hurtownia
+message hurtownia -> biblioteka "Oferta" id=m-hurtownia-biblioteka
+
+conversation wypozyczenie "Wypożyczenie" pools="czytelnik biblioteka" messages="m-zamowienie m-odbior"
+subconversation zakup "Zakup książek" pools="biblioteka hurtownia" doc="Zakup brakujących książek"
+  conversation oferta "Oferta" pools="biblioteka hurtownia" messages="m-biblioteka-hurtownia m-hurtownia-biblioteka"
+  conversation zamowienie "Zamówienie" pools="biblioteka hurtownia"  # bez przepływów komunikatów
+callconversation reklamacja "Reklamacja" pools="biblioteka hurtownia" collaboration=reklamacje map="sprzedawca:hurtownia; klient:biblioteka"

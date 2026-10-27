@@ -213,7 +213,7 @@ pub const EXPR_KEYS: &[&str] = &[
     "activation",
 ];
 /// Language versions accepted in the header.
-pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5"];
+pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5", "0.6"];
 
 pub const HEADER_KEYS: &[&str] = &[
     "id",
@@ -228,6 +228,31 @@ pub const HEADER_KEYS: &[&str] = &[
 pub const HEADER_FLAGS: &[&str] = &["executable"];
 pub const POOL_KEYS: &[&str] = &["process", "version-tag", "process-name", "doc"];
 pub const POOL_FLAGS: &[&str] = &["executable"];
+/// Attributes of a pool in a document of language 0.6: the participant multiplicity.
+pub const POOL_KEYS_06: &[&str] = &[
+    "process",
+    "version-tag",
+    "process-name",
+    "min",
+    "max",
+    "doc",
+];
+
+/// Conversation nodes of a collaboration (language 0.6).
+pub const CONVERSATION_KINDS: &[&str] = &["conversation", "subconversation", "callconversation"];
+pub const CONVERSATION_KEYS: &[&str] = &["pools", "messages", "doc"];
+pub const CALLCONVERSATION_KEYS: &[&str] = &["pools", "messages", "collaboration", "map", "doc"];
+/// Choreography activities (language 0.6); they stand only in a `choreography` block.
+pub const CHOREO_KINDS: &[&str] = &["choreo", "subchoreo", "callchoreo"];
+pub const CHOREOGRAPHY_KEYS: &[&str] = &["doc"];
+pub const CHOREO_KEYS: &[&str] = &["from", "to", "message", "reply", "doc"];
+pub const SUBCHOREO_KEYS: &[&str] = &["pools", "from", "doc"];
+pub const CALLCHOREO_KEYS: &[&str] = &["pools", "from", "choreography", "map", "doc"];
+pub const CHOREO_FLAGS: &[&str] = &["loop", "parallel", "sequential"];
+/// Flow nodes allowed in a choreography besides its activities (BPMN 2.0.2 §11.6, §11.7).
+pub const CHOREOGRAPHY_NODE_KINDS: &[&str] = &[
+    "start", "end", "catch", "throw", "boundary", "xor", "and", "or", "eventgw", "complex",
+];
 pub const LANE_KEYS: &[&str] = &["doc"];
 pub const FLOW_KEYS: &[&str] = &["id", "when", "p", "doc"];
 pub const FLOW_FLAGS: &[&str] = &["default"];
@@ -291,6 +316,14 @@ pub fn is_node(kind: &str) -> bool {
 pub fn is_activity(kind: &str) -> bool {
     TASK_KINDS.contains(&kind) || is_sub(kind)
 }
+/// A choreography activity: `choreo`, `subchoreo` or `callchoreo` (language 0.6).
+pub fn is_choreo(kind: &str) -> bool {
+    CHOREO_KINDS.contains(&kind)
+}
+/// A conversation node: `conversation`, `subconversation` or `callconversation`.
+pub fn is_conversation(kind: &str) -> bool {
+    CONVERSATION_KINDS.contains(&kind)
+}
 
 /// Canonical attribute keys of a flow node kind.
 pub fn node_keys(kind: &str) -> &'static [&'static str] {
@@ -303,7 +336,12 @@ pub fn node_keys(kind: &str) -> &'static [&'static str] {
     } else if GATEWAY_KINDS.contains(&kind) {
         GATEWAY_KEYS
     } else {
-        &[]
+        match kind {
+            "choreo" => CHOREO_KEYS,
+            "subchoreo" => SUBCHOREO_KEYS,
+            "callchoreo" => CALLCHOREO_KEYS,
+            _ => &[],
+        }
     }
 }
 
@@ -315,9 +353,43 @@ pub fn node_flags(kind: &str) -> &'static [&'static str] {
         TASK_FLAGS
     } else if kind == "eventgw" {
         EVENTGW_FLAGS
+    } else if is_choreo(kind) {
+        CHOREO_FLAGS
     } else {
         &[]
     }
+}
+
+/// Canonical attribute keys of a conversation node kind.
+pub fn conversation_keys(kind: &str) -> &'static [&'static str] {
+    if kind == "callconversation" {
+        CALLCONVERSATION_KEYS
+    } else {
+        CONVERSATION_KEYS
+    }
+}
+
+/// Split a list attribute (`pools="a b"`, `messages="m1 m2"`) into its words.
+pub fn words(text: &str) -> Vec<String> {
+    text.split(|c: char| c.is_whitespace() || c == ',')
+        .filter(|w| !w.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// `map="inner:outer; …"`: participant associations as (inner, outer) pairs; `None` when
+/// an item is malformed.
+pub fn participant_map(text: &str) -> Option<Vec<(String, String)>> {
+    let mut out = Vec::new();
+    for item in text.split(';').map(str::trim).filter(|x| !x.is_empty()) {
+        let (a, b) = item.split_once(':')?;
+        let (a, b) = (a.trim(), b.trim());
+        if a.is_empty() || b.is_empty() || b.contains(':') {
+            return None;
+        }
+        out.push((a.to_string(), b.to_string()));
+    }
+    Some(out)
 }
 
 /// Attribute map in insertion order.
@@ -390,6 +462,8 @@ pub struct Node {
     pub lane: Option<String>,
     pub pool: Option<String>,
     pub children: Vec<String>,
+    /// The choreography the node belongs to (language 0.6); `None` in processes.
+    pub choreography: Option<String>,
 }
 
 /// A sequence flow.
@@ -516,6 +590,29 @@ pub struct CorrelationKey {
     pub props: Vec<Base>,
 }
 
+/// A conversation node of the collaboration (language 0.6): `conversation`,
+/// `subconversation` (with the nodes of its block in `children`) or `callconversation`.
+#[derive(Debug, Clone, Default)]
+pub struct Conversation {
+    pub base: Base,
+    pub parent: Option<String>,
+    pub children: Vec<String>,
+}
+
+impl Conversation {
+    pub fn pools(&self) -> Vec<String> {
+        words(self.base.attr("pools").unwrap_or(""))
+    }
+}
+
+/// A choreography (language 0.6): its flow nodes are in `Document::nodes` with
+/// `choreography` set, its top-level nodes listed in `children`.
+#[derive(Debug, Clone, Default)]
+pub struct Choreography {
+    pub base: Base,
+    pub children: Vec<String>,
+}
+
 /// Kind and line of a registered identifier (for duplicate and reference checks).
 #[derive(Debug, Clone)]
 pub struct IdEntry {
@@ -552,6 +649,8 @@ pub struct Document {
     pub globals: IndexMap<String, Base>,
     pub interfaces: IndexMap<String, Interface>,
     pub keys: IndexMap<String, CorrelationKey>,
+    pub conversations: IndexMap<String, Conversation>,
+    pub choreographies: IndexMap<String, Choreography>,
     pub end_comments: Vec<String>,
     pub ids: IndexMap<String, IdEntry>,
 }
@@ -561,6 +660,22 @@ impl Document {
     /// resources, and an event may have several triggers.
     pub fn lang_05(&self) -> bool {
         !matches!(self.version.as_deref(), Some("0.1" | "0.3") | None)
+    }
+    /// The header declares language 0.6 (or newer): pools have a multiplicity.
+    pub fn lang_06(&self) -> bool {
+        !matches!(self.version.as_deref(), Some("0.1" | "0.3" | "0.5") | None)
+    }
+    /// Attribute keys of pools in this document.
+    pub fn pool_keys(&self) -> &'static [&'static str] {
+        if self.lang_06() {
+            POOL_KEYS_06
+        } else {
+            POOL_KEYS
+        }
+    }
+    /// A flow node of a choreography (language 0.6), not of a process.
+    pub fn in_choreography(&self, id: &str) -> bool {
+        self.nodes.get(id).is_some_and(|n| n.choreography.is_some())
     }
     pub fn executable(&self) -> bool {
         self.flags.iter().any(|f| f == "executable")

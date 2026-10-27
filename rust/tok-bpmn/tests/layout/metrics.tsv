@@ -45,6 +45,12 @@ cases/43-err-05	0	1	0	0	0	1	0	1	0	570
 cases/44-documentation	0	1	0	0	0	5	0	0	0	501
 cases/45-documentation-pools	1	1	0	0	0	3	0	0	0	293
 cases/46-err-documentation	0	1	0	0	0	0	0	1	0	210
+cases/47-conversation	0	0	0	0	0	0	0	0	0	258
+cases/48-choreography	0	0	0	0	0	1	0	0	0	1177
+cases/49-choreography-events	1	0	0	1	0	5	0	0	0	590
+cases/50-multiplicity	0	0	0	0	0	0	0	0	0	408
+cases/51-executable-06	0	0	0	0	0	0	0	0	0	384
+cases/52-err-06	0	0	0	0	0	0	3	0	0	1721
 import/01-wypozyczenie-pierwszy-model	0	0	0	0	0	2	0	0	0	328
 import/02-wypozyczenie-wymagania-norm	0	0	0	0	0	3	0	0	0	1017
 import/03-rejestracja-pisma-z-bledem	0	0	0	0	0	4	0	0	0	621

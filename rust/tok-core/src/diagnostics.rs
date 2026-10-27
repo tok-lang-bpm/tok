@@ -231,6 +231,27 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
         "unknown {what} '{id}'; declare it with '{keyword}'",
         "nieznany element ({what_pl}): „{id}”; zadeklaruj go słowem „{keyword}”",
     ),
+    ("R070", E, "{detail}", "{detail_pl}"),
+    (
+        "R071",
+        E,
+        "message flow '{flow}' named by '{id}' does not connect two of its pools",
+        "przepływ komunikatów „{flow}” wskazany w „{id}” nie łączy dwóch basenów tej konwersacji",
+    ),
+    ("R072", E, "{detail}", "{detail_pl}"),
+    ("R073", E, "{detail}", "{detail_pl}"),
+    (
+        "R074",
+        E,
+        "participant multiplicity of pool '{id}' needs whole numbers with 0 <= min <= max and max >= 1 (min is 2 when only max is given, max is 1 when only min is given)",
+        "krotność uczestnika w basenie „{id}” wymaga liczb całkowitych, dla których 0 <= min <= max i max >= 1 (gdy podano tylko max, min wynosi 2; gdy podano tylko min, max wynosi 1)",
+    ),
+    (
+        "R075",
+        E,
+        "'{id}' ({what}) is outside the BPMN conformance class {class}; it belongs to the class {needed}",
+        "„{id}” ({what}) wykracza poza klasę zgodności BPMN {class}; należy do klasy {needed}",
+    ),
     (
         "C100",
         E,
@@ -296,6 +317,30 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
         W,
         "correlation key '{id}' is ignored by Camunda 8.10 (messages are correlated by correlation=)",
         "klucz korelacji „{id}” jest pomijany przez Camunda 8.10 (wiadomości koreluje correlation=)",
+    ),
+    (
+        "C120",
+        W,
+        "conversation '{id}' is ignored by Camunda 8.10 (conversations describe the collaboration, not its execution)",
+        "konwersacja „{id}” jest pomijana przez Camunda 8.10 (konwersacje opisują współpracę, a nie jej wykonanie)",
+    ),
+    (
+        "C121",
+        W,
+        "call conversation '{id}' is ignored by Camunda 8.10",
+        "wywołanie konwersacji „{id}” jest pomijane przez Camunda 8.10",
+    ),
+    (
+        "C122",
+        E,
+        "choreography '{id}' is not executed by Camunda 8.10",
+        "choreografia „{id}” nie jest wykonywana przez Camunda 8.10",
+    ),
+    (
+        "C123",
+        W,
+        "participant multiplicity of pool '{id}' is ignored by Camunda 8.10",
+        "krotność uczestnika w basenie „{id}” jest pomijana przez Camunda 8.10",
     ),
     (
         "C022",

@@ -66,7 +66,7 @@ Language additions (each with checker rules, export, import, conformance cases a
 
 From 0.4 every new feature is written once, in Rust. Python, R and Julia call the Rust engine; the Julia core stays as an independent check of the specification.
 
-- **Build infrastructure first:** continuous integration that builds and tests the Rust workspace and produces Python wheels (abi3) for Windows, macOS and Linux on every release (Woodpecker CI on Codeberg, or a GitHub mirror with Actions); the Windows wheel can also be built locally. Wheels are attached to the release archives on Codeberg; registry releases remain for 1.0.
+- **Build infrastructure first:** the release gates are one script, `tools/check.sh`: formatting, lints and tests of Rust, Python and Julia, the engine wheel (abi3) and its parity with the Python implementation, and the native `tok` program. Every release is checked with it on Windows and on Linux; Linux wheels are manylinux2014 (built with zig), and the macOS wheel (universal2) is cross-compiled. Wheels are attached to the release archives on Codeberg; registry releases remain for 1.0.
 - **Python on Rust:** `tok-lang` becomes a thin layer over `tok-py` with the same command line and API. Where no wheel exists for a platform yet, the archive installs the frozen pure-Python implementation (language 0.3).
 - **Pure Python frozen:** no new features after 0.3; it stays in the repository as the test oracle for language 0.3 (parity tests keep running against it).
 
@@ -121,5 +121,6 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 ## 1.0 — stable
 
 - Specification 1.0: every BPMN 2.0.2 element reachable from the language, conformance tables for Camunda 8 and BPMN 2.0.2 published with the release.
+- Hosted continuous integration running `tools/check.sh` on Windows, macOS and Linux for every change, so that the macOS wheel is tested on its platform before the first registry release.
 - First registry releases, from one version number: crates.io, PyPI (`tok-lang`), CRAN and the Julia General registry; archived release with a DOI on Zenodo.
 - Semantic versioning promise: 1.x keeps every valid 1.0 document valid and prints it identically; new Camunda versions and DMN revisions are tracked in minor releases.

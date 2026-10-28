@@ -133,7 +133,7 @@ fn text<'a>(e: X<'a, '_>) -> Option<&'a str> {
     e.text()
 }
 
-fn slug(text: &str) -> String {
+pub(crate) fn slug(text: &str) -> String {
     let t = text.replace('ł', "l").replace('Ł', "L");
     let t = ascii_fold(&t);
     let mut out = String::new();

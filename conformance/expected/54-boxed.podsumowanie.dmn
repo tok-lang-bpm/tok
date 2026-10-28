@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="podsumowanie-definitions" name="Podsumowanie egzemplarzy" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="egzemplarz-t" name="egzemplarz-t" label="Egzemplarz">
+    <itemComponent id="egzemplarz-t-1" name="sygnatura">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-2" name="rok">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-3" name="stan zachowania">
+      <typeRef>string</typeRef>
+      <allowedValues>
+        <text>"dobry", "zły"</text>
+      </allowedValues>
+    </itemComponent>
+  </itemDefinition>
+  <itemDefinition id="egzemplarze-t" name="egzemplarze-t" label="Lista egzemplarzy" isCollection="true">
+    <typeRef>egzemplarz-t</typeRef>
+  </itemDefinition>
+  <inputData id="egzemplarze" name="egzemplarze" label="Egzemplarze">
+    <variable id="egzemplarze-variable" name="egzemplarze" typeRef="egzemplarze-t" />
+  </inputData>
+  <decision id="podsumowanie" name="podsumowanie" label="Podsumowanie egzemplarzy">
+    <variable id="podsumowanie-variable" name="podsumowanie" />
+    <informationRequirement id="podsumowanie-requires-egzemplarze">
+      <requiredInput href="#egzemplarze" />
+    </informationRequirement>
+    <context id="podsumowanie-context">
+      <contextEntry id="podsumowanie-1-entry">
+        <variable id="podsumowanie-1-variable" name="liczba" />
+        <literalExpression id="podsumowanie-1-expr">
+          <text>count(egzemplarze)</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-2-entry">
+        <variable id="podsumowanie-2-variable" name="najstarszy" />
+        <literalExpression id="podsumowanie-2-expr">
+          <text>min(egzemplarze.rok)</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-3-entry">
+        <variable id="podsumowanie-3-variable" name="do naprawy" />
+        <literalExpression id="podsumowanie-3-expr">
+          <text>egzemplarze[stan zachowania = "zły"].sygnatura</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-4-entry">
+        <variable id="podsumowanie-4-variable" name="przeglad" typeRef="boolean" />
+        <decisionTable id="podsumowanie-4-table" hitPolicy="FIRST">
+          <input id="podsumowanie-4-input-1" label="najstarszy">
+            <inputExpression id="podsumowanie-4-input-1-expr" typeRef="number">
+              <text>najstarszy</text>
+            </inputExpression>
+          </input>
+          <output id="podsumowanie-4-output-1" label="przegląd" name="przegląd" typeRef="boolean" />
+          <rule id="podsumowanie-4-rule-1">
+            <inputEntry id="podsumowanie-4-rule-1-in-1">
+              <text>&lt; 1950</text>
+            </inputEntry>
+            <outputEntry id="podsumowanie-4-rule-1-out-1">
+              <text>true</text>
+            </outputEntry>
+          </rule>
+          <rule id="podsumowanie-4-rule-2">
+            <inputEntry id="podsumowanie-4-rule-2-in-1">
+              <text>-</text>
+            </inputEntry>
+            <outputEntry id="podsumowanie-4-rule-2-out-1">
+              <text>false</text>
+            </outputEntry>
+          </rule>
+        </decisionTable>
+      </contextEntry>
+    </context>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_podsumowanie">
+      <dmndi:DMNShape id="DMNShape_podsumowanie" dmnElementRef="podsumowanie">
+        <dc:Bounds height="80" width="180" x="150" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_egzemplarze" dmnElementRef="egzemplarze">
+        <dc:Bounds height="45" width="125" x="178" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-egzemplarze" dmnElementRef="podsumowanie-requires-egzemplarze">
+        <di:waypoint x="240" y="248" />
+        <di:waypoint x="240" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

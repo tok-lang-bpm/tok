@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.7" id="definitions" name="Decyzje w dokumencie wykonywalnym" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Decyzje w dokumencie wykonywalnym">
+    <bpmn:startEvent id="s" name="Wniosek" />
+    <bpmn:businessRuleTask id="decyzja" name="Decyzja o wypożyczeniu">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="wypozyczenie" resultVariable="wynik" />
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+    <bpmn:endEvent id="e" name="Rozpatrzony" />
+    <bpmn:sequenceFlow id="f-s-decyzja" sourceRef="s" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-e" sourceRef="decyzja" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

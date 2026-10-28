@@ -22,6 +22,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.4.0** — the Rust engine is the only engine: `eval` and `sim` in Rust, XES event logs, improved layout; `tok-lang` wheels on the engine with the module `tok.api`; R package `tokr`; release gates in `tools/check.sh`.
 - **0.5.0** — language 0.5: the BPMN 2.0.2 process elements Camunda 8 does not execute (transaction and cancel, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks, interfaces, correlation keys), documentation, MIWG round-trip gate with coverage per model (`docs/miwg.md`).
 - **0.6.0** — language 0.6: conversations, choreographies, participant multiplicity; BPMN conformance classes (`tok check --class`); layout sidecar keeping the drawing of imported files.
+- **0.7.0** — language 0.7: decision requirements graphs (input data, knowledge sources, business knowledge models), boxed expressions, FEEL of DMN 1.5 conformance level 3, DMN 1.5 export and DMN import, `tok eval` for graphs; DMN TCK gate (level 2: all, level 3: 99.5 %); decisions verified on Camunda 8 Run.
 
 ## State at 0.1
 

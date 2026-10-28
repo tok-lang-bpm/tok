@@ -32,7 +32,8 @@ fn language_05_survives_import() {
     let mut failures = Vec::new();
     for (name, text) in cases() {
         let (doc, diags) = tok_core::parse(&text);
-        if !doc.lang_05() || diags.iter().any(tok_core::Diag::is_error) {
+        // decision models of language 0.7 are not BPMN: their round trip is DMN (`lang07.rs`)
+        if !doc.lang_05() || doc.lang_07() || diags.iter().any(tok_core::Diag::is_error) {
             continue;
         }
         let mut checked_doc = doc.clone();

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="kategorie-definitions" name="Kategorie kont" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="egzemplarz-t" name="egzemplarz-t" label="Egzemplarz">
+    <itemComponent id="egzemplarz-t-1" name="sygnatura">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-2" name="rok">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-3" name="stan zachowania">
+      <typeRef>string</typeRef>
+      <allowedValues>
+        <text>"dobry", "zły"</text>
+      </allowedValues>
+    </itemComponent>
+  </itemDefinition>
+  <itemDefinition id="egzemplarze-t" name="egzemplarze-t" label="Lista egzemplarzy" isCollection="true">
+    <typeRef>egzemplarz-t</typeRef>
+  </itemDefinition>
+  <decision id="kategorie" name="kategorie" label="Kategorie kont">
+    <variable id="kategorie-variable" name="kategorie" />
+    <list id="kategorie-list">
+      <literalExpression id="kategorie-1-expr">
+        <text>"student"</text>
+      </literalExpression>
+      <literalExpression id="kategorie-2-expr">
+        <text>"doktorant"</text>
+      </literalExpression>
+      <literalExpression id="kategorie-3-expr">
+        <text>"pracownik"</text>
+      </literalExpression>
+    </list>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_kategorie">
+      <dmndi:DMNShape id="DMNShape_kategorie" dmnElementRef="kategorie">
+        <dc:Bounds height="80" width="180" x="150" y="80" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

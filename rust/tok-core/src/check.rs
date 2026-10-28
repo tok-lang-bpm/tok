@@ -10,6 +10,8 @@ use crate::simcheck;
 
 #[path = "check_06.rs"]
 mod lang06;
+#[path = "check_07.rs"]
+mod lang07;
 
 pub use lang06::choreography_participants;
 
@@ -167,6 +169,11 @@ fn kind_name(what: &str) -> (&'static str, &'static str) {
         "resource" => ("resource", "zasób"),
         "choreography" => ("choreography", "choreografia"),
         "message flow" => ("message flow", "przepływ komunikatów"),
+        "requirement" => (
+            "decision, input data, business knowledge model or knowledge source of an allowed kind",
+            "decyzja, dane wejściowe, model wiedzy biznesowej albo źródło wiedzy dozwolonego rodzaju",
+        ),
+        "bkm" => ("business knowledge model", "model wiedzy biznesowej"),
         _ => ("pool", "basen"),
     }
 }
@@ -200,6 +207,9 @@ pub fn check(doc: &mut Document, level: &str, bpmn: Option<&dyn BpmnRules>) -> V
     c.layer_05();
     let camunda = c.doc.attrs.get("target").is_none_or(|t| t == "camunda");
     c.layer_06(camunda);
+    if c.doc.lang_07() {
+        c.layer_07(camunda);
+    }
     c.decisions_and_forms();
     c.feel();
     c.simulation();
@@ -346,7 +356,11 @@ impl Checker<'_> {
                 IO_KEYS,
                 &[],
             ),
-            (d.items.values().collect(), ITEM_KEYS, ITEM_FLAGS),
+            (
+                d.items.values().collect(),
+                if d.lang_07() { ITEM_KEYS_07 } else { ITEM_KEYS },
+                ITEM_FLAGS,
+            ),
             (d.globals.values().collect(), GLOBAL_KEYS, &[]),
             (
                 d.interfaces.values().map(|x| &x.base).collect(),
@@ -395,7 +409,11 @@ impl Checker<'_> {
             ),
             (
                 d.decisions.values().map(|x| &x.base).collect(),
-                DECISION_KEYS,
+                if d.lang_07() {
+                    DECISION_KEYS_07
+                } else {
+                    DECISION_KEYS
+                },
                 &[],
             ),
             (d.resources.values().collect(), RESOURCE_KEYS, &[]),
@@ -1925,7 +1943,9 @@ impl Checker<'_> {
     fn decisions_and_forms(&mut self) {
         let mut found = Vec::new();
         let d = &*self.doc;
-        for dec in d.decisions.values() {
+        // language 0.7: decision tables are checked with the other boxes (`layer_07`)
+        let old_tables = if d.lang_07() { 0 } else { d.decisions.len() };
+        for dec in d.decisions.values().take(old_tables) {
             let id = dec.base.id();
             let line = dec.base.line;
             if !HIT_POLICIES.contains(&dec.hit()) {
@@ -2040,8 +2060,15 @@ impl Checker<'_> {
                 exprs.push((t.clone(), f.base.line, f.base.id.clone()));
             }
         }
+        let names07 = self.doc.lang_07().then(|| crate::drg::names(self.doc));
         for (text, line, id) in exprs {
-            if let Some((code, detail)) = feel::check_expr(&text) {
+            let found = match &names07 {
+                Some(names) => crate::feel3::parse_expression(&text, names)
+                    .err()
+                    .map(|e| (e.code(), e.detail().to_string())),
+                None => feel::check_expr(&text),
+            };
+            if let Some((code, detail)) = found {
                 let pl = feel::detail_pl(&detail);
                 self.add(
                     code,
@@ -2144,13 +2171,25 @@ impl Checker<'_> {
                 &[("keyword", b.kind.clone()), ("level", s(level))],
             ));
         }
-        if level == "basic"
-            && (!d.decisions.is_empty() || !d.forms.is_empty() || d.simulate.is_some())
-        {
-            let el = d
+        let drg_first = || {
+            let mut v: Vec<&Base> = d
                 .decisions
                 .values()
                 .map(|x| &x.base)
+                .chain(d.bkms.values().map(|x| &x.base))
+                .chain(d.inputdata.values())
+                .chain(d.sources.values())
+                .collect();
+            v.sort_by_key(|b| b.line);
+            v
+        };
+        let has_drg = !d.decisions.is_empty()
+            || !d.bkms.is_empty()
+            || !d.inputdata.is_empty()
+            || !d.sources.is_empty();
+        if level == "basic" && (has_drg || !d.forms.is_empty() || d.simulate.is_some()) {
+            let el = drg_first()
+                .into_iter()
                 .chain(d.forms.values().map(|f| &f.base))
                 .chain(d.simulate.iter())
                 .next();
@@ -2180,13 +2219,9 @@ impl Checker<'_> {
                 &[("keyword", s("version-tag")), ("level", s(level))],
             ));
         }
-        if level == "analytic"
-            && (!d.decisions.is_empty() || !d.forms.is_empty() || d.executable_any())
-        {
-            let el = d
-                .decisions
-                .values()
-                .map(|x| &x.base)
+        if level == "analytic" && (has_drg || !d.forms.is_empty() || d.executable_any()) {
+            let el = drg_first()
+                .into_iter()
                 .chain(d.forms.values().map(|f| &f.base))
                 .next();
             let (line, kw) = el

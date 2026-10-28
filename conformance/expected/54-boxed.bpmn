@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.7" id="definitions" name="Wyrażenia ramkowe" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:itemDefinition id="egzemplarz-t">
+    <bpmn:documentation>Egzemplarz</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="egzemplarze-t" isCollection="true">
+    <bpmn:documentation>Lista egzemplarzy</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:process id="process" isExecutable="false" name="Wyrażenia ramkowe" />
+</bpmn:definitions>

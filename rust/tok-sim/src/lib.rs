@@ -38,6 +38,8 @@ pub fn simulate(
     seed: Option<Param>,
 ) -> Result<SimResult, PyError> {
     let job = move || -> Result<SimResult, PyError> {
+        // the expressions of a 0.7 document are FEEL of conformance level 3
+        let _feel = fallback::Feel07::set(doc.lang_07());
         let outcome = Simulator::new(doc, cases, seed)?.run()?;
         Ok(SimResult { outcome })
     };

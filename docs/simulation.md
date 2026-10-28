@@ -14,8 +14,8 @@ The simulator runs **one process**: the process of the first pool that has one, 
 | `simulate arrival=` | time between consecutive case arrivals; the first case arrives at `start=` |
 | `variable` | drawn once per case, when the case starts |
 | activity (`task`, `user`, `service`, `manual`, `script`, `rule`, `send`, `receive`, `call`) | waits for a free performer of `by=` (first come, first served), then takes `duration=` (0 if absent); `assign=` sets variables when it completes |
-| `rule` task | evaluates its decision table with the case variables and stores the result in `result=` (default: the single output name) |
-| `script` task | evaluates its FEEL expression and stores the result in `result=` |
+| `rule` task | evaluates its decision table with the case variables and stores the result in `result=` (default: the single output name). In a document of language 0.7 it evaluates the decision with the decisions, input data and business knowledge models it requires (the case variables are the input data, by FEEL name) and stores the value of the decision; `result=` defaults to the only output of a decision table, otherwise to the FEEL name of the decision |
+| `script` task | evaluates its FEEL expression and stores the result in `result=` (in a document of language 0.7 every condition and expression is FEEL of conformance level 3, `feel.md` §9) |
 | `xor` split | the first outgoing flow (in document order) whose `when` holds; otherwise one flow drawn by `p=`; otherwise the `default` flow |
 | `or` split | every flow whose `when` holds or whose `p=` is drawn (each independently); if none, the `default` flow |
 | `and` split | all outgoing flows |

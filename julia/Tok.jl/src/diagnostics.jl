@@ -32,11 +32,16 @@ const MESSAGES = Dict{String,Tuple{String,String,String}}(
     "D002" => (ERROR, "rule has {got} cells, the header has {expected}", "reguła ma {got} komórek, a nagłówek {expected}"),
     "D004" => (ERROR, "header cell '{cell}' must be 'name: type' with type string, number, boolean or date",
                "komórka nagłówka „{cell}” musi mieć postać „nazwa: typ” (string, number, boolean, date)"),
+    # language 0.7
+    "D008" => (ERROR, "row has {got} cells, the relation has {expected} columns",
+               "wiersz ma {got} komórek, a relacja ma {expected} kolumn"),
+    "D009" => (ERROR, "header cell '{cell}' must be 'name: type' or 'name: type = values' (language 0.7)",
+               "komórka nagłówka „{cell}” musi mieć postać „nazwa: typ” albo „nazwa: typ = wartości” (język 0.7)"),
 )
 
 "Diagnostic codes that every core implementation reports (conformance level core)."
 const CORE_CODES = Set(["T001", "T002", "T003", "P001", "P002", "P003", "P004", "P005", "P006", "P007",
-                        "P008", "P009", "P010", "R001", "R004", "R020", "D002", "D004"])
+                        "P008", "P009", "P010", "R001", "R004", "R020", "D002", "D004", "D008", "D009"])
 
 struct Diag
     code::String

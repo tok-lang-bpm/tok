@@ -158,8 +158,11 @@ def import_bpmn(xml, keep_ids=True):
 
 
 def eval_decision(text, decision, values=None):
-    """Evaluate a decision table (``tok eval``) with a dict of inputs; the result follows the
-    hit policy: a dict output -> value, a list of them for ``collect``, or ``None``."""
+    """Evaluate a decision (``tok eval``) with a dict of inputs. In a document of language
+    0.7 (Rust engine) the decision is evaluated with the decisions, input data and business
+    knowledge models it requires, and the result is its value. In earlier documents the
+    result follows the hit policy of the table: a dict output -> value, a list of them for
+    ``collect``, or ``None``."""
     e = _engine()
     if e is not None:
         return e.eval_decision(text, decision, values)

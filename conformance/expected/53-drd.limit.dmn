@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="limit-definitions" name="Limit wypożyczeń" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="wiek" name="wiek" label="Wiek czytelnika">
+    <variable id="wiek-variable" name="wiek" typeRef="number" />
+  </inputData>
+  <inputData id="konto" name="konto" label="Rodzaj konta">
+    <description>student, doktorant, pracownik albo gość</description>
+    <variable id="konto-variable" name="konto" typeRef="string" />
+  </inputData>
+  <inputData id="zaleglosci" name="Zaległe opłaty" label="Zaległe opłaty (zł)">
+    <variable id="zaleglosci-variable" name="Zaległe opłaty" typeRef="number" />
+  </inputData>
+  <inputData id="dni-zwloki" name="dni-zwloki" label="Dni zwłoki">
+    <variable id="dni-zwloki-variable" name="dni-zwloki" typeRef="number" />
+  </inputData>
+  <knowledgeSource id="regulamin" name="regulamin" label="Regulamin wypożyczalni" locationURI="https://biblioteka.example/regulamin">
+    <type>regulamin</type>
+  </knowledgeSource>
+  <knowledgeSource id="dyrektor" name="dyrektor" label="Zarządzenie dyrektora">
+    <authorityRequirement id="dyrektor-requires-regulamin">
+      <requiredAuthority href="#regulamin" />
+    </authorityRequirement>
+    <authorityRequirement id="dyrektor-requires-zaleglosci">
+      <requiredInput href="#zaleglosci" />
+    </authorityRequirement>
+    <type>zarządzenie</type>
+  </knowledgeSource>
+  <businessKnowledgeModel id="kara" name="kara" label="Kara za zwłokę">
+    <variable id="kara-variable" name="kara" />
+    <encapsulatedLogic id="kara-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="kara-param-1" name="dni" typeRef="number" />
+      <formalParameter id="kara-param-2" name="stawka" typeRef="number" />
+      <literalExpression id="kara-expr">
+        <text>dni * stawka</text>
+      </literalExpression>
+    </encapsulatedLogic>
+    <authorityRequirement id="kara-requires-regulamin">
+      <requiredAuthority href="#regulamin" />
+    </authorityRequirement>
+  </businessKnowledgeModel>
+  <decision id="limit" name="limit" label="Limit wypożyczeń">
+    <question>Ile książek może wypożyczyć czytelnik?</question>
+    <allowedAnswers>liczba od 0 do 30</allowedAnswers>
+    <variable id="limit-variable" name="limit" typeRef="number" />
+    <informationRequirement id="limit-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+    <informationRequirement id="limit-requires-konto">
+      <requiredInput href="#konto" />
+    </informationRequirement>
+    <authorityRequirement id="limit-requires-regulamin">
+      <requiredAuthority href="#regulamin" />
+    </authorityRequirement>
+    <decisionTable id="limit-table" hitPolicy="FIRST">
+      <input id="limit-input-1" label="wiek">
+        <inputExpression id="limit-input-1-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <input id="limit-input-2" label="konto">
+        <inputExpression id="limit-input-2-expr" typeRef="string">
+          <text>konto</text>
+        </inputExpression>
+      </input>
+      <output id="limit-output-1" label="limit" name="limit" typeRef="number" />
+      <rule id="limit-rule-1">
+        <inputEntry id="limit-rule-1-in-1">
+          <text>&lt; 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-1-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-1-out-1">
+          <text>5</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-2">
+        <inputEntry id="limit-rule-2-in-1">
+          <text>&gt;= 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-2-in-2">
+          <text>"student", "doktorant"</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-2-out-1">
+          <text>15</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-3">
+        <inputEntry id="limit-rule-3-in-1">
+          <text>&gt;= 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-3-in-2">
+          <text>"pracownik"</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-3-out-1">
+          <text>30</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-4">
+        <inputEntry id="limit-rule-4-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-4-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-4-out-1">
+          <text>10</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="blokada" name="Blokada konta" label="Czy zablokować konto?">
+    <variable id="blokada-variable" name="Blokada konta" typeRef="boolean" />
+    <informationRequirement id="blokada-requires-limit">
+      <requiredDecision href="#limit" />
+    </informationRequirement>
+    <informationRequirement id="blokada-requires-zaleglosci">
+      <requiredInput href="#zaleglosci" />
+    </informationRequirement>
+    <authorityRequirement id="blokada-requires-dyrektor">
+      <requiredAuthority href="#dyrektor" />
+    </authorityRequirement>
+    <literalExpression id="blokada-expr">
+      <text>Zaległe opłaty &gt; 50 or limit &lt; 1</text>
+    </literalExpression>
+  </decision>
+  <decision id="naleznosc" name="naleznosc" label="Należność za zwłokę">
+    <variable id="naleznosc-variable" name="naleznosc" typeRef="number" />
+    <informationRequirement id="naleznosc-requires-dni-zwloki">
+      <requiredInput href="#dni-zwloki" />
+    </informationRequirement>
+    <knowledgeRequirement id="naleznosc-requires-kara">
+      <requiredKnowledge href="#kara" />
+    </knowledgeRequirement>
+    <invocation id="naleznosc-invocation">
+      <literalExpression id="naleznosc-invocation-callee">
+        <text>kara</text>
+      </literalExpression>
+      <binding>
+        <parameter id="naleznosc-binding-1" name="dni" typeRef="number" />
+        <literalExpression id="naleznosc-binding-1-expr">
+          <text>dni-zwloki</text>
+        </literalExpression>
+      </binding>
+      <binding>
+        <parameter id="naleznosc-binding-2" name="stawka" typeRef="number" />
+        <literalExpression id="naleznosc-binding-2-expr">
+          <text>0.5</text>
+        </literalExpression>
+      </binding>
+    </invocation>
+  </decision>
+  <decision id="opis" name="opis" label="Opis sytuacji czytelnika">
+    <variable id="opis-variable" name="opis" />
+    <informationRequirement id="opis-requires-limit">
+      <requiredDecision href="#limit" />
+    </informationRequirement>
+    <informationRequirement id="opis-requires-naleznosc">
+      <requiredDecision href="#naleznosc" />
+    </informationRequirement>
+    <informationRequirement id="opis-requires-blokada">
+      <requiredDecision href="#blokada" />
+    </informationRequirement>
+    <literalExpression id="opis-expr">
+      <text>if Blokada konta then "konto zablokowane" else "limit " + string(limit) + ", należność " + string(naleznosc) + " zł"</text>
+    </literalExpression>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_limit">
+      <dmndi:DMNShape id="DMNShape_opis" dmnElementRef="opis">
+        <dc:Bounds height="80" width="180" x="576" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_blokada" dmnElementRef="blokada">
+        <dc:Bounds height="80" width="180" x="348" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_naleznosc" dmnElementRef="naleznosc">
+        <dc:Bounds height="80" width="180" x="829" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_dyrektor" dmnElementRef="dyrektor">
+        <dc:Bounds height="63" width="100" x="411" y="389" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_limit" dmnElementRef="limit">
+        <dc:Bounds height="80" width="180" x="551" y="380" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_dni-zwloki" dmnElementRef="dni-zwloki">
+        <dc:Bounds height="45" width="125" x="772" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_kara" dmnElementRef="kara">
+        <dc:Bounds height="46" width="135" x="937" y="397" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_zaleglosci" dmnElementRef="zaleglosci">
+        <dc:Bounds height="45" width="125" x="151" y="548" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wiek" dmnElementRef="wiek">
+        <dc:Bounds height="45" width="125" x="331" y="548" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_konto" dmnElementRef="konto">
+        <dc:Bounds height="45" width="125" x="496" y="548" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_regulamin" dmnElementRef="regulamin">
+        <dc:Bounds height="63" width="100" x="660" y="539" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_dyrektor-requires-regulamin" dmnElementRef="dyrektor-requires-regulamin">
+        <di:waypoint x="685" y="539" />
+        <di:waypoint x="444" y="452" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_dyrektor-requires-zaleglosci" dmnElementRef="dyrektor-requires-zaleglosci">
+        <di:waypoint x="192" y="548" />
+        <di:waypoint x="477" y="452" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_kara-requires-regulamin" dmnElementRef="kara-requires-regulamin">
+        <di:waypoint x="710" y="539" />
+        <di:waypoint x="1004" y="443" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-wiek" dmnElementRef="limit-requires-wiek">
+        <di:waypoint x="393" y="548" />
+        <di:waypoint x="596" y="460" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-konto" dmnElementRef="limit-requires-konto">
+        <di:waypoint x="558" y="548" />
+        <di:waypoint x="641" y="460" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-regulamin" dmnElementRef="limit-requires-regulamin">
+        <di:waypoint x="735" y="539" />
+        <di:waypoint x="686" y="460" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_blokada-requires-limit" dmnElementRef="blokada-requires-limit">
+        <di:waypoint x="611" y="380" />
+        <di:waypoint x="393" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_blokada-requires-zaleglosci" dmnElementRef="blokada-requires-zaleglosci">
+        <di:waypoint x="234" y="548" />
+        <di:waypoint x="438" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_blokada-requires-dyrektor" dmnElementRef="blokada-requires-dyrektor">
+        <di:waypoint x="461" y="389" />
+        <di:waypoint x="483" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_naleznosc-requires-kara" dmnElementRef="naleznosc-requires-kara">
+        <di:waypoint x="1004" y="397" />
+        <di:waypoint x="889" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_naleznosc-requires-dni-zwloki" dmnElementRef="naleznosc-requires-dni-zwloki">
+        <di:waypoint x="834" y="398" />
+        <di:waypoint x="949" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_opis-requires-limit" dmnElementRef="opis-requires-limit">
+        <di:waypoint x="671" y="380" />
+        <di:waypoint x="621" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_opis-requires-naleznosc" dmnElementRef="opis-requires-naleznosc">
+        <di:waypoint x="919" y="230" />
+        <di:waypoint x="666" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_opis-requires-blokada" dmnElementRef="opis-requires-blokada">
+        <di:waypoint x="438" y="230" />
+        <di:waypoint x="711" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

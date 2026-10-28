@@ -11,7 +11,7 @@ use tok_core::diagnostics::{Diag, format_diag};
 use tok_core::feel_eval::{Context, PyValue, Value};
 use tok_core::pydec::Decimal;
 use tok_core::pytime::DateTime;
-use tok_core::{Document, dmn, export, forms, import, printer};
+use tok_core::{Document, export, forms, import, printer};
 use tok_sim::sim::shift;
 use tok_sim::{Param, PyError};
 
@@ -147,9 +147,9 @@ fn engine_export(text: &str, name: &str, lang: &str) -> Res<List> {
     let svg_name = format!("{name}.svg");
     files.push(svg_of(&doc, Some(&svg_name))?);
     names.push(svg_name);
-    for dec in doc.decisions.values() {
-        names.push(format!("{}.dmn", dec.base.id()));
-        files.push(dmn::export_dmn(dec, Some(&doc)));
+    for (file, content) in tok_core::drg::export::decision_files(&doc) {
+        names.push(file);
+        files.push(content);
     }
     for form in doc.forms.values() {
         names.push(format!("{}.form", form.base.id()));
@@ -267,18 +267,19 @@ fn engine_eval(text: &str, decision: &str, values: List, lang: &str) -> Res<Robj
     if diags.iter().any(Diag::is_error) {
         return Err(errors(&diags, lang));
     }
-    let Some(dec) = doc.decisions.get(decision) else {
+    if !doc.decisions.contains_key(decision) {
         let known: Vec<&str> = doc.decisions.keys().map(String::as_str).collect();
         return Err(fail(format!(
             "unknown decision '{decision}'; the model has: {}",
             known.join(", ")
         )));
-    };
+    }
     let mut ctx = Context::new();
     for (k, v) in values.iter() {
         ctx.insert(k.to_string(), value_from_r(&v)?);
     }
-    dmn::evaluate_decision(dec, &ctx)
+    // language 0.7: the decision with what it requires; earlier documents: the table alone
+    tok_core::drg::values::evaluate_values(&doc, decision, &ctx)
         .map(|r| value_to_r(&r))
         .map_err(|e| fail(e.message))
 }

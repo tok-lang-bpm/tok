@@ -1,0 +1,52 @@
+tok 0.7 "Errors of language 0.7"
+
+item t1 "Typ" structure="xsd:int" type=number
+
+inputdata a "A" type=number
+inputdata b "B" name=a type=tekst
+inputdata c "C" requires="a"
+source s1 "Źródło" requires="k"
+
+bkm k "Model" params="x: number, x: string" requires="d1"
+
+bkm k2 "Wywołanie modelu" params="y" invoke=d1 with="y = y"
+
+bkm k3 "Zły parametr" params="p" invoke=k with="q = p; zle"
+
+# R076: a cycle; R079: a name used without a requirement
+decision d1 "D1" requires="d2 a" expr="d2 + a"
+
+decision d2 "D2" requires="d1" expr="d1 + a + 1"
+
+# R077: two forms of logic, with= without invoke=, result not last, mixed lines
+decision d3 "D3" expr="1" invoke=k
+  entry x expr="1"
+
+decision d4 "D4" with="x = 1"
+
+decision d5 "D5"
+  result expr="1"
+  entry y expr="2"
+  element expr="3"
+
+decision d6 "D6" hit=first expr="1"
+
+# R080: two entries with one name; R081: unknown types
+decision d7 "D7" type=liczba
+  entry x expr="1"
+  entry x expr="2"
+
+# D003, D006, D007; F002 in a cell and in an expression
+decision d8 "D8" requires="a" hit=priority aggregation=sum
+  | a: number || w: number |
+  | > 1       || 1         |
+
+decision d9 "D9" requires="a" hit=chaos
+  | a: number || w: number |
+  | > 1 >     || (1        |
+
+decision d10 "D10" requires="a" hit=collect aggregation=median expr2=1
+  | a: number || w: number | v: number |
+  | -         || 1         | 2         |
+
+decision d11 "D11" expr="1 +"

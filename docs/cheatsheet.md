@@ -1,11 +1,11 @@
-# tok 0.6 — cheat sheet
+# tok 0.7 — cheat sheet
 
 One statement per line. Blocks by indentation (spaces). `#` starts a comment.
 Every statement starts with a keyword. Identifiers: `[A-Za-z_][A-Za-z0-9_-]*`, unique. Labels: "quoted text".
 Attributes: `key=value` (value: word, number or "text") and bare flags.
 
 ```
-tok 0.6 "Title" [executable]                       # header, first line (0.1, 0.3 and 0.5 documents stay valid)
+tok 0.7 "Title" [executable]                       # header, first line (0.1–0.6 documents stay valid)
     [process-name="Name"] (process of a document without pools)   doc="Text" on any statement: documentation
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
@@ -69,6 +69,32 @@ decision ID "Label" hit=first               # unique | first | any | priority | 
   | "e-book"    | -           || "manager"   || licences   |
   | -           | <= 150      || "auto"      ||            |
 
+# decision requirements graphs and boxed expressions (language 0.7, header tok 0.7)
+inputdata ID "Label" [name="FEEL name"] type=number            # also date, "date and time", list, an item …
+source ID "Label" [requires="D I S"] [kind="regulation"] [uri="https://…"]
+bkm ID "Label" params="a: number, b: string" [type=T] [requires="BKM S"] expr="a * b"
+decision ID "Label" [name="FEEL name"] [type=T] requires="D I BKM S" [question="?"] [answers="…"] expr="feel"
+decision ID "Label" requires="…" invoke=BKM with="a = feel; b = feel"     # invocation
+decision ID "Label" requires="…" hit=rule-order|output-order|collect aggregation=sum|count|min|max default="0"
+  | in: number = [0..100] || out: string = "high", "low" |              # input/output values
+decision ID "Label"                         # context: entries in order, optional result last
+  entry NAME [type=T] expr="feel"           # NAME a word or "quoted name"; each line may have its own block
+  entry f params="x: number" expr="x * 2"   # function definition
+  entry table                               # nested table or relation
+    | col: string | val: number |           # relation: header without ||
+    | "a"         | 1           |
+  result expr="f(2)"
+decision ID "Label"                         # list
+  element expr="1"
+item T "Label" [type=number] [allowed="[0..10]"] [collection]      # DMN type (0.7)
+  item field type=string                    # components
+```
+
+FEEL of 0.7 documents is full FEEL (level 3): `for x in l return e`, `some/every x in l satisfies c`, `l[item > 1]`,
+`{a: 1}.a`, `@"2027-01-15"`, `date and time(…)`, durations, ranges, names with spaces resolved against the document.
+
+```
+
 form ID "Title"
   text "## Markdown with {{variable}}"
   field KEY "Label" type=textfield|textarea|number|checkbox|select|radio|datetime [required] [options="v:Label, v:Label"]
@@ -103,8 +129,11 @@ tok 0.3 "T" executable version-tag="v1"   pool p … version-tag="v1"
 Language 0.5 elements (transaction, cancel, complex, loop conditions, multiple events, instantiate, process data,
 global tasks, operations, keys) and 0.6 elements (conversations, choreographies, min/max) are BPMN only:
 `--level basic|analytic` rejects them, and in executable documents for Camunda they are reported as `C100`–`C123`.
+Decisions of 0.7 are level `full`; Camunda codes `C130` (bkm with invoke=), `C131` (non-literal function body),
+`C132` (decision without logic).
 In 0.5 documents `resource` and `by=` also export BPMN performers.
 
 Commands: `tok check F [--class descriptive|analytic|common-executable|full]` · `tok fmt F [-w]` · `tok bpmn F` ·
-`tok svg F` · `tok export F [-o DIR]` · `tok import F.bpmn [-o F.tok]` (writes F.tok.layout: the drawing,
-reused by bpmn/svg/export; `--no-sidecar`) · `tok sim F` · `tok eval F DECISION name=value …` · `--lang pl` · `--json`
+`tok svg F` · `tok export F [-o DIR]` (0.7: NAME.dmn + NAME.drd.svg per decision graph) · `tok import F.bpmn|F.dmn [-o F.tok]`
+(BPMN: writes F.tok.layout, the drawing reused by bpmn/svg/export; `--no-sidecar`) · `tok sim F` ·
+`tok eval F DECISION name=value …` (0.7: with required decisions; JSON values `x='{"a": 1}'`) · `--lang pl` · `--json`

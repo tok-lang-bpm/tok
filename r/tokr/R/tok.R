@@ -222,18 +222,23 @@ tok_import <- function(file, keep_ids = TRUE) {
   )
 }
 
-#' Evaluate a decision table
+#' Evaluate a decision
 #'
-#' Evaluates a decision table of the model for the given inputs, as `tok eval` does,
-#' with the hit policy of the table.
+#' Evaluates a decision of the model for the given inputs, as `tok eval` does. In a
+#' model of language 0.7 the decision is evaluated with the decisions, input data and
+#' business knowledge models it requires, and the inputs are the input data by FEEL
+#' name; in earlier models the decision table alone is evaluated with the hit policy of
+#' the table.
 #'
 #' @inheritParams tok_check
-#' @param decision Identifier of the decision table.
+#' @param decision Identifier of the decision.
 #' @param inputs Named list of inputs: numbers, strings, logical values, `NA` for null;
 #'   a vector longer than one is a list, a named list is a context.
-#' @return For the hit policies `unique`, `first`, `any` and `priority` a named list
-#'   output name → value (`NULL` when no rule matches); for `collect` a data frame with
-#'   one row per matched rule.
+#' @return In a model of language 0.7 the value of the decision (a number, string,
+#'   logical value, list or named list; `NULL` for null), a list of named lists as a data
+#'   frame. In earlier models: for the hit policies `unique`, `first`, `any` and
+#'   `priority` a named list output name → value (`NULL` when no rule matches); for
+#'   `collect` a data frame with one row per matched rule.
 #' @examples
 #' f <- system.file("examples", "propozycja-zakupu.tok", package = "tokr")
 #' tok_eval(f, "tryb-akceptacji", list(rodzaj = "drukowana", cena = 120))

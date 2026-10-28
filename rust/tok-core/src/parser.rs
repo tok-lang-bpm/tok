@@ -5,6 +5,10 @@ use crate::lexer::{self, Kind, Line, Token};
 use crate::model::*;
 use crate::pyutil::strip;
 
+#[path = "parser_07.rs"]
+mod lang07;
+pub use lang07::split_header_cell_07;
+
 const NODE_LIKE_EXTRA: &[&str] = &[
     "flow", "message", "data", "store", "reads", "writes", "note", "input", "output", "property",
 ];
@@ -30,9 +34,16 @@ fn allowed(ctx: &str, kw: &str) -> bool {
                     "subconversation",
                     "callconversation",
                     "choreography",
+                    "inputdata",
+                    "bkm",
+                    "source",
                 ]
                 .contains(&kw)
         }
+        // language 0.7: the block of a decision, a business knowledge model, an entry, a
+        // result or an element, and the components of a DMN type
+        "box" => ["entry", "result", "element"].contains(&kw),
+        "itemdef" => kw == "item",
         // language 0.6: the block of a sub-conversation, of a choreography and of a
         // sub-choreography (the checker reports flow nodes a choreography cannot contain)
         "subconversation" => is_conversation(kw),
@@ -54,6 +65,16 @@ fn is_keyword(kw: &str) -> bool {
         || allowed("interface", kw)
         || allowed("key", kw)
         || allowed("choreography", kw)
+        || allowed("box", kw)
+}
+
+/// A decision or a business knowledge model and the path of nested lines to one box of
+/// it (language 0.7).
+#[derive(Debug, Clone)]
+struct BoxRef {
+    bkm: bool,
+    id: String,
+    path: Vec<usize>,
 }
 
 /// `[A-Za-z_][A-Za-z0-9_-]*`
@@ -78,6 +99,10 @@ enum Owner {
     Key(String),
     Conversation(String),
     Choreography(String),
+    /// Language 0.7: a box of a decision or a business knowledge model.
+    Box(BoxRef),
+    /// Language 0.7: a DMN type and the path to a component of it.
+    Item(String, Vec<usize>),
 }
 
 #[derive(Debug, Clone)]
@@ -102,7 +127,9 @@ impl Ctx {
             | Owner::Interface(i)
             | Owner::Key(i)
             | Owner::Conversation(i)
-            | Owner::Choreography(i) => Some(i),
+            | Owner::Choreography(i)
+            | Owner::Item(i, _) => Some(i),
+            Owner::Box(b) => Some(&b.id),
             Owner::None => None,
         }
     }
@@ -389,6 +416,11 @@ impl Parser {
                     let did = did.clone();
                     self.row(line, &did);
                 }
+            } else if ctx.kind == "box" {
+                if let Owner::Box(b) = &ctx.owner {
+                    let b = b.clone();
+                    self.row07(line, &b);
+                }
             } else {
                 self.err(
                     "P004",
@@ -408,7 +440,10 @@ impl Parser {
             self.err("P010", line.number, None, &[]);
             return Prev::plain("tok");
         }
-        if first.kind != Kind::Word || !is_keyword(kw) {
+        if first.kind != Kind::Word
+            || !is_keyword(kw)
+            || (KEYWORDS_07.contains(&kw) && !self.doc.lang_07())
+        {
             self.err("P001", line.number, None, &[("word", first.value.clone())]);
             return Prev::plain("?");
         }
@@ -427,7 +462,13 @@ impl Parser {
             "flow" => self.st_flow(line),
             "message" => self.st_message(line),
             "data" | "store" | "input" | "output" | "property" => self.st_data(line, ctx, kw),
+            "item" if ctx.kind == "itemdef" => self.st_component(line, ctx),
+            "item" if self.doc.lang_07() => self.st_item07(line),
             "item" | "global" => self.st_declaration(line, kw),
+            "inputdata" | "source" => self.st_drg_element(line, kw),
+            "bkm" => self.st_box_root(line, true),
+            "decision" if self.doc.lang_07() => self.st_box_root(line, false),
+            "entry" | "result" | "element" => self.st_box_line(line, ctx, kw),
             "interface" | "key" => self.st_block_declaration(line, kw),
             "operation" | "prop" => self.st_member(line, ctx, kw),
             "conversation" | "subconversation" | "callconversation" => {

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="wypozyczenie-definitions" name="Wypożyczenie" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="wiek" name="wiek" label="Wiek">
+    <variable id="wiek-variable" name="wiek" typeRef="number" />
+  </inputData>
+  <businessKnowledgeModel id="stawka" name="stawka" label="Stawka">
+    <variable id="stawka-variable" name="stawka" />
+    <encapsulatedLogic id="stawka-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="stawka-param-1" name="wiek" typeRef="number" />
+      <literalExpression id="stawka-expr">
+        <text>if wiek &lt; 18 then 0 else 1</text>
+      </literalExpression>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <businessKnowledgeModel id="przez-wywolanie" name="przez-wywolanie" label="Stawka przez wywołanie">
+    <variable id="przez-wywolanie-variable" name="przez-wywolanie" />
+    <encapsulatedLogic id="przez-wywolanie-logic" kind="FEEL">
+      <formalParameter id="przez-wywolanie-param-1" name="wiek" typeRef="number" />
+      <invocation id="przez-wywolanie-invocation">
+        <literalExpression id="przez-wywolanie-invocation-callee">
+          <text>stawka</text>
+        </literalExpression>
+        <binding>
+          <parameter id="przez-wywolanie-binding-1" name="wiek" typeRef="number" />
+          <literalExpression id="przez-wywolanie-binding-1-expr">
+            <text>wiek</text>
+          </literalExpression>
+        </binding>
+      </invocation>
+    </encapsulatedLogic>
+    <knowledgeRequirement id="przez-wywolanie-requires-stawka">
+      <requiredKnowledge href="#stawka" />
+    </knowledgeRequirement>
+  </businessKnowledgeModel>
+  <decision id="wypozyczenie" name="wypozyczenie" label="Wypożyczenie">
+    <variable id="wypozyczenie-variable" name="wypozyczenie" />
+    <informationRequirement id="wypozyczenie-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+    <knowledgeRequirement id="wypozyczenie-requires-stawka">
+      <requiredKnowledge href="#stawka" />
+    </knowledgeRequirement>
+    <context id="wypozyczenie-context">
+      <contextEntry id="wypozyczenie-1-entry">
+        <variable id="wypozyczenie-1-variable" name="podwojenie" />
+        <functionDefinition id="wypozyczenie-1-function" kind="FEEL">
+          <formalParameter id="wypozyczenie-1-param-1" name="x" typeRef="number" />
+          <decisionTable id="wypozyczenie-1-table" hitPolicy="UNIQUE">
+            <input id="wypozyczenie-1-input-1" label="x">
+              <inputExpression id="wypozyczenie-1-input-1-expr" typeRef="number">
+                <text>x</text>
+              </inputExpression>
+            </input>
+            <output id="wypozyczenie-1-output-1" label="wynik" name="wynik" typeRef="number" />
+            <rule id="wypozyczenie-1-rule-1">
+              <inputEntry id="wypozyczenie-1-rule-1-in-1">
+                <text>-</text>
+              </inputEntry>
+              <outputEntry id="wypozyczenie-1-rule-1-out-1">
+                <text>x * 2</text>
+              </outputEntry>
+            </rule>
+          </decisionTable>
+        </functionDefinition>
+      </contextEntry>
+      <contextEntry id="wypozyczenie-2-entry">
+        <literalExpression id="wypozyczenie-2-expr">
+          <text>podwojenie(stawka(wiek))</text>
+        </literalExpression>
+      </contextEntry>
+    </context>
+  </decision>
+  <decision id="opisowa" name="opisowa" label="Decyzja opisowa">
+    <variable id="opisowa-variable" name="opisowa" />
+    <informationRequirement id="opisowa-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_wypozyczenie">
+      <dmndi:DMNShape id="DMNShape_przez-wywolanie" dmnElementRef="przez-wywolanie">
+        <dc:Bounds height="46" width="135" x="151" y="97" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wypozyczenie" dmnElementRef="wypozyczenie">
+        <dc:Bounds height="80" width="180" x="325" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_opisowa" dmnElementRef="opisowa">
+        <dc:Bounds height="80" width="180" x="545" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_stawka" dmnElementRef="stawka">
+        <dc:Bounds height="46" width="135" x="151" y="247" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wiek" dmnElementRef="wiek">
+        <dc:Bounds height="45" width="125" x="364" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_przez-wywolanie-requires-stawka" dmnElementRef="przez-wywolanie-requires-stawka">
+        <di:waypoint x="196" y="247" />
+        <di:waypoint x="218" y="143" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_wypozyczenie-requires-wiek" dmnElementRef="wypozyczenie-requires-wiek">
+        <di:waypoint x="405" y="248" />
+        <di:waypoint x="385" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_wypozyczenie-requires-stawka" dmnElementRef="wypozyczenie-requires-stawka">
+        <di:waypoint x="241" y="247" />
+        <di:waypoint x="445" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_opisowa-requires-wiek" dmnElementRef="opisowa-requires-wiek">
+        <di:waypoint x="447" y="248" />
+        <di:waypoint x="635" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

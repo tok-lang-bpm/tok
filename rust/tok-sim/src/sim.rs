@@ -1383,6 +1383,8 @@ impl<'a> Simulator<'a> {
                 Some(r) => r.clone(),
                 None => match dec {
                     Some(d) if d.outputs.len() == 1 => d.outputs[0].0.clone(),
+                    // language 0.7: other decision logic gives the value of the decision
+                    Some(d) if self.doc.lang_07() => tok_core::drg::var_name(&d.base),
                     _ => "result".to_string(),
                 },
             };

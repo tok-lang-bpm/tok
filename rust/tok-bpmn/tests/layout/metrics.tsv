@@ -51,6 +51,13 @@ cases/49-choreography-events	1	0	0	1	0	5	0	0	0	590
 cases/50-multiplicity	0	0	0	0	0	0	0	0	0	408
 cases/51-executable-06	0	0	0	0	0	0	0	0	0	384
 cases/52-err-06	0	0	0	0	0	0	3	0	0	1721
+cases/53-drd	0	0	0	0	0	0	0	0	0	0
+cases/54-boxed	0	0	0	0	0	0	0	0	0	0
+cases/55-tables-07	0	0	0	0	0	0	0	0	0	0
+cases/56-feel3	0	0	0	0	0	1	0	0	0	112
+cases/57-executable-07	0	0	0	0	0	0	0	0	0	22
+cases/58-err-07	0	0	0	0	0	0	0	0	0	0
+cases/61-executable-decisions	0	0	0	0	0	0	0	0	0	0
 import/01-wypozyczenie-pierwszy-model	0	0	0	0	0	2	0	0	0	328
 import/02-wypozyczenie-wymagania-norm	0	0	0	0	0	3	0	0	0	1017
 import/03-rejestracja-pisma-z-bledem	0	0	0	0	0	4	0	0	0	621

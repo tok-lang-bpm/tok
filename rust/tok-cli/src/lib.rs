@@ -493,7 +493,8 @@ fn cmd_export(a: &Args) -> u8 {
         report(a, &diags);
         return EXIT_ERRORS;
     }
-    if let Some(code) = nothing_to_draw(a, &doc) {
+    let has_drg = doc.lang_07() && (!doc.decisions.is_empty() || !doc.bkms.is_empty());
+    if !has_drg && let Some(code) = nothing_to_draw(a, &doc) {
         return code;
     }
     let folder = match &a.output {
@@ -521,24 +522,50 @@ fn cmd_export(a: &Args) -> u8 {
     };
     let bpmn_path = folder.join(format!("{stem}.bpmn"));
     let svg_path = folder.join(format!("{stem}.svg"));
-    let mut written = vec![bpmn_path.clone(), svg_path.clone()];
-    let side = match sidecar(a) {
-        Ok(s) => s,
-        Err(e) => return fail(&e),
-    };
-    let res = bpmn_text(&doc, true, side.as_ref())
-        .and_then(|t| write_platform(&bpmn_path, &t).map_err(|e| e.to_string()))
-        .and_then(|_| svg_text(&doc, &svg_path, side.as_ref()))
-        .and_then(|t| write_platform(&svg_path, &t).map_err(|e| e.to_string()));
-    if let Err(e) = res {
-        return fail(&e);
-    }
-    for dec in doc.decisions.values() {
-        let p = folder.join(format!("{}.dmn", dec.base.id()));
-        if let Err(e) = write_lf(&p, &dmn::export_dmn(dec, Some(&doc))) {
-            return fail(&e.to_string());
+    // a decision model of language 0.7 without a process has no BPMN file
+    let decisions_only = doc.lang_07() && doc.nodes.is_empty() && doc.pools.is_empty();
+    let mut written = Vec::new();
+    if !decisions_only {
+        written.push(bpmn_path.clone());
+        written.push(svg_path.clone());
+        let side = match sidecar(a) {
+            Ok(s) => s,
+            Err(e) => return fail(&e),
+        };
+        let res = bpmn_text(&doc, true, side.as_ref())
+            .and_then(|t| write_platform(&bpmn_path, &t).map_err(|e| e.to_string()))
+            .and_then(|_| svg_text(&doc, &svg_path, side.as_ref()))
+            .and_then(|t| write_platform(&svg_path, &t).map_err(|e| e.to_string()));
+        if let Err(e) = res {
+            return fail(&e);
         }
-        written.push(p);
+    }
+    if doc.lang_07() {
+        // language 0.7: one DMN 1.5 file and one picture per decision requirements graph
+        let pictures = tok_core::drg::export::export_svg(&doc);
+        for ((stem, xml), (_, svg)) in tok_core::drg::export::export_dmn15(&doc)
+            .into_iter()
+            .zip(pictures)
+        {
+            let p = folder.join(format!("{stem}.dmn"));
+            if let Err(e) = write_lf(&p, &xml) {
+                return fail(&e.to_string());
+            }
+            written.push(p);
+            let p = folder.join(format!("{stem}.drd.svg"));
+            if let Err(e) = write_lf(&p, &svg) {
+                return fail(&e.to_string());
+            }
+            written.push(p);
+        }
+    } else {
+        for dec in doc.decisions.values() {
+            let p = folder.join(format!("{}.dmn", dec.base.id()));
+            if let Err(e) = write_lf(&p, &dmn::export_dmn(dec, Some(&doc))) {
+                return fail(&e.to_string());
+            }
+            written.push(p);
+        }
     }
     for form in doc.forms.values() {
         let p = folder.join(format!("{}.form", form.base.id()));
@@ -561,6 +588,9 @@ fn cmd_import(a: &Args) -> u8 {
             return EXIT_USAGE;
         }
     };
+    if a.file.to_lowercase().ends_with(".dmn") || tok_core::drg::dmnimport::is_dmn(&xml) {
+        return import_dmn(a, &xml);
+    }
     let (doc, warnings, ids) = match import::import_bpmn_mapped(&xml, !a.no_flow_ids) {
         Ok(r) => r,
         Err(e) => return fail(&e.to_string()),
@@ -591,6 +621,28 @@ fn cmd_import(a: &Args) -> u8 {
                     Err(e) => return fail(&e.to_string()),
                 }
             }
+        }
+        None => out!("{out}"),
+    }
+    EXIT_OK
+}
+
+/// `tok import FILE.dmn`: a decision model as a document of language 0.7.
+fn import_dmn(a: &Args, xml: &str) -> u8 {
+    let (doc, warnings) = match tok_core::drg::dmnimport::import_dmn(xml) {
+        Ok(r) => r,
+        Err(e) => return fail(&e.to_string()),
+    };
+    for w in warnings {
+        errln!("{}: {w}", a.file);
+    }
+    let out = printer::fmt(&doc);
+    match &a.output {
+        Some(o) => {
+            if let Err(e) = write_lf(Path::new(o), &out) {
+                return fail(&e.to_string());
+            }
+            outln!("tok: {o}");
         }
         None => out!("{out}"),
     }
@@ -837,6 +889,26 @@ fn eval_command(argv: &[String]) -> Result<u8, u8> {
         errln!("tok: no decision '{decision}' in {file}");
         return Ok(EXIT_USAGE);
     };
+    if doc.lang_07() {
+        // language 0.7: the decision with what it requires; the result is its DMN value
+        let mut inputs = tok_core::feel3::Map::new();
+        for pair in &p.positional("values") {
+            let Some((k, v)) = pair.split_once('=') else {
+                errln!("tok: expected NAME=VALUE, got '{pair}'");
+                return Ok(EXIT_USAGE);
+            };
+            inputs.insert(k.to_string(), tok_core::drg::values::cli_value(v));
+        }
+        let (value, problems) = tok_core::drg::eval::evaluate(&doc, &decision, &inputs);
+        if !problems.is_empty() {
+            for problem in problems {
+                errln!("tok: {problem}");
+            }
+            return Ok(EXIT_ERRORS);
+        }
+        outln!("{}", tok_core::drg::values::to_json(&value).compact());
+        return Ok(EXIT_OK);
+    }
     let mut ctx = tok_core::feel_eval::Context::new();
     for pair in &p.positional("values") {
         let Some((k, v)) = pair.split_once('=') else {

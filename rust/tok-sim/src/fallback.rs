@@ -22,8 +22,47 @@ fn value_error(msg: impl Into<String>) -> PyError {
     PyError::new("ValueError", msg)
 }
 
+thread_local! {
+    /// The simulated document declares language 0.7.
+    static FEEL07: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// While alive, expressions are evaluated as FEEL of language 0.7 (when `on`).
+pub struct Feel07(bool);
+
+impl Feel07 {
+    pub fn set(on: bool) -> Feel07 {
+        Feel07(FEEL07.with(|f| f.replace(on)))
+    }
+}
+
+impl Drop for Feel07 {
+    fn drop(&mut self) {
+        FEEL07.with(|f| f.set(self.0));
+    }
+}
+
+/// An expression of a 0.7 document: FEEL at conformance level 3; an expression that
+/// cannot be evaluated is `null`.
+fn feel07_value(text: &str, ctx: &Vars) -> R<PyValue> {
+    use tok_core::feel3::{Env, Eval, Names, Types, parse_expression};
+    let names = Names::builtins();
+    let e = parse_expression(text, &names)
+        .map_err(|e| PyError::new("tok.feel.FeelSyntaxError", e.detail().to_string()))?;
+    let vars = ctx
+        .iter()
+        .map(|(k, v)| (k.clone(), tok_core::drg::values::from_plain(v)))
+        .collect();
+    let types = Types::default();
+    let v = Eval::new(&types).eval(&e, &Env::root(vars));
+    Ok(tok_core::drg::values::to_plain(&v))
+}
+
 /// Evaluate an expression (`sim.eval_expr`): FEEL, then the built-in subset.
 pub fn eval_expr(text: &str, ctx: &Vars) -> R<PyValue> {
+    if FEEL07.with(|f| f.get()) {
+        return feel07_value(text, ctx);
+    }
     if let Ok(v) = feel_value(text, ctx) {
         return Ok(v);
     }
@@ -42,6 +81,10 @@ pub fn eval_decision(doc: &Document, decision_id: &str, ctx: &Vars) -> R<PyValue
     let Some(dec) = doc.decisions.get(decision_id) else {
         return Ok(PyValue::None);
     };
+    if doc.lang_07() {
+        // language 0.7: the decision with what it requires; the case variables are the input data
+        return tok_core::drg::values::evaluate_plain(doc, decision_id, ctx);
+    }
     if let Ok(v) = pyval::feel_context(ctx).and_then(|c| dmn::evaluate_decision(dec, &c)) {
         return Ok(v);
     }

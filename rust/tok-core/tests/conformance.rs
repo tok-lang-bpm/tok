@@ -1,5 +1,6 @@
-//! Conformance corpus: canonical text, core diagnostics, semantic BPMN XML and the codes of
-//! `tok check` at every level must equal the expected files byte for byte.
+//! Conformance corpus: canonical text, core diagnostics, semantic BPMN XML, the codes of
+//! `tok check` at every level and, for documents of language 0.7, the DMN files must equal
+//! the expected files byte for byte.
 //!
 //! The expected files of cases written for language 0.1 and 0.3 (01–32) are produced by
 //! the Python reference implementation (`conformance/generate.py`). Those of cases whose
@@ -42,7 +43,7 @@ impl BpmnRules for Rules {
 
 const CORE_CODES: &[&str] = &[
     "T001", "T002", "T003", "P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008", "P009",
-    "P010", "R001", "R004", "R020", "D002", "D004",
+    "P010", "R001", "R004", "R020", "D002", "D004", "D008", "D009",
 ];
 
 fn corpus() -> PathBuf {
@@ -71,6 +72,20 @@ fn bless(expected: &Path, stem: &str, text: &str, codes: &str) {
     }
     write(&bpmn_path, &tok_core::export::semantic_xml(&doc, None));
     write(&levels_path, &levels(text));
+    for (file, xml) in dmn_files(&doc) {
+        write(&expected.join(format!("{stem}.{file}")), &xml);
+    }
+}
+
+/// The DMN files of a document of language 0.7 (one per decision requirements graph).
+fn dmn_files(doc: &tok_core::Document) -> Vec<(String, String)> {
+    if !doc.lang_07() {
+        return Vec::new();
+    }
+    tok_core::drg::export::export_dmn15(doc)
+        .into_iter()
+        .map(|(stem, xml)| (format!("{stem}.dmn"), xml))
+        .collect()
 }
 
 /// `basic: …`, `analytic: …` and `full: …` lines with the sorted codes of `tok check`.
@@ -139,6 +154,16 @@ fn conformance_corpus() {
 {got}--- expected
 {exp}"
                 ));
+            }
+        }
+        if !diags.iter().any(tok_core::Diag::is_error) {
+            for (file, got) in dmn_files(&doc) {
+                let path = expected.join(format!("{stem}.{file}"));
+                match fs::read_to_string(&path) {
+                    Ok(exp) if exp == got => {}
+                    Ok(_) => failures.push(format!("{stem}.{file} differs")),
+                    Err(_) => failures.push(format!("{stem}.{file} is missing")),
+                }
             }
         }
         let bpmn_path = expected.join(format!("{stem}.bpmn"));

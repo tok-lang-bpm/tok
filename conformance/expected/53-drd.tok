@@ -1,0 +1,25 @@
+tok 0.7 "Wypożyczenia w bibliotece" doc="Decyzje o wypożyczeniach czytelników."
+
+# a decision requirements graph: input data, a knowledge source, a business knowledge
+# model and decisions that require each other
+inputdata wiek "Wiek czytelnika" type=number
+inputdata konto "Rodzaj konta" type=string doc="student, doktorant, pracownik albo gość"
+inputdata zaleglosci "Zaległe opłaty (zł)" name="Zaległe opłaty" type=number
+inputdata dni-zwloki "Dni zwłoki" type=number
+source regulamin "Regulamin wypożyczalni" kind=regulamin uri="https://biblioteka.example/regulamin"
+source dyrektor "Zarządzenie dyrektora" requires="regulamin zaleglosci" kind="zarządzenie"
+
+bkm kara "Kara za zwłokę" params="dni: number, stawka: number" type=number requires="regulamin" expr="dni * stawka"
+
+decision limit "Limit wypożyczeń" requires="wiek konto regulamin" question="Ile książek może wypożyczyć czytelnik?" answers="liczba od 0 do 30" hit=first
+  | wiek: number | konto: string          || limit: number |
+  | < 18         | -                      || 5             |
+  | >= 18        | "student", "doktorant" || 15            |
+  | >= 18        | "pracownik"            || 30            |
+  | -            | -                      || 10            |
+
+decision blokada "Czy zablokować konto?" name="Blokada konta" type=boolean requires="limit zaleglosci dyrektor" expr="Zaległe opłaty > 50 or limit < 1"
+
+decision naleznosc "Należność za zwłokę" type=number requires="kara dni-zwloki" invoke=kara with="dni = dni-zwloki; stawka = 0.5"
+
+decision opis "Opis sytuacji czytelnika" requires="limit naleznosc blokada" expr="if Blokada konta then \"konto zablokowane\" else \"limit \" + string(limit) + \", należność \" + string(naleznosc) + \" zł\""

@@ -1,0 +1,9 @@
+tok 0.6 "Statements of language 0.7 under an older header"
+
+start s
+end e
+flow s -> e
+
+inputdata wiek "Wiek" type=number
+bkm kara "Kara" params="dni" expr="dni * 0.5"
+decision limit "Limit" requires="wiek" expr="10"

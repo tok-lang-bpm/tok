@@ -20,7 +20,7 @@ use tok_core::json::Json;
 use tok_core::pydec::Decimal;
 use tok_core::pytime::{Date, DateTime, Duration};
 use tok_core::pyutil::PyError;
-use tok_core::{Document, dmn, export, forms, import, printer};
+use tok_core::{Document, export, forms, import, printer};
 use tok_sim::result::{ActivityKpi, Kpi, ResourceKpi};
 use tok_sim::{Param, SimResult};
 
@@ -201,7 +201,9 @@ fn svg(text: &str, title: Option<&str>) -> PyResult<String> {
 }
 
 /// Every file `tok export` writes, as a dict file name → content:
-/// `NAME.bpmn`, `NAME.svg`, one `.dmn` per decision and one `.form` per form.
+/// `NAME.bpmn`, `NAME.svg`, the decision files (one `.dmn` per decision table, or in
+/// language 0.7 one `.dmn` and one `.drd.svg` per decision requirements graph) and one
+/// `.form` per form.
 #[pyfunction]
 #[pyo3(name = "export", signature = (text, name = "model"))]
 fn export_files<'py>(py: Python<'py>, text: &str, name: &str) -> PyResult<Bound<'py, PyDict>> {
@@ -210,11 +212,8 @@ fn export_files<'py>(py: Python<'py>, text: &str, name: &str) -> PyResult<Bound<
     files.set_item(format!("{name}.bpmn"), bpmn_with_layout(&doc)?)?;
     let svg_name = format!("{name}.svg");
     files.set_item(&svg_name, svg_of(&doc, Some(&svg_name))?)?;
-    for dec in doc.decisions.values() {
-        files.set_item(
-            format!("{}.dmn", dec.base.id()),
-            dmn::export_dmn(dec, Some(&doc)),
-        )?;
+    for (file, content) in tok_core::drg::export::decision_files(&doc) {
+        files.set_item(file, content)?;
     }
     for form in doc.forms.values() {
         files.set_item(format!("{}.form", form.base.id()), forms::export_form(form))?;
@@ -447,9 +446,11 @@ fn plain_to_py<'py>(py: Python<'py>, v: &PyValue) -> PyResult<Bound<'py, PyAny>>
     })
 }
 
-/// Evaluate a decision table of a document (`dmn.evaluate_decision`) for the given
-/// variables: a dict {output name: value}, `None` when no rule matches, or a list of dicts
-/// for hit policy collect. Numbers come back as int or float, dates as ISO text.
+/// Evaluate a decision of a document for the given variables. In a document of language
+/// 0.7 the decision is evaluated with the decisions, input data and business knowledge
+/// models it requires, and the result is its value; in earlier documents the decision
+/// table alone gives a dict {output name: value}, `None` when no rule matches, or a list
+/// of dicts for hit policy collect. Numbers come back as int or float, dates as ISO text.
 /// Raises `ValueError` for a document with errors, `KeyError` for an unknown decision,
 /// `DecisionError` for a violated hit policy and the FEEL and arithmetic errors of the
 /// reference implementation.
@@ -465,14 +466,17 @@ fn eval_decision<'py>(
     if diags.iter().any(Diag::is_error) {
         return Err(errors_to_py(&diags));
     }
-    let Some(dec) = doc.decisions.get(decision) else {
+    if !doc.decisions.contains_key(decision) {
         return Err(PyKeyError::new_err(decision.to_string()));
-    };
+    }
     let ctx = match values {
         Some(v) => context_from_py(v)?,
         None => Context::new(),
     };
-    let result = dmn::evaluate_decision(dec, &ctx).map_err(|e| eval_error_to_py(py, e))?;
+    // language 0.7: the decision with what it requires (its DMN value); earlier
+    // documents: the decision table alone
+    let result = tok_core::drg::values::evaluate_values(&doc, decision, &ctx)
+        .map_err(|e| eval_error_to_py(py, e))?;
     plain_to_py(py, &result)
 }
 

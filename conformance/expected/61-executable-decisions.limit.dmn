@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="limit-definitions" name="Limit wypożyczeń" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="egzemplarz-t" name="egzemplarz-t" label="Egzemplarz">
+    <itemComponent id="egzemplarz-t-1" name="sygnatura">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-2" name="stan zachowania">
+      <typeRef>string</typeRef>
+    </itemComponent>
+  </itemDefinition>
+  <itemDefinition id="egzemplarze-t" name="egzemplarze-t" label="Lista egzemplarzy" isCollection="true">
+    <typeRef>egzemplarz-t</typeRef>
+  </itemDefinition>
+  <inputData id="wiek" name="wiek" label="Wiek czytelnika">
+    <variable id="wiek-variable" name="wiek" typeRef="number" />
+  </inputData>
+  <inputData id="zaleglosci" name="Zaległe opłaty" label="Zaległe opłaty (zł)">
+    <variable id="zaleglosci-variable" name="Zaległe opłaty" typeRef="number" />
+  </inputData>
+  <inputData id="dni-zwloki" name="dni-zwloki" label="Dni zwłoki">
+    <variable id="dni-zwloki-variable" name="dni-zwloki" typeRef="number" />
+  </inputData>
+  <inputData id="stawka" name="opłata dzienna" label="Stawka">
+    <variable id="stawka-variable" name="opłata dzienna" typeRef="number" />
+  </inputData>
+  <businessKnowledgeModel id="kara" name="kara" label="Kara za zwłokę">
+    <variable id="kara-variable" name="kara" />
+    <encapsulatedLogic id="kara-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="kara-param-1" name="dni" typeRef="number" />
+      <formalParameter id="kara-param-2" name="stawka" typeRef="number" />
+      <literalExpression id="kara-expr">
+        <text>dni * stawka</text>
+      </literalExpression>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <decision id="limit" name="limit" label="Limit wypożyczeń">
+    <variable id="limit-variable" name="limit" typeRef="number" />
+    <informationRequirement id="limit-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+    <decisionTable id="limit-table" hitPolicy="FIRST">
+      <input id="limit-input-1" label="wiek">
+        <inputExpression id="limit-input-1-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <output id="limit-output-1" label="limit" name="limit" typeRef="number" />
+      <rule id="limit-rule-1">
+        <inputEntry id="limit-rule-1-in-1">
+          <text>&lt; 18</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-1-out-1">
+          <text>5</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-2">
+        <inputEntry id="limit-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-2-out-1">
+          <text>10</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="blokada" name="Blokada konta" label="Czy zablokować konto?">
+    <variable id="blokada-variable" name="Blokada konta" typeRef="boolean" />
+    <informationRequirement id="blokada-requires-limit">
+      <requiredDecision href="#limit" />
+    </informationRequirement>
+    <informationRequirement id="blokada-requires-zaleglosci">
+      <requiredInput href="#zaleglosci" />
+    </informationRequirement>
+    <literalExpression id="blokada-expr">
+      <text>`Zaległe opłaty` &gt; 50 or limit &lt; 1</text>
+    </literalExpression>
+  </decision>
+  <decision id="naleznosc" name="naleznosc" label="Należność">
+    <variable id="naleznosc-variable" name="naleznosc" typeRef="number" />
+    <informationRequirement id="naleznosc-requires-dni-zwloki">
+      <requiredInput href="#dni-zwloki" />
+    </informationRequirement>
+    <informationRequirement id="naleznosc-requires-stawka">
+      <requiredInput href="#stawka" />
+    </informationRequirement>
+    <knowledgeRequirement id="naleznosc-requires-kara">
+      <requiredKnowledge href="#kara" />
+    </knowledgeRequirement>
+    <invocation id="naleznosc-invocation">
+      <literalExpression id="naleznosc-invocation-callee">
+        <text>kara</text>
+      </literalExpression>
+      <binding>
+        <parameter id="naleznosc-binding-1" name="dni" typeRef="number" />
+        <literalExpression id="naleznosc-binding-1-expr">
+          <text>`dni-zwloki`</text>
+        </literalExpression>
+      </binding>
+      <binding>
+        <parameter id="naleznosc-binding-2" name="stawka" typeRef="number" />
+        <literalExpression id="naleznosc-binding-2-expr">
+          <text>`opłata dzienna`</text>
+        </literalExpression>
+      </binding>
+    </invocation>
+  </decision>
+  <decision id="podsumowanie" name="podsumowanie" label="Podsumowanie">
+    <variable id="podsumowanie-variable" name="podsumowanie" />
+    <informationRequirement id="podsumowanie-requires-limit">
+      <requiredDecision href="#limit" />
+    </informationRequirement>
+    <informationRequirement id="podsumowanie-requires-blokada">
+      <requiredDecision href="#blokada" />
+    </informationRequirement>
+    <informationRequirement id="podsumowanie-requires-naleznosc">
+      <requiredDecision href="#naleznosc" />
+    </informationRequirement>
+    <informationRequirement id="podsumowanie-requires-dni-zwloki">
+      <requiredInput href="#dni-zwloki" />
+    </informationRequirement>
+    <knowledgeRequirement id="podsumowanie-requires-kara">
+      <requiredKnowledge href="#kara" />
+    </knowledgeRequirement>
+    <context id="podsumowanie-context">
+      <contextEntry id="podsumowanie-1-entry">
+        <variable id="podsumowanie-1-variable" name="do zapłaty" typeRef="number" />
+        <literalExpression id="podsumowanie-1-expr">
+          <text>kara(`dni-zwloki`, 0.5) + naleznosc</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-2-entry">
+        <variable id="podsumowanie-2-variable" name="stan" />
+        <literalExpression id="podsumowanie-2-expr">
+          <text>if `Blokada konta` then "blokada" else "limit " + string(limit)</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-3-entry">
+        <literalExpression id="podsumowanie-3-expr">
+          <text>{kwota: `do zapłaty`, "stan konta": stan, "po zwłoce": `do zapłaty` &gt; 0}</text>
+        </literalExpression>
+      </contextEntry>
+    </context>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_limit">
+      <dmndi:DMNShape id="DMNShape_podsumowanie" dmnElementRef="podsumowanie">
+        <dc:Bounds height="80" width="180" x="479" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_blokada" dmnElementRef="blokada">
+        <dc:Bounds height="80" width="180" x="219" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_naleznosc" dmnElementRef="naleznosc">
+        <dc:Bounds height="80" width="180" x="678" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_zaleglosci" dmnElementRef="zaleglosci">
+        <dc:Bounds height="45" width="125" x="151" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_limit" dmnElementRef="limit">
+        <dc:Bounds height="80" width="180" x="315" y="380" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_dni-zwloki" dmnElementRef="dni-zwloki">
+        <dc:Bounds height="45" width="125" x="536" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_kara" dmnElementRef="kara">
+        <dc:Bounds height="46" width="135" x="701" y="397" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_stawka" dmnElementRef="stawka">
+        <dc:Bounds height="45" width="125" x="876" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wiek" dmnElementRef="wiek">
+        <dc:Bounds height="45" width="125" x="343" y="548" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-wiek" dmnElementRef="limit-requires-wiek">
+        <di:waypoint x="405" y="548" />
+        <di:waypoint x="405" y="460" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_blokada-requires-limit" dmnElementRef="blokada-requires-limit">
+        <di:waypoint x="375" y="380" />
+        <di:waypoint x="279" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_blokada-requires-zaleglosci" dmnElementRef="blokada-requires-zaleglosci">
+        <di:waypoint x="213" y="398" />
+        <di:waypoint x="339" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_naleznosc-requires-kara" dmnElementRef="naleznosc-requires-kara">
+        <di:waypoint x="746" y="397" />
+        <di:waypoint x="723" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_naleznosc-requires-dni-zwloki" dmnElementRef="naleznosc-requires-dni-zwloki">
+        <di:waypoint x="577" y="398" />
+        <di:waypoint x="768" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_naleznosc-requires-stawka" dmnElementRef="naleznosc-requires-stawka">
+        <di:waypoint x="938" y="398" />
+        <di:waypoint x="813" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-limit" dmnElementRef="podsumowanie-requires-limit">
+        <di:waypoint x="435" y="380" />
+        <di:waypoint x="509" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-blokada" dmnElementRef="podsumowanie-requires-blokada">
+        <di:waypoint x="309" y="230" />
+        <di:waypoint x="539" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-naleznosc" dmnElementRef="podsumowanie-requires-naleznosc">
+        <di:waypoint x="768" y="230" />
+        <di:waypoint x="569" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-kara" dmnElementRef="podsumowanie-requires-kara">
+        <di:waypoint x="791" y="397" />
+        <di:waypoint x="599" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-dni-zwloki" dmnElementRef="podsumowanie-requires-dni-zwloki">
+        <di:waypoint x="619" y="398" />
+        <di:waypoint x="629" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

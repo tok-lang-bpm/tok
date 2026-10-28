@@ -1,0 +1,32 @@
+tok 0.7 "Tabele decyzyjne języka 0.7"
+
+inputdata termin "Termin zwrotu" type=date
+inputdata zwrot "Data zwrotu" type=date
+inputdata wartosc "Wartość egzemplarza" type=number
+inputdata konto "Rodzaj konta" type=string
+
+# priority with output values: the most severe matching rule wins
+decision ocena "Ocena zwrotu" requires="termin zwrot wartosc" hit=priority
+  | zwrot - termin: days and time duration | wartosc: number = [0..10000] || ocena: string = "pilne", "zwykłe", "brak" |
+  | > duration("P30D")                     | -                           || "pilne"                                    |
+  | > duration("P0D")                      | > 200                       || "pilne"                                    |
+  | > duration("P0D")                      | -                           || "zwykłe"                                   |
+  | -                                      | -                           || "brak"                                     |
+
+# collect with an aggregation
+decision punkty "Punkty za zwłokę" requires="termin zwrot wartosc" hit=collect aggregation=sum default="0"
+  | (zwrot - termin).days: number | wartosc: number || punkty: number ||                 |
+  | > 0                           | -               || 1               || każda zwłoka    |
+  | > 14                          | -               || 2               || ponad dwa tygodnie |
+  | -                             | > 500           || 3               || cenny egzemplarz |
+
+# rule order and output order, two outputs, a default output
+decision powiadomienia "Powiadomienia" requires="konto termin zwrot" hit=rule-order
+  | konto: string | zwrot > termin: boolean || kanal: string | tresc: string |
+  | "student"     | true                    || "e-mail"      | "Minął termin zwrotu." |
+  | -             | true                    || "SMS"         | "Prosimy o zwrot."     |
+
+decision kolejnosc "Kolejność kanałów" requires="konto" hit=output-order default="kanal = \"poczta\"; waga = 0"
+  | konto: string          || kanal: string = "SMS", "e-mail", "poczta" | waga: number |
+  | "student", "doktorant" || "e-mail"                                   | 1            |
+  | -                      || "SMS"                                      | 2            |

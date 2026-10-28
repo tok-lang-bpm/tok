@@ -74,7 +74,20 @@ Language 0.6 (spec §5.5, §5.7, §6.4, §13). `R070`, `R072` and `R073` carry a
 | R074 | error | participant multiplicity of pool '{id}' needs whole numbers with 0 <= min <= max and max >= 1 (min is 2 when only max is given, max is 1 when only min is given) | krotność uczestnika w basenie „{id}” wymaga liczb całkowitych, dla których 0 <= min <= max i max >= 1 (gdy podano tylko max, min wynosi 2; gdy podano tylko min, max wynosi 1) |
 | R075 | error | '{id}' ({what}) is outside the BPMN conformance class {class}; it belongs to the class {needed} (only with `tok check --class`) | „{id}” ({what}) wykracza poza klasę zgodności BPMN {class}; należy do klasy {needed} |
 
-## Decision tables (D)
+Language 0.7 (spec §9). `R077`, `R078` and `R081` carry a detail text; the table gives its forms. References of `requires=` and `invoke=` to unknown elements or elements of a kind that cannot be required are `R002` and `R003`.
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| R076 | error | '{id}' requires itself through {path}; the requirements of a decision requirements graph form no cycle | „{id}” wymaga samego siebie przez {path}; wymagania w diagramie wymagań decyzyjnych nie mogą tworzyć cyklu |
+| R077 | error | '{what}' has more than one form of logic (expr=, invoke=, a table, entries or elements) · with= on '{what}' requires invoke= · hit=, aggregation= and default= on '{what}' need a decision table · the block of '{what}' mixes element lines with entry and result lines · 'result' must be the last line of the context of '{what}', and only one | „{what}” ma więcej niż jedną postać logiki (expr=, invoke=, tabela, wpisy albo elementy) · with= w „{what}” wymaga invoke= · hit=, aggregation= i default= w „{what}” wymagają tabeli decyzyjnej · blok „{what}” łączy wiersze element z wierszami entry i result · „result” musi być ostatnim i jedynym takim wierszem kontekstu „{what}” |
+| R078 | error | malformed {key}="…" item '{item}' on '{id}' · with= names '{param}', which is not a parameter of '{bkm}' | niepoprawny element listy {key}="…": „{item}” w „{id}” · with= wskazuje „{param}”, który nie jest parametrem „{bkm}” |
+| R079 | warning | '{id}' uses '{name}' ({kind} '{other}') without requiring it; add it to requires= | „{id}” używa „{name}” ({kind_pl} „{other}”), choć nie wymaga tego elementu; dodaj go do requires= |
+| R080 | error | the name '{name}' is used twice ('{a}' and '{b}'); the names of a decision requirements graph, of the entries of one context and of the parameters of one function are unique | nazwa „{name}” występuje dwa razy („{a}” i „{b}”); nazwy w diagramie wymagań decyzyjnych, wpisów jednego kontekstu i parametrów jednej funkcji muszą być różne |
+| R081 | error | unknown type '{type}' (a FEEL type or an item of the document) · item '{id}' is both a BPMN item (structure=, kind=) and a DMN type (type=, allowed=, components) | nieznany typ „{type}” (typ FEEL albo item dokumentu) · item „{id}” jest jednocześnie typem BPMN (structure=, kind=) i typem DMN (type=, allowed=, składowe) |
+
+## Decision tables and relations (D)
+
+`D006`–`D009` are reported in documents of language 0.7, where `D003` also accepts the hit policies `rule-order` and `output-order` and header cells are checked as `D009` instead of `D004`. `D007` carries a detail text; the table gives its forms.
 
 | Code | Severity | Message (English) | Message (Polish) |
 |---|---|---|---|
@@ -83,6 +96,10 @@ Language 0.6 (spec §5.5, §5.7, §6.4, §13). `R070`, `R072` and `R073` carry a
 | D003 | error | unknown hit policy '{hit}' | nieznana polityka trafień „{hit}” |
 | D004 | error | header cell '{cell}' must be 'name: type' with type string, number, boolean or date | komórka nagłówka „{cell}” musi mieć postać „nazwa: typ” (string, number, boolean, date) |
 | D005 | warning | decision '{id}' has no rules | decyzja „{id}” nie ma reguł |
+| D006 | error | hit policy {hit} orders the matching rules by output values; give them for at least one output (name: type = …) | polityka trafień {hit} porządkuje pasujące reguły według wartości wyników; podaj je co najmniej dla jednego wyniku (nazwa: typ = …) |
+| D007 | error | aggregation={a} requires hit=collect · unknown aggregation '{a}' (sum, count, min, max) · aggregation={a} needs a table with one output | aggregation={a} wymaga hit=collect · nieznana agregacja „{a}” (sum, count, min, max) · aggregation={a} wymaga tabeli z jednym wynikiem |
+| D008 | error | row has {got} cells, the relation has {expected} columns | wiersz ma {got} komórek, a relacja ma {expected} kolumn |
+| D009 | error | header cell '{cell}' must be 'name: type' or 'name: type = values' (language 0.7) | komórka nagłówka „{cell}” musi mieć postać „nazwa: typ” albo „nazwa: typ = wartości” (język 0.7) |
 | D010 | warning | rules {a} and {b} can both match {example} (hit policy unique) | reguły {a} i {b} mogą pasować jednocześnie, np. {example} (polityka unique) |
 
 ## Forms (M)
@@ -98,6 +115,8 @@ Language 0.6 (spec §5.5, §5.7, §6.4, §13). `R070`, `R072` and `R073` carry a
 |---|---|---|---|
 | F001 | warning | FEEL expression outside the supported subset: {detail} | wyrażenie FEEL spoza obsługiwanego podzbioru: {detail_pl} |
 | F002 | error | FEEL syntax error: {detail} | błąd składni FEEL: {detail_pl} |
+
+In documents of language 0.7 every expression is full FEEL (`feel.md` §9): `F002` reports syntax errors, and `F001` only externally defined functions, which tok does not evaluate.
 
 ## Simulation (S)
 
@@ -147,6 +166,14 @@ Elements of language 0.6 in executable documents for Camunda (spec §10.4); repo
 | C121 | warning | call conversation '{id}' is ignored by Camunda 8.10 | wywołanie konwersacji „{id}” jest pomijane przez Camunda 8.10 |
 | C122 | error | choreography '{id}' is not executed by Camunda 8.10 | choreografia „{id}” nie jest wykonywana przez Camunda 8.10 |
 | C123 | warning | participant multiplicity of pool '{id}' is ignored by Camunda 8.10 | krotność uczestnika w basenie „{id}” jest pomijana przez Camunda 8.10 |
+
+Decisions of language 0.7 in executable documents for Camunda (spec §10.4); reported only with `target=camunda` (the default).
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| C130 | error | business knowledge model '{id}' whose logic is an invocation is not executed by Camunda 8.10 | model wiedzy biznesowej „{id}”, którego logiką jest wywołanie, nie jest wykonywany przez Camunda 8.10 |
+| C131 | error | a function definition in '{id}' whose body is not a literal expression is not executed by Camunda 8.10 | definicja funkcji w „{id}”, której treścią nie jest wyrażenie literalne, nie jest wykonywana przez Camunda 8.10 |
+| C132 | error | decision '{id}' has no decision logic; Camunda 8.10 does not deploy it | decyzja „{id}” nie ma logiki decyzyjnej; Camunda 8.10 jej nie wdroży |
 
 ## BPMN 2.0 rules (E, W, L)
 

@@ -253,6 +253,27 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
         "„{id}” ({what}) wykracza poza klasę zgodności BPMN {class}; należy do klasy {needed}",
     ),
     (
+        "R076",
+        E,
+        "'{id}' requires itself through {path}; the requirements of a decision requirements graph form no cycle",
+        "„{id}” wymaga samego siebie przez {path}; wymagania w diagramie wymagań decyzyjnych nie mogą tworzyć cyklu",
+    ),
+    ("R077", E, "{detail}", "{detail_pl}"),
+    ("R078", E, "{detail}", "{detail_pl}"),
+    (
+        "R079",
+        W,
+        "'{id}' uses '{name}' ({kind} '{other}') without requiring it; add it to requires=",
+        "„{id}” używa „{name}” ({kind_pl} „{other}”), choć nie wymaga tego elementu; dodaj go do requires=",
+    ),
+    (
+        "R080",
+        E,
+        "the name '{name}' is used twice ('{a}' and '{b}'); the names of a decision requirements graph, of the entries of one context and of the parameters of one function are unique",
+        "nazwa „{name}” występuje dwa razy („{a}” i „{b}”); nazwy w diagramie wymagań decyzyjnych, wpisów jednego kontekstu i parametrów jednej funkcji muszą być różne",
+    ),
+    ("R081", E, "{detail}", "{detail_pl}"),
+    (
         "C100",
         E,
         "transaction '{id}' is not executed by Camunda 8.10",
@@ -343,6 +364,24 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
         "krotność uczestnika w basenie „{id}” jest pomijana przez Camunda 8.10",
     ),
     (
+        "C130",
+        E,
+        "business knowledge model '{id}' whose logic is an invocation is not executed by Camunda 8.10",
+        "model wiedzy biznesowej „{id}”, którego logiką jest wywołanie, nie jest wykonywany przez Camunda 8.10",
+    ),
+    (
+        "C131",
+        E,
+        "a function definition in '{id}' whose body is not a literal expression is not executed by Camunda 8.10",
+        "definicja funkcji w „{id}”, której treścią nie jest wyrażenie literalne, nie jest wykonywana przez Camunda 8.10",
+    ),
+    (
+        "C132",
+        E,
+        "decision '{id}' has no decision logic; Camunda 8.10 does not deploy it",
+        "decyzja „{id}” nie ma logiki decyzyjnej; Camunda 8.10 jej nie wdroży",
+    ),
+    (
         "C022",
         E,
         "message {kind} event '{id}' needs type=\"…\" (Camunda executes it as a job)",
@@ -401,6 +440,25 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
         W,
         "rules {a} and {b} can both match {example} (hit policy unique)",
         "reguły {a} i {b} mogą pasować jednocześnie, np. {example} (polityka unique)",
+    ),
+    (
+        "D006",
+        E,
+        "hit policy {hit} orders the matching rules by output values; give them for at least one output (name: type = …)",
+        "polityka trafień {hit} porządkuje pasujące reguły według wartości wyników; podaj je co najmniej dla jednego wyniku (nazwa: typ = …)",
+    ),
+    ("D007", E, "{detail}", "{detail_pl}"),
+    (
+        "D008",
+        E,
+        "row has {got} cells, the relation has {expected} columns",
+        "wiersz ma {got} komórek, a relacja ma {expected} kolumn",
+    ),
+    (
+        "D009",
+        E,
+        "header cell '{cell}' must be 'name: type' or 'name: type = values' (language 0.7)",
+        "komórka nagłówka „{cell}” musi mieć postać „nazwa: typ” albo „nazwa: typ = wartości” (język 0.7)",
     ),
     (
         "M001",

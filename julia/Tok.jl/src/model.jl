@@ -41,7 +41,7 @@ const TRANSACTION_METHODS = Dict("compensate" => "##Compensate", "store" => "##S
 const GLOBAL_KINDS = Dict("task" => "globalTask", "user" => "globalUserTask", "manual" => "globalManualTask",
                           "script" => "globalScriptTask", "rule" => "globalBusinessRuleTask")
 
-const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5", "0.6")
+const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5", "0.6", "0.7")
 
 # language 0.6: conversation nodes of a collaboration and choreography activities
 const CONVERSATION_KINDS = ("conversation", "subconversation", "callconversation")
@@ -111,6 +111,22 @@ const INTERFACE_KEYS = ("doc",)
 const OPERATION_KEYS = ("in", "out", "error", "doc")
 const PROP_KEYS = ("message", "path")
 
+# language 0.7: decision requirements graphs, boxed expressions and DMN types
+const HIT_POLICIES_07 = ("unique", "first", "any", "priority", "collect", "rule-order", "output-order")
+# statements of language 0.7; in documents of earlier versions they are unknown keywords
+const KEYWORDS_07 = ("inputdata", "bkm", "source", "entry", "result", "element")
+const DECISION_KEYS_07 = ("name", "type", "requires", "question", "answers", "hit", "aggregation", "default",
+                          "expr", "invoke", "with", "doc")
+const BKM_KEYS = ("name", "params", "type", "requires", "hit", "aggregation", "default", "expr", "invoke",
+                  "with", "doc")
+const INPUTDATA_KEYS = ("name", "type", "doc")
+const SOURCE_KEYS = ("name", "requires", "kind", "uri", "doc")
+# `entry`, `result` and `element` lines of a box
+const BOX_LINE_KEYS = ("type", "params", "hit", "aggregation", "default", "expr", "invoke", "with")
+const ITEM_KEYS_07 = ("name", "structure", "namespace", "kind", "type", "allowed")
+# components of a DMN type
+const COMPONENT_KEYS = ("type", "allowed")
+
 const MaybeStr = Union{Nothing,String}
 
 mutable struct Rule
@@ -154,10 +170,17 @@ mutable struct Elem
     has_annotations::Bool
     annotation_title::MaybeStr
     header_done::Bool
-    # form items, operations of an interface, props of a correlation key
+    # form items, operations of an interface, props of a correlation key; the entry,
+    # result and element lines of a box and the components of a DMN type (language 0.7)
     items::Vector{Elem}
     # the choreography of a flow node (language 0.6)
     choreography::MaybeStr
+    # language 0.7: values of the input and output columns (`name: type = values`),
+    # parallel to inputs and outputs; a header without `||` makes a relation whose
+    # columns are in inputs
+    input_values::Vector{MaybeStr}
+    output_values::Vector{MaybeStr}
+    relation::Bool
 end
 
 function Elem(kind, id; label=nothing, attrs=Dict{String,String}(), flags=String[], line=0)
@@ -166,7 +189,8 @@ function Elem(kind, id; label=nothing, attrs=Dict{String,String}(), flags=String
          nothing, nothing, nothing, nothing, nothing, String[], true,
          "", "", false, true,
          Tuple{String,String}[], Tuple{String,String}[], Rule[], false, nothing, false,
-         Elem[], nothing)
+         Elem[], nothing,
+         MaybeStr[], MaybeStr[], false)
 end
 
 has(e::Elem, flag) = flag in e.flags
@@ -215,6 +239,10 @@ mutable struct Document
     choreographies::ODict{Elem}
     end_comments::Vector{String}
     ids::Dict{String,Elem}
+    # language 0.7: input data, knowledge sources and business knowledge models
+    inputdata::ODict{Elem}
+    sources::ODict{Elem}
+    bkms::ODict{Elem}
 end
 
 Document() = Document(nothing, nothing, Dict{String,String}(), String[], 0, String[], nothing,
@@ -222,7 +250,8 @@ Document() = Document(nothing, nothing, Dict{String,String}(), String[], 0, Stri
                       ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), nothing, ODict{Elem}(), Elem[],
                       ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(), ODict{Elem}(),
                       String[],
-                      Dict{String,Elem}())
+                      Dict{String,Elem}(),
+                      ODict{Elem}(), ODict{Elem}(), ODict{Elem}())
 
 "The header declares language 0.5 (or later): several triggers per event, BPMN resources."
 lang_05(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3"))
@@ -230,6 +259,9 @@ lang_05(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3"))
 "The header declares language 0.6 (or later): pools have a multiplicity."
 lang_06(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3", "0.5"))
 pool_keys(d::Document) = lang_06(d) ? POOL_KEYS_06 : POOL_KEYS
+
+"The header declares language 0.7 (or later): decision requirements graphs and boxed expressions."
+lang_07(d::Document) = !(d.version === nothing || d.version in ("0.1", "0.3", "0.5", "0.6"))
 
 is_executable(d::Document) = "executable" in d.flags
 executable_any(d::Document) = is_executable(d) || any(p -> has(p, "executable"), d.pools)

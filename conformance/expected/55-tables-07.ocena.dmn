@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="ocena-definitions" name="Ocena zwrotu" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="termin" name="termin" label="Termin zwrotu">
+    <variable id="termin-variable" name="termin" typeRef="date" />
+  </inputData>
+  <inputData id="zwrot" name="zwrot" label="Data zwrotu">
+    <variable id="zwrot-variable" name="zwrot" typeRef="date" />
+  </inputData>
+  <inputData id="wartosc" name="wartosc" label="Wartość egzemplarza">
+    <variable id="wartosc-variable" name="wartosc" typeRef="number" />
+  </inputData>
+  <inputData id="konto" name="konto" label="Rodzaj konta">
+    <variable id="konto-variable" name="konto" typeRef="string" />
+  </inputData>
+  <decision id="ocena" name="ocena" label="Ocena zwrotu">
+    <variable id="ocena-variable" name="ocena" typeRef="string" />
+    <informationRequirement id="ocena-requires-termin">
+      <requiredInput href="#termin" />
+    </informationRequirement>
+    <informationRequirement id="ocena-requires-zwrot">
+      <requiredInput href="#zwrot" />
+    </informationRequirement>
+    <informationRequirement id="ocena-requires-wartosc">
+      <requiredInput href="#wartosc" />
+    </informationRequirement>
+    <decisionTable id="ocena-table" hitPolicy="PRIORITY">
+      <input id="ocena-input-1" label="zwrot - termin">
+        <inputExpression id="ocena-input-1-expr" typeRef="days and time duration">
+          <text>zwrot - termin</text>
+        </inputExpression>
+      </input>
+      <input id="ocena-input-2" label="wartosc">
+        <inputExpression id="ocena-input-2-expr" typeRef="number">
+          <text>wartosc</text>
+        </inputExpression>
+        <inputValues>
+          <text>[0..10000]</text>
+        </inputValues>
+      </input>
+      <output id="ocena-output-1" label="ocena" name="ocena" typeRef="string">
+        <outputValues>
+          <text>"pilne", "zwykłe", "brak"</text>
+        </outputValues>
+      </output>
+      <rule id="ocena-rule-1">
+        <inputEntry id="ocena-rule-1-in-1">
+          <text>&gt; duration("P30D")</text>
+        </inputEntry>
+        <inputEntry id="ocena-rule-1-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="ocena-rule-1-out-1">
+          <text>"pilne"</text>
+        </outputEntry>
+      </rule>
+      <rule id="ocena-rule-2">
+        <inputEntry id="ocena-rule-2-in-1">
+          <text>&gt; duration("P0D")</text>
+        </inputEntry>
+        <inputEntry id="ocena-rule-2-in-2">
+          <text>&gt; 200</text>
+        </inputEntry>
+        <outputEntry id="ocena-rule-2-out-1">
+          <text>"pilne"</text>
+        </outputEntry>
+      </rule>
+      <rule id="ocena-rule-3">
+        <inputEntry id="ocena-rule-3-in-1">
+          <text>&gt; duration("P0D")</text>
+        </inputEntry>
+        <inputEntry id="ocena-rule-3-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="ocena-rule-3-out-1">
+          <text>"zwykłe"</text>
+        </outputEntry>
+      </rule>
+      <rule id="ocena-rule-4">
+        <inputEntry id="ocena-rule-4-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="ocena-rule-4-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="ocena-rule-4-out-1">
+          <text>"brak"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="punkty" name="punkty" label="Punkty za zwłokę">
+    <variable id="punkty-variable" name="punkty" />
+    <informationRequirement id="punkty-requires-termin">
+      <requiredInput href="#termin" />
+    </informationRequirement>
+    <informationRequirement id="punkty-requires-zwrot">
+      <requiredInput href="#zwrot" />
+    </informationRequirement>
+    <informationRequirement id="punkty-requires-wartosc">
+      <requiredInput href="#wartosc" />
+    </informationRequirement>
+    <decisionTable id="punkty-table" hitPolicy="COLLECT" aggregation="SUM">
+      <input id="punkty-input-1" label="(zwrot - termin).days">
+        <inputExpression id="punkty-input-1-expr" typeRef="number">
+          <text>(zwrot - termin).days</text>
+        </inputExpression>
+      </input>
+      <input id="punkty-input-2" label="wartosc">
+        <inputExpression id="punkty-input-2-expr" typeRef="number">
+          <text>wartosc</text>
+        </inputExpression>
+      </input>
+      <output id="punkty-output-1" label="punkty" name="punkty" typeRef="number">
+        <defaultOutputEntry id="punkty-output-1-default">
+          <text>0</text>
+        </defaultOutputEntry>
+      </output>
+      <rule id="punkty-rule-1">
+        <description>każda zwłoka</description>
+        <inputEntry id="punkty-rule-1-in-1">
+          <text>&gt; 0</text>
+        </inputEntry>
+        <inputEntry id="punkty-rule-1-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="punkty-rule-1-out-1">
+          <text>1</text>
+        </outputEntry>
+      </rule>
+      <rule id="punkty-rule-2">
+        <description>ponad dwa tygodnie</description>
+        <inputEntry id="punkty-rule-2-in-1">
+          <text>&gt; 14</text>
+        </inputEntry>
+        <inputEntry id="punkty-rule-2-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="punkty-rule-2-out-1">
+          <text>2</text>
+        </outputEntry>
+      </rule>
+      <rule id="punkty-rule-3">
+        <description>cenny egzemplarz</description>
+        <inputEntry id="punkty-rule-3-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="punkty-rule-3-in-2">
+          <text>&gt; 500</text>
+        </inputEntry>
+        <outputEntry id="punkty-rule-3-out-1">
+          <text>3</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="powiadomienia" name="powiadomienia" label="Powiadomienia">
+    <variable id="powiadomienia-variable" name="powiadomienia" />
+    <informationRequirement id="powiadomienia-requires-konto">
+      <requiredInput href="#konto" />
+    </informationRequirement>
+    <informationRequirement id="powiadomienia-requires-termin">
+      <requiredInput href="#termin" />
+    </informationRequirement>
+    <informationRequirement id="powiadomienia-requires-zwrot">
+      <requiredInput href="#zwrot" />
+    </informationRequirement>
+    <decisionTable id="powiadomienia-table" hitPolicy="RULE ORDER">
+      <input id="powiadomienia-input-1" label="konto">
+        <inputExpression id="powiadomienia-input-1-expr" typeRef="string">
+          <text>konto</text>
+        </inputExpression>
+      </input>
+      <input id="powiadomienia-input-2" label="zwrot &gt; termin">
+        <inputExpression id="powiadomienia-input-2-expr" typeRef="boolean">
+          <text>zwrot &gt; termin</text>
+        </inputExpression>
+      </input>
+      <output id="powiadomienia-output-1" label="kanal" name="kanal" typeRef="string" />
+      <output id="powiadomienia-output-2" label="tresc" name="tresc" typeRef="string" />
+      <rule id="powiadomienia-rule-1">
+        <inputEntry id="powiadomienia-rule-1-in-1">
+          <text>"student"</text>
+        </inputEntry>
+        <inputEntry id="powiadomienia-rule-1-in-2">
+          <text>true</text>
+        </inputEntry>
+        <outputEntry id="powiadomienia-rule-1-out-1">
+          <text>"e-mail"</text>
+        </outputEntry>
+        <outputEntry id="powiadomienia-rule-1-out-2">
+          <text>"Minął termin zwrotu."</text>
+        </outputEntry>
+      </rule>
+      <rule id="powiadomienia-rule-2">
+        <inputEntry id="powiadomienia-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="powiadomienia-rule-2-in-2">
+          <text>true</text>
+        </inputEntry>
+        <outputEntry id="powiadomienia-rule-2-out-1">
+          <text>"SMS"</text>
+        </outputEntry>
+        <outputEntry id="powiadomienia-rule-2-out-2">
+          <text>"Prosimy o zwrot."</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="kolejnosc" name="kolejnosc" label="Kolejność kanałów">
+    <variable id="kolejnosc-variable" name="kolejnosc" />
+    <informationRequirement id="kolejnosc-requires-konto">
+      <requiredInput href="#konto" />
+    </informationRequirement>
+    <decisionTable id="kolejnosc-table" hitPolicy="OUTPUT ORDER">
+      <input id="kolejnosc-input-1" label="konto">
+        <inputExpression id="kolejnosc-input-1-expr" typeRef="string">
+          <text>konto</text>
+        </inputExpression>
+      </input>
+      <output id="kolejnosc-output-1" label="kanal" name="kanal" typeRef="string">
+        <outputValues>
+          <text>"SMS", "e-mail", "poczta"</text>
+        </outputValues>
+        <defaultOutputEntry id="kolejnosc-output-1-default">
+          <text>"poczta"</text>
+        </defaultOutputEntry>
+      </output>
+      <output id="kolejnosc-output-2" label="waga" name="waga" typeRef="number">
+        <defaultOutputEntry id="kolejnosc-output-2-default">
+          <text>0</text>
+        </defaultOutputEntry>
+      </output>
+      <rule id="kolejnosc-rule-1">
+        <inputEntry id="kolejnosc-rule-1-in-1">
+          <text>"student", "doktorant"</text>
+        </inputEntry>
+        <outputEntry id="kolejnosc-rule-1-out-1">
+          <text>"e-mail"</text>
+        </outputEntry>
+        <outputEntry id="kolejnosc-rule-1-out-2">
+          <text>1</text>
+        </outputEntry>
+      </rule>
+      <rule id="kolejnosc-rule-2">
+        <inputEntry id="kolejnosc-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="kolejnosc-rule-2-out-1">
+          <text>"SMS"</text>
+        </outputEntry>
+        <outputEntry id="kolejnosc-rule-2-out-2">
+          <text>2</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_ocena">
+      <dmndi:DMNShape id="DMNShape_ocena" dmnElementRef="ocena">
+        <dc:Bounds height="80" width="180" x="288" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_punkty" dmnElementRef="punkty">
+        <dc:Bounds height="80" width="180" x="508" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_powiadomienia" dmnElementRef="powiadomienia">
+        <dc:Bounds height="80" width="180" x="728" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_kolejnosc" dmnElementRef="kolejnosc">
+        <dc:Bounds height="80" width="180" x="948" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wartosc" dmnElementRef="wartosc">
+        <dc:Bounds height="45" width="125" x="151" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_termin" dmnElementRef="termin">
+        <dc:Bounds height="45" width="125" x="316" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_zwrot" dmnElementRef="zwrot">
+        <dc:Bounds height="45" width="125" x="481" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_konto" dmnElementRef="konto">
+        <dc:Bounds height="45" width="125" x="646" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_ocena-requires-termin" dmnElementRef="ocena-requires-termin">
+        <di:waypoint x="347" y="248" />
+        <di:waypoint x="333" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_ocena-requires-zwrot" dmnElementRef="ocena-requires-zwrot">
+        <di:waypoint x="512" y="248" />
+        <di:waypoint x="378" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_ocena-requires-wartosc" dmnElementRef="ocena-requires-wartosc">
+        <di:waypoint x="192" y="248" />
+        <di:waypoint x="423" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_punkty-requires-termin" dmnElementRef="punkty-requires-termin">
+        <di:waypoint x="378" y="248" />
+        <di:waypoint x="553" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_punkty-requires-zwrot" dmnElementRef="punkty-requires-zwrot">
+        <di:waypoint x="543" y="248" />
+        <di:waypoint x="598" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_punkty-requires-wartosc" dmnElementRef="punkty-requires-wartosc">
+        <di:waypoint x="234" y="248" />
+        <di:waypoint x="643" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_powiadomienia-requires-konto" dmnElementRef="powiadomienia-requires-konto">
+        <di:waypoint x="687" y="248" />
+        <di:waypoint x="773" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_powiadomienia-requires-termin" dmnElementRef="powiadomienia-requires-termin">
+        <di:waypoint x="409" y="248" />
+        <di:waypoint x="818" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_powiadomienia-requires-zwrot" dmnElementRef="powiadomienia-requires-zwrot">
+        <di:waypoint x="574" y="248" />
+        <di:waypoint x="863" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_kolejnosc-requires-konto" dmnElementRef="kolejnosc-requires-konto">
+        <di:waypoint x="729" y="248" />
+        <di:waypoint x="1038" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

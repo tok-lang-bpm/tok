@@ -213,7 +213,7 @@ pub const EXPR_KEYS: &[&str] = &[
     "activation",
 ];
 /// Language versions accepted in the header.
-pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5", "0.6"];
+pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5", "0.6", "0.7"];
 
 pub const HEADER_KEYS: &[&str] = &[
     "id",
@@ -287,6 +287,87 @@ pub const OPERATION_KEYS: &[&str] = &["in", "out", "error", "doc"];
 pub const PROP_KEYS: &[&str] = &["message", "path"];
 
 pub const HIT_POLICIES: &[&str] = &["unique", "first", "any", "priority", "collect"];
+/// Hit policies of language 0.7 (DMN 1.5 §8.2.11).
+pub const HIT_POLICIES_07: &[&str] = &[
+    "unique",
+    "first",
+    "any",
+    "priority",
+    "collect",
+    "rule-order",
+    "output-order",
+];
+/// Aggregations of `hit=collect` (language 0.7).
+pub const AGGREGATIONS: &[&str] = &["sum", "count", "min", "max"];
+
+/// Statements of language 0.7 (decision requirements graphs and boxed expressions); in
+/// documents of earlier versions they are unknown keywords.
+pub const KEYWORDS_07: &[&str] = &["inputdata", "bkm", "source", "entry", "result", "element"];
+/// Attributes of `decision` in a document of language 0.7.
+pub const DECISION_KEYS_07: &[&str] = &[
+    "name",
+    "type",
+    "requires",
+    "question",
+    "answers",
+    "hit",
+    "aggregation",
+    "default",
+    "expr",
+    "invoke",
+    "with",
+    "doc",
+];
+/// Attributes of `bkm` (language 0.7).
+pub const BKM_KEYS: &[&str] = &[
+    "name",
+    "params",
+    "type",
+    "requires",
+    "hit",
+    "aggregation",
+    "default",
+    "expr",
+    "invoke",
+    "with",
+    "doc",
+];
+/// Attributes of `inputdata` (language 0.7).
+pub const INPUTDATA_KEYS: &[&str] = &["name", "type", "doc"];
+/// Attributes of `source` (language 0.7).
+pub const SOURCE_KEYS: &[&str] = &["name", "requires", "kind", "uri", "doc"];
+/// Attributes of `entry`, `result` and `element` lines (language 0.7).
+pub const BOX_LINE_KEYS: &[&str] = &[
+    "type",
+    "params",
+    "hit",
+    "aggregation",
+    "default",
+    "expr",
+    "invoke",
+    "with",
+];
+/// Attributes of an `item` in a document of language 0.7 (BPMN or DMN type).
+pub const ITEM_KEYS_07: &[&str] = &["name", "structure", "namespace", "kind", "type", "allowed"];
+/// Attributes of a component of a DMN type (language 0.7).
+pub const COMPONENT_KEYS: &[&str] = &["type", "allowed"];
+/// Built-in FEEL types usable in `type=` and in table headers (language 0.7).
+pub const FEEL_TYPES: &[&str] = &[
+    "string",
+    "number",
+    "boolean",
+    "date",
+    "time",
+    "date and time",
+    "days and time duration",
+    "years and months duration",
+    "list",
+    "context",
+    "range",
+    "function",
+    "any",
+    "Any",
+];
 pub const FIELD_TYPES: &[&str] = &[
     "textfield",
     "textarea",
@@ -551,9 +632,34 @@ pub struct Decision {
     pub annotation_title: Option<String>,
     pub header_line: Option<usize>,
     pub header_done: bool,
+    /// Language 0.7: input values of the input columns and output values of the output
+    /// columns (`name: type = tests`), parallel to `inputs` and `outputs`.
+    pub input_values: Vec<Option<String>>,
+    pub output_values: Vec<Option<String>>,
+    /// Language 0.7: the header has no `||`; the rows form a relation whose columns are
+    /// in `inputs`.
+    pub relation: bool,
+    /// Language 0.7: the `entry`, `result` and `element` lines of the block, each with its
+    /// own logic (the same structure; `base.kind` names the line and `base.id` is the
+    /// name of an entry).
+    pub lines: Vec<Decision>,
+}
+
+/// A component of a DMN type (language 0.7): `item NAME …` in the block of an `item`.
+#[derive(Debug, Clone, Default)]
+pub struct Component {
+    pub base: Base,
+    pub children: Vec<Component>,
 }
 
 impl Decision {
+    /// The table has a header or rows (a decision table or a relation).
+    pub fn has_table(&self) -> bool {
+        self.header_done
+            || !self.inputs.is_empty()
+            || !self.outputs.is_empty()
+            || !self.rules.is_empty()
+    }
     pub fn hit(&self) -> &str {
         self.base
             .attrs
@@ -651,6 +757,12 @@ pub struct Document {
     pub keys: IndexMap<String, CorrelationKey>,
     pub conversations: IndexMap<String, Conversation>,
     pub choreographies: IndexMap<String, Choreography>,
+    /// Language 0.7: input data, knowledge sources and business knowledge models.
+    pub inputdata: IndexMap<String, Base>,
+    pub sources: IndexMap<String, Base>,
+    pub bkms: IndexMap<String, Decision>,
+    /// Language 0.7: the components of DMN types, by item identifier.
+    pub components: IndexMap<String, Vec<Component>>,
     pub end_comments: Vec<String>,
     pub ids: IndexMap<String, IdEntry>,
 }
@@ -664,6 +776,14 @@ impl Document {
     /// The header declares language 0.6 (or newer): pools have a multiplicity.
     pub fn lang_06(&self) -> bool {
         !matches!(self.version.as_deref(), Some("0.1" | "0.3" | "0.5") | None)
+    }
+    /// The header declares language 0.7 (or newer): decision requirements graphs, boxed
+    /// expressions and FEEL at conformance level 3.
+    pub fn lang_07(&self) -> bool {
+        !matches!(
+            self.version.as_deref(),
+            Some("0.1" | "0.3" | "0.5" | "0.6") | None
+        )
     }
     /// Attribute keys of pools in this document.
     pub fn pool_keys(&self) -> &'static [&'static str] {

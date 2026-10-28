@@ -1,6 +1,6 @@
 ---
 name: tok-modelling
-description: Write, check and repair process models in the tok language (.tok files) and export them to BPMN 2.0 XML, SVG, DMN decision tables, Camunda forms and simulation results. Use for .tok files, for turning a process description (e.g. a table of steps) into a model, and for executable or simulated processes described in tok.
+description: Write, check and repair process models in the tok language (.tok files) and export them to BPMN 2.0 XML, SVG, DMN decision models, Camunda forms and simulation results. Use for .tok files, for turning a process description (e.g. a table of steps) into a model, and for executable or simulated processes described in tok.
 ---
 
 # Modelling processes in tok
@@ -44,6 +44,10 @@ With the header `tok 0.5` the model may use the rest of BPMN 2.0.2 process model
 With the header `tok 0.6` the model may describe the interactions between participants: `conversation`, `subconversation` and `callconversation` nodes between pools (`pools="a b"`, `messages="m1 m2"` naming message flows with `id=`), `choreography` blocks with `choreo ID "Label" from=a to=b message="M" reply="R"`, `subchoreo` and `callchoreo` activities, and `min=`/`max=` on pools for several participants of one kind. Their participants are pools, usually black-box pools. They belong to the level `full`; in executable documents they are reported as `C120`–`C123`. `tok check FILE --class descriptive|analytic|common-executable|full` checks the model against a conformance class of BPMN 2.0.2.
 
 When the model comes from a BPMN file drawn in a modelling tool, import it with `tok import FILE.bpmn -o FILE.tok`: the drawing is kept in `FILE.tok.layout`, and `tok bpmn`, `tok svg` and `tok export` reuse it for every element you do not change. Keep that file next to the model.
+
+## Decision models (language 0.7)
+
+With the header `tok 0.7` decisions become DMN 1.5 decision models. Declare `inputdata ID "Label" type=…`, knowledge sources (`source`) and business knowledge models (`bkm ID params="a: number" expr="…"`), and connect them with `requires="ID …"` on decisions; a decision sees only what it requires, and FEEL refers to an element by its identifier (or `name="…"` for a name with spaces). Decision logic is a table (as before, plus `hit=rule-order|output-order`, `aggregation=`, output values `name: type = "a", "b"` and `default=`), `expr="FEEL"`, `invoke=BKM with="p = FEEL; …"`, a context (`entry NAME …` lines, optionally `result …` last), a list (`element …` lines) or a relation (rows without `||`); `params=` on a line makes it a function. Every expression of a 0.7 document is full FEEL (dates, durations, `for`, `some`, filters, contexts). Check the model with `tok check`, test decisions with `tok eval FILE DECISION name=value …` (JSON objects and lists are accepted as values), export the DMN 1.5 files and their diagrams with `tok export`, and read existing DMN files with `tok import FILE.dmn`. In executable documents `C130`–`C132` report what Camunda 8 does not execute.
 
 ## Simulation
 

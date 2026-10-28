@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="dni-zwloki-definitions" name="Dni zwłoki" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="termin" name="termin" label="Termin zwrotu">
+    <variable id="termin-variable" name="termin" typeRef="date" />
+  </inputData>
+  <inputData id="zwrot" name="zwrot" label="Data zwrotu">
+    <variable id="zwrot-variable" name="zwrot" typeRef="date" />
+  </inputData>
+  <decision id="dni-zwloki" name="dni-zwloki" label="Dni zwłoki">
+    <variable id="dni-zwloki-variable" name="dni-zwloki" typeRef="number" />
+    <informationRequirement id="dni-zwloki-requires-termin">
+      <requiredInput href="#termin" />
+    </informationRequirement>
+    <informationRequirement id="dni-zwloki-requires-zwrot">
+      <requiredInput href="#zwrot" />
+    </informationRequirement>
+    <literalExpression id="dni-zwloki-expr">
+      <text>max([0, (zwrot - termin).days])</text>
+    </literalExpression>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_dni-zwloki">
+      <dmndi:DMNShape id="DMNShape_dni-zwloki" dmnElementRef="dni-zwloki">
+        <dc:Bounds height="80" width="180" x="205" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_termin" dmnElementRef="termin">
+        <dc:Bounds height="45" width="125" x="151" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_zwrot" dmnElementRef="zwrot">
+        <dc:Bounds height="45" width="125" x="316" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_dni-zwloki-requires-termin" dmnElementRef="dni-zwloki-requires-termin">
+        <di:waypoint x="213" y="248" />
+        <di:waypoint x="265" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_dni-zwloki-requires-zwrot" dmnElementRef="dni-zwloki-requires-zwrot">
+        <di:waypoint x="378" y="248" />
+        <di:waypoint x="325" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

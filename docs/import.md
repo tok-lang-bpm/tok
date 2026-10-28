@@ -1,4 +1,4 @@
-# Importing BPMN 2.0 XML
+# Importing BPMN 2.0 XML and DMN
 
 `tok import model.bpmn` reads a BPMN 2.0 XML file, for example one drawn in Camunda Modeler or on demo.bpmn.io, and prints the same model as tok text. From Python:
 
@@ -156,3 +156,33 @@ The Rust test `rust/tok-core/tests/miwg.rs` compares the semantic content of the
 - The sidecar never changes the meaning of the model; deleting it gives the automatic layout again.
 
 The Rust test `rust/tok-bpmn/tests/sidecar.rs` imports every file of `conformance/import` and every MIWG reference model, draws the document with its sidecar and checks that every shape, edge and label of the file that the import keeps is drawn with the geometry of the file (in whole units; the further diagrams of a file moved by one offset each), and that a task added to an imported model is placed next to its predecessor without moving the other shapes.
+
+## Importing DMN
+
+`tok import model.dmn [-o model.tok]` reads a DMN 1.1, 1.2, 1.3, 1.4 or 1.5 file (any file whose root element is a DMN `definitions` is recognised) and prints a document of language 0.7 (spec §9). The decision model keeps its elements, identifiers, names, requirements, decision logic and types; everything tok does not express is reported on standard error, as for BPMN.
+
+| DMN | tok |
+|---|---|
+| `definitions/@name`, `@namespace` | document title; header `namespace=` (only when it differs from `http://camunda.org/schema/1.0/dmn`) |
+| `inputData` with `variable/@typeRef` | `inputdata ID … type=` |
+| `decision` (`question`, `allowedAnswers`, `variable/@typeRef`) | `decision ID … question= answers= type=`; `type=` is left out when it repeats the type of a table's only output |
+| `businessKnowledgeModel` with `encapsulatedLogic` (`formalParameter`s, `@typeRef`) | `bkm ID … params="name: type, …" type=` |
+| `knowledgeSource` (`type`, `@locationURI`) | `source ID … kind= uri=` |
+| `informationRequirement`, `knowledgeRequirement`, `authorityRequirement` (`href="#id"`, also with the namespace of the file before `#`) | `requires="ID …"` |
+| `@name`, `@label`, `description` | `name=` (when it is not the tok identifier), label, `doc=` |
+| `literalExpression/text` | `expr="…"` |
+| `decisionTable` (`hitPolicy`, `aggregation`, `input`/`inputExpression`, `inputValues`, `output`, `outputValues`, `defaultOutputEntry`, `rule` with entries, `description` and `annotationEntry`) | table rows; `hit=`, `aggregation=`, header cells `name: type = values`, `default=`; rule annotations in the annotation column; an input or output without `typeRef` has the type `any`, a single output without a name the name of its decision |
+| `context` with `contextEntry`s | `entry NAME [type=]` lines; the entry without a variable is `result` |
+| `list` | `element` lines |
+| `relation` (`column`s, `row`s) | rows without `\|\|` |
+| `invocation` with `binding`s | `invoke=BKM with="param = FEEL; …"` |
+| `functionDefinition` (`kind="FEEL"`) in a context, a list or a function | `params=` on its line; as the logic of a decision or of a business knowledge model, a `result` line with `params=` |
+| `conditional`, `filter`, `for`, `some`, `every` (DMN 1.5) whose parts are literal expressions | the equivalent literal expression (`if (c) then (a) else if (c) = false then (b) else null`, `(l)[m]`, `for x in l return (e)`, `some x in l satisfies (c)`) |
+| `@typeRef` of an expression in a box without a type | `type=` of the line |
+| `itemDefinition` (`typeRef`, `allowedValues` or `typeConstraint`, `isCollection`, `itemComponent`s) | `item ID … type= allowed= collection` with component lines; an item without a base type and components gets `type=Any` |
+
+FEEL text is kept as it is written; in table cells, line breaks outside strings become spaces and inside strings the escape `\n`, because a row is one line. DMN identifiers that are not tok identifiers are converted as for BPMN (`Identifiers`).
+
+Not kept, and reported: decision services, imports of other models and requirements of elements of other models, text annotations, associations and groups, organisation units and the owners of knowledge sources, performance indicators, objectives, decision makers and owners, using processes and tasks, function items of item definitions, function definitions of kind Java or PMML, bindings and relation cells that are not literal expressions, and the diagram (DMNDI): tok lays out the decision requirements diagram again on export. The DMN files tok exports import back to the same document, apart from comments and the order of `requires=` (grouped by the kind of requirement).
+
+The test cases of the DMN Technology Compatibility Kit (`dmn-tck.md`) are imported, printed, parsed again and evaluated; the import must keep everything their evaluation needs.

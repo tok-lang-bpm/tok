@@ -15,11 +15,11 @@ fn xml(text: &str) -> String {
 
 #[test]
 fn every_version_is_accepted() {
-    for v in ["0.1", "0.3", "0.5"] {
+    for v in ["0.1", "0.3", "0.5", "0.6", "0.7"] {
         let text = format!("tok {v} \"x\"\nstart s\nend e\nflow s -> e\n");
         assert!(!codes(&text).contains(&"P006".to_string()), "tok {v}");
     }
-    assert!(codes("tok 0.7\nstart s\nend e\nflow s -> e\n").contains(&"P006".to_string()));
+    assert!(codes("tok 0.8\nstart s\nend e\nflow s -> e\n").contains(&"P006".to_string()));
 }
 
 #[test]

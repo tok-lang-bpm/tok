@@ -1,4 +1,5 @@
-//! Python `decimal.Decimal` in the default context: precision 28, rounding ROUND_HALF_EVEN,
+//! Python `decimal.Decimal` in the default context (precision 28, or another precision set with
+//! [`with_precision`]): rounding ROUND_HALF_EVEN,
 //! Emax 999999, Emin -999999, with the signals InvalidOperation, DivisionByZero and Overflow
 //! trapped (raised as exceptions). The algorithms follow CPython's `_pydecimal`, so values,
 //! exponents (visible in `str` and `repr`) and raised exceptions match the reference
@@ -8,11 +9,40 @@ use std::cmp::Ordering;
 
 use crate::pyutil::{PyError, decimal_value, is_space};
 
-const PREC: i64 = 28;
+/// Precision of Python's default context.
+const DEFAULT_PREC: i64 = 28;
 const EMAX: i64 = 999_999;
 const EMIN: i64 = -999_999;
-const ETINY: i64 = EMIN - PREC + 1;
-const ETOP: i64 = EMAX - PREC + 1;
+
+thread_local! {
+    /// Precision of the arithmetic on this thread: 28 digits (Python's default context)
+    /// unless [`with_precision`] runs a computation with another one.
+    static PRECISION: std::cell::Cell<i64> = const { std::cell::Cell::new(DEFAULT_PREC) };
+}
+
+/// Run `f` with the arithmetic of this thread rounding to `digits` significant digits
+/// (34 for FEEL of language 0.7, as DMN requires); the previous precision is restored.
+pub fn with_precision<T>(digits: u32, f: impl FnOnce() -> T) -> T {
+    let old = PRECISION.with(|p| p.replace(i64::from(digits)));
+    let out = f();
+    PRECISION.with(|p| p.set(old));
+    out
+}
+
+/// The current precision (significant digits).
+pub fn precision() -> u32 {
+    PRECISION.with(|p| p.get()) as u32
+}
+
+fn prec() -> i64 {
+    PRECISION.with(|p| p.get())
+}
+fn etiny() -> i64 {
+    EMIN - prec() + 1
+}
+fn etop() -> i64 {
+    EMAX - prec() + 1
+}
 /// Largest exponent accepted by the constructor (libmpdec `MPD_MAX_EMAX` on 64-bit systems).
 const MAX_EMAX: i128 = 999_999_999_999_999_999;
 /// Smallest exponent accepted by the constructor (libmpdec `MPD_MIN_ETINY`).
@@ -28,6 +58,10 @@ pub enum Rounding {
     Floor,
     Ceiling,
     Down,
+    /// Away from zero (ROUND_UP).
+    Up,
+    /// To nearest, ties towards zero (ROUND_HALF_DOWN).
+    HalfDown,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -361,6 +395,26 @@ impl Decimal {
         self.exp + self.int.len() as i64 - 1
     }
 
+    /// Exponent of the most significant digit (`adjusted()`).
+    pub fn magnitude(&self) -> i64 {
+        self.adjusted()
+    }
+
+    /// A finite number `(-1)^negative * digits * 10^exp`, rounded to the current precision.
+    pub fn from_parts(negative: bool, digits: Vec<u8>, exp: i64) -> Result<Self, PyError> {
+        Decimal::finite(negative, digits, exp).fix()
+    }
+
+    /// Sign, coefficient digits (most significant first) and exponent of a finite number.
+    pub fn parts(&self) -> Option<(bool, &[u8], i64)> {
+        (self.kind == Kind::Finite).then_some((self.sign, self.int.as_slice(), self.exp))
+    }
+
+    /// Finite (neither an infinity nor a NaN).
+    pub fn is_finite(&self) -> bool {
+        self.kind == Kind::Finite
+    }
+
     fn nan_level(&self) -> u8 {
         match self.kind {
             Kind::NaN => 1,
@@ -407,7 +461,7 @@ impl Decimal {
 
     fn fix_nan(&self) -> Self {
         let mut d = self.clone();
-        let max = PREC as usize;
+        let max = prec() as usize;
         if d.int.len() > max {
             let cut = d.int.len() - max;
             d.int = d.int[cut..]
@@ -427,15 +481,15 @@ impl Decimal {
             Kind::Finite => {}
         }
         if self.is_zero() {
-            let new_exp = self.exp.clamp(ETINY, EMAX);
+            let new_exp = self.exp.clamp(etiny(), EMAX);
             return Ok(Decimal::finite(self.sign, vec![0], new_exp));
         }
-        let mut exp_min = self.int.len() as i64 + self.exp - PREC;
-        if exp_min > ETOP {
+        let mut exp_min = self.int.len() as i64 + self.exp - prec();
+        if exp_min > etop() {
             return Err(overflow());
         }
-        if exp_min < ETINY {
-            exp_min = ETINY;
+        if exp_min < etiny() {
+            exp_min = etiny();
         }
         if self.exp < exp_min {
             let mut digits = self.int.len() as i64 + self.exp - exp_min;
@@ -453,12 +507,12 @@ impl Decimal {
             };
             if changed > 0 {
                 coeff = add_mag(&coeff, &[1]);
-                if coeff.len() as i64 > PREC {
+                if coeff.len() as i64 > prec() {
                     coeff.pop();
                     exp_min += 1;
                 }
             }
-            if exp_min > ETOP {
+            if exp_min > etop() {
                 return Err(overflow());
             }
             return Ok(Decimal::finite(self.sign, coeff, exp_min));
@@ -486,7 +540,15 @@ impl Decimal {
         };
         match rounding {
             Rounding::Down => down,
+            Rounding::Up => -down,
             Rounding::HalfUp => half_up(),
+            Rounding::HalfDown => {
+                if self.int[prec] == 5 && all_zeros(prec + 1) {
+                    -1
+                } else {
+                    half_up()
+                }
+            }
             Rounding::HalfEven => {
                 let exact_half = self.int[prec] == 5 && all_zeros(prec + 1);
                 if exact_half && (prec == 0 || self.int[prec - 1].is_multiple_of(2)) {
@@ -573,11 +635,11 @@ impl Decimal {
             return Decimal::finite(sign, vec![0], exp).fix();
         }
         if self.is_zero() {
-            let exp = exp.max(other.exp - PREC - 1);
+            let exp = exp.max(other.exp - prec() - 1);
             return other.rescale(exp, Rounding::HalfEven)?.fix();
         }
         if other.is_zero() {
-            let exp = exp.max(self.exp - PREC - 1);
+            let exp = exp.max(self.exp - prec() - 1);
             return self.rescale(exp, Rounding::HalfEven)?.fix();
         }
         // _normalize: align the exponents, replacing a negligible operand by 10**exp
@@ -592,7 +654,7 @@ impl Decimal {
             };
             let tmp_len = tmp_i.len() as i64;
             let other_len = oth_i.len() as i64;
-            let lim = *tmp_e + (-1i64).min(tmp_len - PREC - 2);
+            let lim = *tmp_e + (-1i64).min(tmp_len - prec() - 2);
             if other_len + *oth_e - 1 < lim {
                 *oth_i = vec![1];
                 *oth_e = lim;
@@ -684,7 +746,7 @@ impl Decimal {
                 return Ok(Decimal::infinity(sign));
             }
             if other.is_infinite() {
-                return Ok(Decimal::finite(sign, vec![0], ETINY));
+                return Ok(Decimal::finite(sign, vec![0], etiny()));
             }
         }
         if other.is_zero() {
@@ -702,7 +764,7 @@ impl Decimal {
         let (coeff, exp) = if self.is_zero() {
             (vec![0], self.exp - other.exp)
         } else {
-            let sh = other.int.len() as i64 - self.int.len() as i64 + PREC + 1;
+            let sh = other.int.len() as i64 - self.int.len() as i64 + prec() + 1;
             let mut exp = self.exp - other.exp - sh;
             let (mut coeff, rem) = if sh >= 0 {
                 divmod_mag(&shift(&self.int, sh), &other.int)
@@ -845,7 +907,7 @@ impl Decimal {
     /// `quantize(Decimal(1).scaleb(-places), rounding)` (`places` already negated by the caller
     /// is passed as the scaleb argument).
     pub fn quantize_scaleb(&self, scaleb: i128, rounding: Rounding) -> Result<Decimal, PyError> {
-        let lim = 2 * (EMAX + PREC) as i128;
+        let lim = 2 * (EMAX + prec()) as i128;
         if !(-lim..=lim).contains(&scaleb) {
             return Err(invalid());
         }
@@ -866,18 +928,18 @@ impl Decimal {
                 return Err(invalid());
             }
         }
-        if !(ETINY..=EMAX).contains(&exp.exp) {
+        if !(etiny()..=EMAX).contains(&exp.exp) {
             return Err(invalid());
         }
         if self.is_zero() {
             return Decimal::finite(self.sign, vec![0], exp.exp).fix();
         }
         let adj = self.adjusted();
-        if adj > EMAX || adj - exp.exp + 1 > PREC {
+        if adj > EMAX || adj - exp.exp + 1 > prec() {
             return Err(invalid());
         }
         let ans = self.rescale(exp.exp, rounding)?;
-        if ans.adjusted() > EMAX || ans.int.len() as i64 > PREC {
+        if ans.adjusted() > EMAX || ans.int.len() as i64 > prec() {
             return Err(invalid());
         }
         ans.fix()

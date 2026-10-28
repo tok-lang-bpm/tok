@@ -9,11 +9,19 @@ files, starts an instance, performs the listed actions (complete user tasks, com
 jobs, set variables) and checks that the instance completed at the expected end event and
 that the expected variables hold the expected values. Only the Python standard library and
 the tok package are used.
+
+Decision cases (language 0.7, `DMN_CASES`) take a conformance case of `conformance/cases`,
+export its DMN 1.5 files with the native `tok` program (the environment variable `TOK`, else
+`tok` on the PATH, else the program built in `dist/` or `rust/target/release/`), deploy them,
+and compare the evaluation of each listed decision by Camunda with `tok eval` and with the
+expected value.
 """
 
+import glob
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -52,6 +60,25 @@ CASES = {
     "version-tag": ("wersja", {}, [], "e", {}),
 }
 EXTRA_CHECKS = {"version-tag": ("versionTag", "v1")}
+
+# decision cases of language 0.7: case of conformance/cases -> [(decision id, variables, expected value)]
+DMN_CASES = {
+    "61-executable-decisions": [
+        ("limit", {"wiek": 16}, 5),
+        ("limit", {"wiek": 30}, 10),
+        ("blokada", {"wiek": 30, "Zaległe opłaty": 60}, True),
+        ("blokada", {"wiek": 30, "Zaległe opłaty": 10}, False),
+        ("naleznosc", {"dni-zwloki": 4, "opłata dzienna": 0.5}, 2),
+        ("do-naprawy", {"egzemplarze": [{"sygnatura": "A1", "stan zachowania": "zły"},
+                                        {"sygnatura": "B2", "stan zachowania": "dobry"}]}, ["A1"]),
+        ("podsumowanie", {"wiek": 30, "Zaległe opłaty": 0, "dni-zwloki": 3, "opłata dzienna": 1},
+         {"kwota": 4.5, "stan konta": "limit 10", "po zwłoce": True}),
+        ("podsumowanie", {"wiek": 30, "Zaległe opłaty": 80, "dni-zwloki": 0, "opłata dzienna": 1},
+         {"kwota": 0, "stan konta": "blokada", "po zwłoce": False}),
+        ("kanaly", {}, ["e-mail", "SMS"]),
+    ],
+}
+REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
 
 
 def call(method, path, body=None, files=None):
@@ -224,12 +251,58 @@ def run_case(name):
         shutil.rmtree(folder, ignore_errors=True)
 
 
+def tok_program():
+    """The native `tok` program of the Rust engine."""
+    if os.environ.get("TOK"):
+        return os.environ["TOK"]
+    found = shutil.which("tok")
+    if found:
+        return found
+    for rel in ("dist", os.path.join("rust", "target", "release")):
+        for exe in ("tok.exe", "tok"):
+            p = os.path.join(REPO, rel, exe)
+            if os.path.isfile(p):
+                return p
+    raise RuntimeError("no tok program: set TOK or build rust/tok-cli")
+
+
+def run_dmn_case(name):
+    tok = tok_program()
+    case = os.path.join(REPO, "conformance", "cases", name + ".tok")
+    folder = tempfile.mkdtemp(prefix="tok-camunda-")
+    try:
+        res = subprocess.run([tok, "export", case, "-o", folder], capture_output=True, text=True, encoding="utf-8")
+        if res.returncode != 0:
+            raise RuntimeError("tok export: " + (res.stderr or res.stdout).strip()[:400])
+        call("POST", "/deployments", files=sorted(glob.glob(os.path.join(folder, "*.dmn"))))
+        for decision, variables, expected in DMN_CASES[name]:
+            args = [tok, "eval", case, decision] + [
+                "%s=%s" % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
+                for k, v in variables.items()]
+            res = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
+            if res.returncode != 0:
+                raise RuntimeError("tok eval %s: %s" % (decision, res.stderr.strip()[:400]))
+            mine = json.loads(res.stdout)
+            out = call("POST", "/decision-definitions/evaluation",
+                       {"decisionDefinitionId": decision, "variables": variables})
+            theirs = json.loads(out["output"]) if isinstance(out.get("output"), str) else out.get("output")
+            if mine != expected:
+                raise RuntimeError("tok eval %s %r = %r, expected %r" % (decision, variables, mine, expected))
+            if theirs != expected:
+                raise RuntimeError("Camunda %s %r = %r, expected %r" % (decision, variables, theirs, expected))
+        return None
+    except Exception as ex:  # report and continue with the next case
+        return str(ex)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def main(argv):
-    names = argv or list(CASES)
+    names = argv or list(CASES) + list(DMN_CASES)
     failed = 0
     for name in names:
-        err = run_case(name)
-        print("%-16s %s" % (name, "OK" if err is None else "FAIL: " + err))
+        err = run_dmn_case(name) if name in DMN_CASES else run_case(name)
+        print("%-24s %s" % (name, "OK" if err is None else "FAIL: " + err))
         failed += err is not None
     print("%d of %d cases passed" % (len(names) - failed, len(names)))
     return 1 if failed else 0

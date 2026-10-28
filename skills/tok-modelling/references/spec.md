@@ -1,12 +1,14 @@
-# tok — Language Specification, version 0.6
+# tok — Language Specification, version 0.7
 
-tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decision tables it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
+tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decisions it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
 This document is normative. The reference implementation is the Rust engine in `rust/` (the `tok` command and the Python and R packages run it); the pure-Python implementation in `python/` is frozen at language 0.3, and the Julia package in `julia/` implements the core (parsing, formatting, core diagnostics, BPMN export) against the same conformance corpus.
 
 Language 0.5 adds the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute: transactions and cancel events (§5.3), the complex gateway (§5.4), the attributes of the standard loop (§5.2.1), multiple and parallel multiple events (§5.1.1), instantiating receive tasks and event-based gateways (§5.2, §5.4), process data (§7.1), resources and performers (§7.2), global tasks, interfaces and operations (§5.6) and correlation keys (§6.3). Every BPMN 2.0.2 rule the checker enforces is listed with its clause in `bpmn-rules.md`.
 
 Language 0.6 adds the interactions between participants: conversations (§6.4), choreographies (§5.7), and the multiplicity of participants with the participant associations of calls (§5.5, §5.7, §6.4). The tools check a document against the conformance classes of BPMN 2.0.2 (§13) and keep the diagram of an imported file in a layout sidecar (§16).
+
+Language 0.7 adds decision models of DMN 1.5: decision requirements graphs with input data, business knowledge models and knowledge sources (§9.1), boxed expressions (§9.2), the hit policies, aggregations, output values and default outputs of decision tables (§9.3), DMN types (§9.4), and FEEL at conformance level 3 in every expression of a 0.7 document (§12). `tok eval` evaluates decisions with everything they require; the tools export DMN 1.5 with diagrams and import DMN (§9.5).
 
 ## 1. Design goals
 
@@ -63,12 +65,12 @@ A key is normally given once; when it is repeated, the last value counts. In a d
 The first statement is the header:
 
 ```
-tok 0.6 "Interlibrary loan" executable
+tok 0.7 "Interlibrary loan" executable
 ```
 
 | Part | Meaning |
 |---|---|
-| `tok 0.6` | language version (required). Accepted versions: `0.1`, `0.3`, `0.5` and `0.6`; a document written for an earlier version means the same under 0.6. The language version follows the minor version of the release that changed the language. Three things depend on the declared version, so that older documents keep their meaning: only a document of 0.5 or later may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), only there do `resource` and `by=` also describe BPMN resources and performers (§7.2), and only in a document of 0.6 do `min=` and `max=` give a pool a multiplicity (§5.5; in older documents they are unknown attributes, `R010`). Everything else of 0.5 and 0.6 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5` or `tok 0.6`. |
+| `tok 0.7` | language version (required). Accepted versions: `0.1`, `0.3`, `0.5`, `0.6` and `0.7`; a document written for an earlier version means the same under 0.7. The language version follows the minor version of the release that changed the language. Three things depend on the declared version, so that older documents keep their meaning: only a document of 0.5 or later may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), only there do `resource` and `by=` also describe BPMN resources and performers (§7.2), and only in a document of 0.6 or later do `min=` and `max=` give a pool a multiplicity (§5.5; in older documents they are unknown attributes, `R010`). Everything else of 0.5 and 0.6 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5` or `tok 0.6`. The statements and attributes of language 0.7 (§9.1–§9.5) need the header `tok 0.7`: in earlier documents `inputdata`, `bkm`, `source`, `entry`, `result` and `element` are unknown keywords (`P001`), the new attributes unknown attributes (`R010`) and the new hit policies unknown (`D003`); a 0.7 document uses FEEL at conformance level 3 with numbers of 34 digits (§12), earlier documents the FEEL subset with numbers of 28 digits. |
 | label | document title; becomes `definitions/@name` and the default process name |
 | `id=` | identifier of the definitions element (default: `definitions`) |
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
@@ -83,7 +85,7 @@ After the header come top-level statements in any order:
 - **pools** with their lanes and flow nodes (§5.5);
 - **declarations** of language 0.5: item definitions (§7.1), global tasks and interfaces (§5.6), correlation keys (§6.3);
 - **choreographies** (§5.7) and **conversation nodes** (§6.4) of language 0.6;
-- **decisions** (§9), **forms** (§10.2), **simulation statements** (§11).
+- **decisions** and, in language 0.7, **input data**, **knowledge sources**, **business knowledge models** and DMN types (§9), **forms** (§10.2), **simulation statements** (§11).
 
 References may point forward: a flow may name a node declared later.
 
@@ -488,6 +490,107 @@ decision ID ["Label"] [hit=first]
 - An optional last cell after a second `||` holds a rule annotation: `| "e-book" | - || "kierownik" || licencje |`.
 - A `rule` task calls the decision with `decision=ID`; its result is stored in `result=` (default: the single output name).
 
+In documents of languages 0.1–0.6 a decision is exactly this table; it is exported as one DMN 1.3 file per decision, and `tok eval` gives the object of its outputs. Language 0.7 extends decisions to complete DMN 1.5 decision models (§9.1–§9.5); the table above means the same there.
+
+### 9.1 Decision requirements graphs (language 0.7)
+
+```
+inputdata wiek "Wiek czytelnika" type=number
+inputdata konto "Rodzaj konta" type=string
+source regulamin "Regulamin wypożyczalni" kind="regulamin" uri="https://biblioteka.example/regulamin"
+bkm kara "Kara za zwłokę" params="dni: number, stawka: number" type=number expr="dni * stawka"
+decision limit "Limit wypożyczeń" requires="wiek konto regulamin" hit=first
+  | wiek: number | konto: string          || limit: number |
+  | < 18         | -                      || 5             |
+  | -            | -                      || 10            |
+decision blokada "Czy zablokować konto?" type=boolean requires="limit" expr="limit < 1"
+```
+
+| Statement | Attributes (in canonical order) | DMN 1.5 |
+|---|---|---|
+| `inputdata ID ["Label"]` | `name=`, `type=`, `doc=` | `inputData` with its `variable` |
+| `source ID ["Label"]` | `name=`, `requires=`, `kind=`, `uri=`, `doc=` | `knowledgeSource` (`type`, `locationURI`) |
+| `bkm ID ["Label"]` + optional block | `name=`, `params=`, `type=`, `requires=`, `hit=`, `aggregation=`, `default=`, `expr=`, `invoke=`, `with=`, `doc=` | `businessKnowledgeModel` with `encapsulatedLogic` |
+| `decision ID ["Label"]` + optional block | `name=`, `type=`, `requires=`, `question=`, `answers=`, `hit=`, `aggregation=`, `default=`, `expr=`, `invoke=`, `with=`, `doc=` | `decision` with `variable`, `question`, `allowedAnswers` and its expression |
+
+- **Names.** The FEEL name of an element is its identifier, or `name="…"` when it is not a tok identifier (`name="Zaległe opłaty"`). Other elements refer to it by that name. Names of the graph are unique (`R080`). The label is the `label` of the DMN element.
+- **Requirements.** `requires="ID …"` lists the elements an element depends on; the kind of each named element gives the kind of requirement: decisions and input data are information requirements, business knowledge models knowledge requirements, knowledge sources authority requirements. A decision may require decisions, input data, business knowledge models and knowledge sources; a business knowledge model business knowledge models and knowledge sources; a knowledge source decisions, input data and knowledge sources (`R002`, `R003`). Requirements form no cycle (`R076`). A decision sees exactly what it requires; a name of the graph used without the requirement is `R079`.
+- **Business knowledge models** are functions: `params="name: type, …"` declares the parameters (types optional, `R078` for a malformed list), `type=` the type of the result, and the logic (§9.2) is the body. A decision calls a required model by its name in FEEL (`kara(10, 0.5)`) or with an invocation (`invoke=`).
+- **Knowledge sources** describe the authority behind a decision (a regulation, an expert); they have no logic.
+- A decision without logic is allowed: it describes the decision in the diagram, and its value is `null`.
+
+### 9.2 Boxed expressions (language 0.7)
+
+The logic of a decision, of a business knowledge model and of each line of its block is one of:
+
+| tok | DMN 1.5 |
+|---|---|
+| `expr="FEEL"` | literal expression |
+| block of table rows with `\|\|` | decision table (§9.3) |
+| block of table rows without `\|\|`: a header of columns `name: type`, then rows of FEEL expressions | relation (a list of contexts) |
+| block of `entry NAME …` lines, optionally ending with one `result …` line | context; the result line is the entry without a variable, whose value is the value of the context; without it the value is the context of all entries |
+| block of `element …` lines | list |
+| `invoke=BKM with="param = FEEL; …"` | invocation with one binding per parameter (parameters not bound are `null`) |
+| `params="name: type, …"` on `entry`, `result` or `element` | function definition whose body is the line's logic |
+
+```
+decision oplata "Opłata za przetrzymanie" type=number requires="rodzaj dni naliczenie"
+  entry stawki
+    | typ: string  | stawka: number |
+    | "książka"    | 0.5            |
+    | "czasopismo" | 0.2            |
+  entry stawka type=number expr="stawki[typ = rodzaj].stawka[1]"
+  entry zaokraglenie params="x: number" expr="round half up(x, 2)"
+  entry naliczona invoke=naliczenie with="dni = dni; stawka = stawka"
+  result expr="zaokraglenie(naliczona)"
+
+decision kategorie "Kategorie kont"
+  element expr="\"student\""
+  element expr="\"doktorant\""
+```
+
+- `entry NAME [type=T] …`: the name is a FEEL name, a word or a quoted string (`entry "do naprawy" expr="…"`); entries of one context have different names (`R080`); each entry sees the entries before it. `type=` converts the value of the line to the type (§9.4).
+- An entry, result or element whose logic is a table, a relation, a context or a list carries it in its own block, indented below the line.
+- A statement has exactly one form of logic, `with=` needs `invoke=`, the result is the last line of its context, and element lines are not mixed with entry and result lines (`R077`).
+
+### 9.3 Decision tables in language 0.7
+
+| tok | DMN 1.5 |
+|---|---|
+| `hit=unique\|first\|any\|priority\|collect\|rule-order\|output-order` | hit policy (`RULE ORDER`, `OUTPUT ORDER`) |
+| `aggregation=sum\|count\|min\|max` (with `hit=collect` and one output, `D007`) | aggregation of `COLLECT` |
+| header cell `name: type = "a", "b"` | input values of an input column, output values of an output column (unary tests) |
+| `default="FEEL"` (one output) or `default="out = FEEL; …"` | default output entries, the result when no rule matches |
+| header types: `string`, `number`, `boolean`, `date`, `time`, `date and time`, `days and time duration`, `years and months duration`, `list`, `context`, `any`, or a DMN type of the document (§9.4) | `typeRef` |
+
+- The value of a table with one output is the value of that output; with several outputs a context of the outputs; with `collect`, `rule-order` and `output-order` a list of them in the order of the rules (`output-order`: by the priority of the output values); with an aggregation the aggregated value. When no rule matches, the value is the default outputs when `default=` gives them, otherwise `null` (an empty list for `collect`, `rule-order` and `output-order`, and `0` for `aggregation=count`).
+- `priority` and `output-order` order the matching rules by the position of their outputs in the output values, the first output first (`D006` when no output has output values; the allowed values of the output's type count as its output values). `priority` gives the first of them.
+- `unique` with several matching rules and `any` with different outputs are violated hit policies: the value is `null` and `tok eval` reports the violation.
+- In a 0.7 document a malformed header cell is `D009`; a relation row with another number of cells than its header `D008`.
+
+### 9.4 Types (language 0.7)
+
+```
+item egzemplarz-t "Egzemplarz"
+  item sygnatura type=string
+  item rok type=number
+  item "stan zachowania" type=string allowed="\"dobry\", \"zły\""
+item egzemplarze-t "Lista egzemplarzy" type=egzemplarz-t collection
+inputdata egzemplarze "Egzemplarze" type=egzemplarze-t
+```
+
+- In a 0.7 document an `item` with `type=` or `allowed=`, or with a block of component lines, is a DMN type (`itemDefinition`): `type=` the base type, `allowed="unary tests"` the allowed values, `collection` a list of such values, the components (`item NAME [type=T] [allowed=…] [collection]`, nested to any depth) the fields of a context. Its FEEL name is `name=` or the identifier. It is exported to the DMN files, not to BPMN. An `item` that is both a BPMN item (`structure=`, `kind=`) and a DMN type is `R081`.
+- `type=` of input data, decisions, business knowledge models, lines and parameters, and the types of table columns, name a FEEL type (above, and `function`, `range`, `Any`, type expressions such as `list<number>`) or a DMN type of the document by identifier or name (`R081` otherwise).
+- A value of input data, of a decision, of a business knowledge model or of a typed line that does not conform to its type is `null` (DMN 1.5 §10.3.2.9.4). Before that, a list of one value conforms through its element, a value through a list of one, and a date through the date and time at midnight UTC.
+
+### 9.5 Evaluation and export (language 0.7)
+
+- `tok eval FILE DECISION name=value …` evaluates the decision with what it requires: required decisions once each, input data from the arguments by FEEL name, business knowledge models as functions. Text given for input data of a temporal type is read as that type; a JSON object or list is a context or list (see `cli.md`). The result is the value of the decision as JSON. A violated hit policy in the decision or in a decision it requires is reported with exit code 1.
+- A `rule` task of a 0.7 document evaluates its decision the same way in the simulator; the case variables are the input data, and `result=` defaults to the only output of a decision table, or else to the FEEL name of the decision.
+- `tok export` writes one DMN 1.5 file per connected decision requirements graph, `NAME.dmn` after its first decision, with the DMN types of the document and a DMNDI diagram laid out automatically (decisions above what they require), and its picture `NAME.drd.svg`. A 0.7 document without a process writes no BPMN file.
+- A document is exported **for Camunda 8** when its header or a pool has the flag `executable` and `target=` is `camunda` (the default), as for BPMN; this holds also for a document that has only decisions (`tok 0.7 "…" executable`). Its DMN files write every FEEL name that is not a plain name (a letter or `_`, then letters, digits and `_`) in backticks, and such a key of a context literal as a string, because Camunda's FEEL reads names with spaces and symbols only in that form (`feel.md` §9.5). Other documents are exported in standard FEEL.
+- `tok import FILE.dmn` reads DMN 1.1–1.5 (`import.md`).
+
 ## 10. Execution
 
 The execution statements and attributes form an **optional layer**. Descriptive and analytic models never need them, and the levels `basic` and `analytic` of `tok check` reject them (§13). Outside this layer, compatibility with Camunda means the set of elements available in Camunda Modeler and the rules for connecting and organizing them (pools, lanes, flows).
@@ -565,9 +668,9 @@ The second kind follows the convention of Camunda Modeler. A document that is no
 
 **Process version.** `version-tag="v1"` on the header (document without pools) or on a pool → `zeebe:versionTag`.
 
-### 10.4 Elements Camunda 8 does not execute (languages 0.5 and 0.6)
+### 10.4 Elements Camunda 8 does not execute (languages 0.5, 0.6 and 0.7)
 
-In executable documents for Camunda (`target=camunda`, the default for executable documents) every element of languages 0.5 and 0.6 that Camunda 8.10 does not execute is reported with a code naming it; descriptive and analytic documents, and executable documents with another `target=`, are not affected.
+In executable documents for Camunda (`target=camunda`, the default for executable documents) every element of languages 0.5, 0.6 and 0.7 that Camunda 8.10 does not execute is reported with a code naming it; descriptive and analytic documents, and executable documents with another `target=`, are not affected. Camunda 8.10 executes decision requirements graphs, decision tables, literal expressions, contexts, relations, lists, invocations and business knowledge models through its DMN engine.
 
 | Code | Severity | Element |
 |---|---|---|
@@ -586,6 +689,9 @@ In executable documents for Camunda (`target=camunda`, the default for executabl
 | `C121` | warning | call conversation (ignored) |
 | `C122` | error | choreography |
 | `C123` | warning | participant multiplicity of a pool (ignored: every process instance is one participant) |
+| `C130` | error | business knowledge model whose logic is an invocation |
+| `C131` | error | function definition (`params=` on a line) whose body is not a literal expression |
+| `C132` | error | decision without decision logic (Camunda rejects the DMN file) |
 
 ## 11. Simulation
 
@@ -629,15 +735,20 @@ Durations are a number followed by a unit: `s`, `m` (minutes), `h`, `d`. In `uni
 
 **Semantics.** Each case starts at its arrival time with its `variable`s drawn. Tokens move along sequence flows. An activity with `by=` queues (first come, first served) until a performer is free, then holds it for its duration. At an `xor` gateway the first outgoing flow (in document order) whose `when` holds is taken, else the default flow; if the flows have `p=` instead, one is drawn. An `or` gateway activates every flow whose condition holds (or which is drawn with its `p`), else the default. An `and` gateway activates all outgoing flows and a joining `and` waits for all incoming tokens; a joining `or` waits for the tokens that were actually activated. An `eventgw` races its following catch events: timers fire after their duration, messages after their `delay`. A boundary timer fires if the activity is still running when the timer elapses: an interrupting one cancels the activity, a non-interrupting one starts an extra token. `rule` tasks evaluate their decision, `script` tasks their expression. Time in the log is simulated calendar time without working-hours calendars (version 0.1).
 
+**Language 0.7.** A `rule` task evaluates its decision with the decisions, input data and business knowledge models it requires (§9.5); the case variables are the input data. Conditions and expressions of 0.7 documents that the simulator cannot evaluate are warnings, as before.
+
 **Language 0.6.** Conversations and choreographies describe interactions, not the work of one participant: the simulator ignores them and simulates the process of the document as before. A pool with `min=`/`max=` is simulated once per case.
 
 **Language 0.5.** Transactions run like sub-processes; a cancel end event stops the transaction, runs the compensation handlers of its completed activities (latest completed first) and then continues from the cancel boundary event of the transaction (without one, the token ends there). A complex gateway splits like an `or` gateway; as a join it lets one token through as soon as `activation` holds, with `_activationCount` the number of tokens arrived so far, absorbs the later tokens and resets when all expected tokens have arrived (without `activation` it joins like `or`). A standard loop repeats while `while` holds, at most `loop-max` times, with `loopCounter` the number of finished iterations, testing before the first iteration with `test-before` and otherwise after each one. A catching multiple event fires on the first of its triggers (on the last with `parallel`); its timers use their durations, its other triggers the event's `delay=`. When a process has no start event, an instantiating receive task or event-based gateway starts the cases. `docs/simulation.md` gives the details.
 
 The simulation produces an **event log** (one row per activity instance: case, activity, resource, enqueue, start, end) and **indicators**: number of cases per end event, cycle time (mean, median, 90th percentile), waiting and processing time per activity, utilization per resource.
 
-## 12. FEEL subset
+## 12. FEEL
 
-Conditions, script expressions, loop conditions (`while`), activation conditions (`activation`, with the variable `_activationCount`) and decision cells use a subset of FEEL (DMN 1.5, chapter 10). The subset is defined in `feel.md`. Expressions outside the subset are passed unchanged to the exported XML and reported by `tok check` as `F001` (a warning); the simulator cannot evaluate them.
+Conditions, script expressions, loop conditions (`while`), activation conditions (`activation`, with the variable `_activationCount`), the values of the executable layer and decision logic are FEEL (DMN 1.5, chapter 10).
+
+- In documents of languages 0.1–0.6 they use a subset of FEEL, defined in `feel.md` §1–§8, with numbers of 28 significant digits. Expressions outside the subset are passed unchanged to the exported XML and reported by `tok check` as `F001` (a warning); the simulator cannot evaluate them.
+- In documents of language 0.7 they use FEEL at DMN conformance level 3 (`feel.md` §9): every expression, temporal values and arithmetic, the standard function library, contexts, ranges, filters, iterations, quantifiers and functions, names with spaces resolved against the names of the document, numbers of 34 significant digits. `F001` reports only what tok cannot evaluate (externally defined functions); `F002` syntax errors.
 
 ## 13. Validation
 
@@ -650,7 +761,7 @@ Conditions, script expressions, loop conditions (`while`), activation conditions
 | `R` | references and structure of the tok document |
 | `E`, `W`, `L` | BPMN 2.0 rules: errors, warnings, style notes (shared with the `bpmn.py` validator) |
 | `C` | executable profile for Camunda 8 |
-| `D` | decision tables |
+| `D` | decision tables and relations |
 | `F` | FEEL |
 | `S` | simulation parameters |
 
@@ -662,7 +773,7 @@ The full list is in `diagnostics.md`. The `--level` option restricts the accepte
 | `analytic` | everything except the executable profile and layer (§10.1, §10.3), forms and decisions |
 | `full` (default) | everything, including all elements of languages 0.5 and 0.6 |
 
-The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules. The descriptive additions `doc=`, `process-name=`, `object=`, `when=""` and the data of events are allowed at every level; the trigger flags without a value (§5.1) are rejected at the level `basic` like the other triggers. They also reject the statements of language 0.6 (`R040`): `conversation`, `subconversation`, `callconversation`, `choreography` (once for the statement; its content is not reported again) and `min=`/`max=` on pools.
+The levels `basic` and `analytic` reject every element of language 0.5 (`R040`): `transaction`, `complex`, the flags `cancel`, `test-before`, `instantiate` and `parallel` on events and event-based gateways, the attributes `while`, `loop-max`, `activation`, `task` and `operation`, events with several triggers, `type=` on data, and the statements `input`, `output`, `property`, `item`, `global`, `interface` and `key`. `resource` and `by=` keep their earlier level rules. The descriptive additions `doc=`, `process-name=`, `object=`, `when=""` and the data of events are allowed at every level; the trigger flags without a value (§5.1) are rejected at the level `basic` like the other triggers. They also reject the statements of language 0.6 (`R040`): `conversation`, `subconversation`, `callconversation`, `choreography` (once for the statement; its content is not reported again) and `min=`/`max=` on pools. The elements of decision requirements graphs of language 0.7 (`inputdata`, `source`, `bkm`, `decision`) are rejected together with decisions, once for the first of them, and DMN types like every `item`.
 
 **BPMN conformance classes** (language 0.6). BPMN 2.0.2 (clause 2) defines three sub-classes of process modelling conformance: Descriptive (the visible elements of high-level modelling), Analytic (Descriptive and about half of the full language) and Common Executable (what an executable process needs: data inputs and outputs, item definitions, operations, but no pools, lanes or message flows). `tok check --class descriptive|analytic|common-executable|full` reports every element or attribute of the document outside the chosen class as `R075`, naming the BPMN element and the first class that contains it (in the order descriptive, analytic, common-executable, full). `full` is the whole modelling language, with conversations and choreographies, and contains everything. `tok check --json` always reports the smallest class the document fits, in the same order, as `"bpmn_class"`. The class of each tok construct is listed in `bpmn-rules.md`; the levels above are teaching levels and do not coincide with the classes.
 
@@ -671,12 +782,12 @@ The levels `basic` and `analytic` reject every element of language 0.5 (`R040`):
 `tok fmt` prints a document in this order and style:
 
 1. the header;
-2. `item` and `global` statements, then each `interface` with its operations;
+2. `item` and `global` statements (a DMN type of language 0.7 with its components), then each `interface` with its operations;
 3. top-level flow nodes in declaration order, then pools (each with its lanes and nodes in declaration order);
    `data`, `store`, `input`, `output` and `property` statements are printed at the end of the block they were declared in (pool, sub-process or top level); then each `choreography` with its nodes and, at the end of its block, the sequence flows of its nodes (as chains, as in item 4);
 4. all other sequence flows, in declaration order, as chains: a chain continues while the next flow has no label or attributes, starts at the last node of the previous flow, and that node has exactly one outgoing flow;
-5. message flows, then the conversation nodes (a sub-conversation with its block); 6. each `key` with its `prop` lines; 7. `reads` and `writes`; 8. notes and groups; 9. decisions; 10. forms; 11. simulation statements (`simulate`, `resource`, `variable`);
-12. two-space indentation, one space between tokens, labels always quoted, attributes in the order of the tables in this document (the values of a repeated key together, in written order), blank line between sections.
+5. message flows, then the conversation nodes (a sub-conversation with its block); 6. each `key` with its `prop` lines; 7. `reads` and `writes`; 8. notes and groups; 9. decisions — in a 0.7 document first `inputdata` and `source` statements, then each `bkm` and each `decision` with its block (table rows, then `entry`, `result` and `element` lines, each with its own block); 10. forms; 11. simulation statements (`simulate`, `resource`, `variable`);
+12. two-space indentation, one space between tokens, labels always quoted, attributes in the order of the tables in this document (the values of a repeated key together, in written order; in 0.7 the values of `requires`, `params`, `with`, `question`, `answers`, `uri`, `allowed`, `expr` and `default` always quoted), blank line between sections.
 
 Comments are kept. A comment line is attached to the statement that follows it and printed above it; a comment at the end of a line stays at the end of that statement's line. Comments at the end of the document are printed last.
 
@@ -690,11 +801,13 @@ An implementation conforms at level **core** if, for every document in `conforma
 2. its `fmt` output equals `expected/*.tok`;
 3. its BPMN export, ignoring diagram interchange (`bpmndi`) and attribute order, equals `expected/*.bpmn`.
 
-Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export, FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
+Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export (for documents of language 0.7 the DMN files of every decision requirements graph, `expected/NAME.GRAPH.dmn`), FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
 
-Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33–46 cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects). Cases 47 and following cover language 0.6: conversations (47), choreographies with sub-choreographies, calls and loop markers (48), the events and gateways of choreographies (49), participant multiplicity (50), the Camunda codes `C120`–`C123` (51) and the errors `R070`–`R074` (52). The expected outputs of cases 33 and following are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
+Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33–46 cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects). Cases 47 and following cover language 0.6: conversations (47), choreographies with sub-choreographies, calls and loop markers (48), the events and gateways of choreographies (49), participant multiplicity (50), the Camunda codes `C120`–`C123` (51) and the errors `R070`–`R074` (52). Cases 53 and following cover language 0.7: decision requirements graphs (53), boxed expressions and DMN types (54), the decision tables of 0.7 (55), FEEL of level 3 in a process with a rule task (56), the Camunda codes `C130`–`C132` (57), the errors `R076`–`R081`, `D003`, `D006`, `D007` and `F002` (58), the statements of 0.7 under an older header (59), the rows of relations and headers (`D008`, `D009`, 60) and an executable decision model for Camunda 8 with names of several words (61), which `conformance/camunda/run.py` also evaluates on Camunda. The expected outputs of cases 33 and following are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
 
 The reference models of the BPMN Model Interchange Working Group in `conformance/miwg` are the conformance gate of BPMN import and export: their semantic content must survive import, printing and export; `miwg.md` lists, per model, what is kept and what is not.
+
+The test cases of the DMN Technology Compatibility Kit in `conformance/dmn-tck` (compliance levels 2 and 3) are the conformance gate of DMN import, FEEL and decision evaluation: every model is imported, printed and evaluated for every test case, and the results must equal the expected values except for the cases listed with a reason in the baseline; `dmn-tck.md` gives the pass counts.
 
 ## 16. Layout sidecar
 

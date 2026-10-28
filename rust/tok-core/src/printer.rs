@@ -2,6 +2,9 @@
 
 use crate::model::*;
 
+#[path = "printer_07.rs"]
+mod lang07;
+
 const QUOTED_KEYS: &[&str] = &[
     "when",
     "expr",
@@ -306,11 +309,15 @@ impl Printer<'_> {
         if !d.items.is_empty() || !d.globals.is_empty() {
             self.blank();
             for it in d.items.values() {
+                let keys = if d.lang_07() { ITEM_KEYS_07 } else { ITEM_KEYS };
                 self.emit_base(
                     0,
-                    &join(&["item", it.id()], tail(it, ITEM_KEYS, ITEM_FLAGS, false)),
+                    &join(&["item", it.id()], tail(it, keys, ITEM_FLAGS, false)),
                     it,
                 );
+                if let Some(list) = d.components.get(it.id()) {
+                    self.components(list, 1);
+                }
             }
             for g in d.globals.values() {
                 self.emit_base(
@@ -467,9 +474,13 @@ impl Printer<'_> {
                 );
             }
         }
-        for dec in d.decisions.values() {
-            self.blank();
-            self.decision(dec);
+        if d.lang_07() {
+            self.drg();
+        } else {
+            for dec in d.decisions.values() {
+                self.blank();
+                self.decision(dec);
+            }
         }
         for f in d.forms.values() {
             self.blank();

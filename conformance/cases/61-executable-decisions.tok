@@ -1,0 +1,37 @@
+tok 0.7 "Decyzje dla Camunda 8" executable
+
+# a decision model executed by Camunda 8: names with spaces, a dash and a non-ASCII letter,
+# a filter with a name of two words, an invocation, a context and a list
+
+inputdata wiek "Wiek czytelnika" type=number
+inputdata zaleglosci "Zaległe opłaty (zł)" name="Zaległe opłaty" type=number
+inputdata dni-zwloki "Dni zwłoki" type=number
+inputdata egzemplarze "Egzemplarze" type=egzemplarze-t
+inputdata stawka "Stawka" name="opłata dzienna" type=number
+
+item egzemplarz-t "Egzemplarz"
+  item sygnatura type=string
+  item "stan zachowania" type=string
+item egzemplarze-t "Lista egzemplarzy" type=egzemplarz-t collection
+
+bkm kara "Kara za zwłokę" params="dni: number, stawka: number" type=number expr="dni * stawka"
+
+decision limit "Limit wypożyczeń" requires="wiek" hit=first
+  | wiek: number || limit: number |
+  | < 18         || 5             |
+  | -            || 10            |
+
+decision blokada "Czy zablokować konto?" name="Blokada konta" type=boolean requires="limit zaleglosci" expr="Zaległe opłaty > 50 or limit < 1"
+
+decision naleznosc "Należność" type=number requires="kara dni-zwloki stawka" invoke=kara with="dni = dni-zwloki; stawka = opłata dzienna"
+
+decision do-naprawy "Do naprawy" requires="egzemplarze" expr="egzemplarze[stan zachowania = \"zły\"].sygnatura"
+
+decision podsumowanie "Podsumowanie" requires="limit blokada naleznosc kara dni-zwloki"
+  entry "do zapłaty" type=number expr="kara(dni-zwloki, 0.5) + naleznosc"
+  entry stan expr="if Blokada konta then \"blokada\" else \"limit \" + string(limit)"
+  result expr="{kwota: do zapłaty, \"stan konta\": stan, \"po zwłoce\": do zapłaty > 0}"
+
+decision kanaly "Kanały powiadomień"
+  element expr="\"e-mail\""
+  element expr="\"SMS\""

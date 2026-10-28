@@ -137,8 +137,10 @@ function run!(pr::Printer)
 
     if !isempty(d.items) || !isempty(d.globals)
         blank!(pr)
+        item_keys = lang_07(d) ? ITEM_KEYS_07 : ITEM_KEYS
         for it in ovalues(d.items)
-            emit!(pr, 0, join(["item", it.id, tail(it, ITEM_KEYS, ITEM_FLAGS)...], " "), it)
+            emit!(pr, 0, join(["item", it.id, tail(it, item_keys, ITEM_FLAGS)...], " "), it)
+            components!(pr, it.items, 1)
         end
         for g in ovalues(d.globals)
             emit!(pr, 0, join(["global", g.id, tail(g, GLOBAL_KEYS, ())...], " "), g)
@@ -216,9 +218,13 @@ function run!(pr::Printer)
             emit!(pr, 0, join(["group", g.id, tail(g, GROUP_KEYS, ())...], " "), g)
         end
     end
-    for dec in ovalues(d.decisions)
-        blank!(pr)
-        decision!(pr, dec)
+    if lang_07(d)
+        drg!(pr)
+    else
+        for dec in ovalues(d.decisions)
+            blank!(pr)
+            decision!(pr, dec)
+        end
     end
     for f in ovalues(d.forms)
         blank!(pr)

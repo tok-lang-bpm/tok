@@ -1,0 +1,7 @@
+0068-feel-equality/datetime_008*	zone identifiers whose offset depends on the date (Europe/Paris) need the IANA time zone database, which tok does not include
+0068-feel-equality/range_01*	a unary test of one value (=10, !=10) used as a range value is not supported
+0074-feel-properties/range_011	a unary test of one value (=10) used as a range value is not supported
+0082-feel-coercion	decision services are not supported
+0092-feel-lambda	decision services are not supported
+0100-arithmetic	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+1151-boxed-filter	a boxed filter is imported as a FEEL filter, which drops elements whose match is not a boolean instead of giving null

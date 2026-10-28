@@ -2,3 +2,4 @@
 *.zip binary
 *-crlf.tok -text
 conformance/miwg/*.bpmn -text
+conformance/dmn-tck/** -text

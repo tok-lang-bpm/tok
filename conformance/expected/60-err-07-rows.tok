@@ -1,0 +1,7 @@
+tok 0.7 "Rows of language 0.7"
+
+decision r1 "Relacja"
+  | typ: string | stawka: number |
+
+decision r2 "Nagłówek"
+  |  || w: number |

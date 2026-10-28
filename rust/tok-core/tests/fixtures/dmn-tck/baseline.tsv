@@ -1,0 +1,19 @@
+# level	test	case	result	reason (cases of the DMN TCK expected to fail)
+compliance-level-3	0068-feel-equality	datetime_008	datetime_008	zone identifiers whose offset depends on the date (Europe/Paris) need the IANA time zone database, which tok does not include
+compliance-level-3	0068-feel-equality	datetime_008_a	datetime_008_a	zone identifiers whose offset depends on the date (Europe/Paris) need the IANA time zone database, which tok does not include
+compliance-level-3	0068-feel-equality	datetime_008_b	datetime_008_b	zone identifiers whose offset depends on the date (Europe/Paris) need the IANA time zone database, which tok does not include
+compliance-level-3	0068-feel-equality	range_010	range_010	a unary test of one value (=10, !=10) used as a range value is not supported
+compliance-level-3	0068-feel-equality	range_011	range_011	a unary test of one value (=10, !=10) used as a range value is not supported
+compliance-level-3	0068-feel-equality	range_012	range_012	a unary test of one value (=10, !=10) used as a range value is not supported
+compliance-level-3	0074-feel-properties	range_011	range_011	a unary test of one value (=10) used as a range value is not supported
+compliance-level-3	0082-feel-coercion	decisionService_002_c	ds_invoke_002_with_singleton_list	decision services are not supported
+compliance-level-3	0092-feel-lambda	013	decision_013_1	decision services are not supported
+compliance-level-3	0100-arithmetic	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_007	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_007	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_008	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_008	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_012	subtract_lhs_dateAndTime_minus_rhs_dateAndTime_012	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_dateAndTime_minus_rhs_date_002	subtract_lhs_dateAndTime_minus_rhs_date_002	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_dateAndTime_minus_rhs_date_004	subtract_lhs_dateAndTime_minus_rhs_date_004	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_date_minus_rhs_dateAndTime_003	subtract_lhs_date_minus_rhs_dateAndTime_003	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	0100-arithmetic	subtract_lhs_date_minus_rhs_dateAndTime_005	subtract_lhs_date_minus_rhs_dateAndTime_005	zone identifiers whose offset depends on the date (Europe/Paris, Asia/Dhaka) need the IANA time zone database, which tok does not include
+compliance-level-3	1151-boxed-filter	004	decision004	a boxed filter is imported as a FEEL filter, which drops elements whose match is not a boolean instead of giving null
+compliance-level-3	1151-boxed-filter	005	decision005	a boxed filter is imported as a FEEL filter, which drops elements whose match is not a boolean instead of giving null

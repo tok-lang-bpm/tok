@@ -5,6 +5,11 @@ pub const XSI_NS: &str = "http://www.w3.org/2001/XMLSchema-instance";
 pub const ZEEBE_NS: &str = "http://camunda.org/schema/zeebe/1.0";
 pub const MODELER_NS: &str = "http://camunda.org/schema/modeler/1.0";
 pub const DMN_NS: &str = "https://www.omg.org/spec/DMN/20191111/MODEL/";
+/// DMN 1.5 (language 0.7) and its diagram interchange.
+pub const DMN15_NS: &str = "https://www.omg.org/spec/DMN/20230324/MODEL/";
+pub const DMNDI15_NS: &str = "https://www.omg.org/spec/DMN/20230324/DMNDI/";
+pub const DMN_DC_NS: &str = "http://www.omg.org/spec/DMN/20180521/DC/";
+pub const DMN_DI_NS: &str = "http://www.omg.org/spec/DMN/20180521/DI/";
 /// XML Schema, the namespace of `xsd:` type names in `structureRef` (language 0.5).
 pub const XSD_NS: &str = "http://www.w3.org/2001/XMLSchema";
 
@@ -16,6 +21,10 @@ pub fn prefix(ns: &str) -> &'static str {
         ZEEBE_NS => "zeebe",
         MODELER_NS => "modeler",
         DMN_NS => "",
+        DMN15_NS => "",
+        DMNDI15_NS => "dmndi",
+        DMN_DC_NS => "dc",
+        DMN_DI_NS => "di",
         XSD_NS => "xsd",
         _ => "ns0",
     }

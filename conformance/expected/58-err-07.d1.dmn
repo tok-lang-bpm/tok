@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="d1-definitions" name="D1" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="t1" name="t1" label="Typ">
+    <typeRef>number</typeRef>
+  </itemDefinition>
+  <inputData id="a" name="a" label="A">
+    <variable id="a-variable" name="a" typeRef="number" />
+  </inputData>
+  <inputData id="c" name="c" label="C">
+    <variable id="c-variable" name="c" />
+  </inputData>
+  <knowledgeSource id="s1" name="s1" label="Źródło" />
+  <businessKnowledgeModel id="k" name="k" label="Model">
+    <variable id="k-variable" name="k" />
+    <encapsulatedLogic id="k-logic" kind="FEEL">
+      <formalParameter id="k-param-1" name="x" typeRef="number" />
+      <formalParameter id="k-param-2" name="x" typeRef="string" />
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <businessKnowledgeModel id="k2" name="k2" label="Wywołanie modelu">
+    <variable id="k2-variable" name="k2" />
+    <encapsulatedLogic id="k2-logic" kind="FEEL">
+      <formalParameter id="k2-param-1" name="y" />
+      <invocation id="k2-invocation">
+        <literalExpression id="k2-invocation-callee">
+          <text>d1</text>
+        </literalExpression>
+        <binding>
+          <parameter id="k2-binding-1" name="y" />
+          <literalExpression id="k2-binding-1-expr">
+            <text>y</text>
+          </literalExpression>
+        </binding>
+      </invocation>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <businessKnowledgeModel id="k3" name="k3" label="Zły parametr">
+    <variable id="k3-variable" name="k3" />
+    <encapsulatedLogic id="k3-logic" kind="FEEL">
+      <formalParameter id="k3-param-1" name="p" />
+      <invocation id="k3-invocation">
+        <literalExpression id="k3-invocation-callee">
+          <text>k</text>
+        </literalExpression>
+      </invocation>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <decision id="d1" name="d1" label="D1">
+    <variable id="d1-variable" name="d1" />
+    <informationRequirement id="d1-requires-d2">
+      <requiredDecision href="#d2" />
+    </informationRequirement>
+    <informationRequirement id="d1-requires-a">
+      <requiredInput href="#a" />
+    </informationRequirement>
+    <literalExpression id="d1-expr">
+      <text>d2 + a</text>
+    </literalExpression>
+  </decision>
+  <decision id="d2" name="d2" label="D2">
+    <variable id="d2-variable" name="d2" />
+    <informationRequirement id="d2-requires-d1">
+      <requiredDecision href="#d1" />
+    </informationRequirement>
+    <literalExpression id="d2-expr">
+      <text>d1 + a + 1</text>
+    </literalExpression>
+  </decision>
+  <decision id="d3" name="d3" label="D3">
+    <variable id="d3-variable" name="d3" />
+    <literalExpression id="d3-expr">
+      <text>1</text>
+    </literalExpression>
+  </decision>
+  <decision id="d8" name="d8" label="D8">
+    <variable id="d8-variable" name="d8" typeRef="number" />
+    <informationRequirement id="d8-requires-a">
+      <requiredInput href="#a" />
+    </informationRequirement>
+    <decisionTable id="d8-table" hitPolicy="PRIORITY" aggregation="SUM">
+      <input id="d8-input-1" label="a">
+        <inputExpression id="d8-input-1-expr" typeRef="number">
+          <text>a</text>
+        </inputExpression>
+      </input>
+      <output id="d8-output-1" label="w" name="w" typeRef="number" />
+      <rule id="d8-rule-1">
+        <inputEntry id="d8-rule-1-in-1">
+          <text>&gt; 1</text>
+        </inputEntry>
+        <outputEntry id="d8-rule-1-out-1">
+          <text>1</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="d9" name="d9" label="D9">
+    <variable id="d9-variable" name="d9" typeRef="number" />
+    <informationRequirement id="d9-requires-a">
+      <requiredInput href="#a" />
+    </informationRequirement>
+    <decisionTable id="d9-table" hitPolicy="CHAOS">
+      <input id="d9-input-1" label="a">
+        <inputExpression id="d9-input-1-expr" typeRef="number">
+          <text>a</text>
+        </inputExpression>
+      </input>
+      <output id="d9-output-1" label="w" name="w" typeRef="number" />
+      <rule id="d9-rule-1">
+        <inputEntry id="d9-rule-1-in-1">
+          <text>&gt; 1 &gt;</text>
+        </inputEntry>
+        <outputEntry id="d9-rule-1-out-1">
+          <text>(1</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="d10" name="d10" label="D10">
+    <variable id="d10-variable" name="d10" />
+    <informationRequirement id="d10-requires-a">
+      <requiredInput href="#a" />
+    </informationRequirement>
+    <decisionTable id="d10-table" hitPolicy="COLLECT" aggregation="MEDIAN">
+      <input id="d10-input-1" label="a">
+        <inputExpression id="d10-input-1-expr" typeRef="number">
+          <text>a</text>
+        </inputExpression>
+      </input>
+      <output id="d10-output-1" label="w" name="w" typeRef="number" />
+      <output id="d10-output-2" label="v" name="v" typeRef="number" />
+      <rule id="d10-rule-1">
+        <inputEntry id="d10-rule-1-in-1">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="d10-rule-1-out-1">
+          <text>1</text>
+        </outputEntry>
+        <outputEntry id="d10-rule-1-out-2">
+          <text>2</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_d1">
+      <dmndi:DMNShape id="DMNShape_c" dmnElementRef="c">
+        <dc:Bounds height="45" width="125" x="151" y="98" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_s1" dmnElementRef="s1">
+        <dc:Bounds height="63" width="100" x="315" y="89" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_k2" dmnElementRef="k2">
+        <dc:Bounds height="46" width="135" x="456" y="97" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_k3" dmnElementRef="k3">
+        <dc:Bounds height="46" width="135" x="631" y="97" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d3" dmnElementRef="d3">
+        <dc:Bounds height="80" width="180" x="805" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d8" dmnElementRef="d8">
+        <dc:Bounds height="80" width="180" x="1025" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d9" dmnElementRef="d9">
+        <dc:Bounds height="80" width="180" x="1245" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d10" dmnElementRef="d10">
+        <dc:Bounds height="80" width="180" x="1465" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_k" dmnElementRef="k">
+        <dc:Bounds height="46" width="135" x="242" y="247" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_a" dmnElementRef="a">
+        <dc:Bounds height="45" width="125" x="151" y="1748" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d2" dmnElementRef="d2">
+        <dc:Bounds height="80" width="180" x="315" y="1730" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_d1" dmnElementRef="d1">
+        <dc:Bounds height="80" width="180" x="219" y="1880" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_c-requires-a" dmnElementRef="c-requires-a">
+        <di:waypoint x="171" y="1748" />
+        <di:waypoint x="213" y="143" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_s1-requires-k" dmnElementRef="s1-requires-k">
+        <di:waypoint x="309" y="247" />
+        <di:waypoint x="365" y="152" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_k-requires-d1" dmnElementRef="k-requires-d1">
+        <di:waypoint x="279" y="1880" />
+        <di:waypoint x="309" y="293" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d1-requires-d2" dmnElementRef="d1-requires-d2">
+        <di:waypoint x="405" y="1810" />
+        <di:waypoint x="279" y="1880" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d1-requires-a" dmnElementRef="d1-requires-a">
+        <di:waypoint x="192" y="1793" />
+        <di:waypoint x="339" y="1880" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d2-requires-d1" dmnElementRef="d2-requires-d1">
+        <di:waypoint x="339" y="1880" />
+        <di:waypoint x="405" y="1810" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d8-requires-a" dmnElementRef="d8-requires-a">
+        <di:waypoint x="213" y="1748" />
+        <di:waypoint x="1115" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d9-requires-a" dmnElementRef="d9-requires-a">
+        <di:waypoint x="234" y="1748" />
+        <di:waypoint x="1335" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_d10-requires-a" dmnElementRef="d10-requires-a">
+        <di:waypoint x="255" y="1748" />
+        <di:waypoint x="1555" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

@@ -7,7 +7,8 @@ const NODE_LIKE = Set{String}([NODE_KINDS..., "flow", "message", "data", "store"
 const ALLOWED = Dict{String,Set{String}}(
     "top" => union(NODE_LIKE, Set(["pool", "group", "decision", "form", "simulate", "resource", "variable",
                                    "item", "global", "interface", "key",
-                                   "conversation", "subconversation", "callconversation", "choreography"])),
+                                   "conversation", "subconversation", "callconversation", "choreography",
+                                   "inputdata", "bkm", "source"])),
     "pool" => union(NODE_LIKE, Set(["lane"])),
     "lane" => union(NODE_LIKE, Set(["lane"])),
     "sub" => NODE_LIKE,
@@ -22,6 +23,10 @@ const ALLOWED = Dict{String,Set{String}}(
     "subconversation" => Set([CONVERSATION_KINDS...]),
     "choreography" => Set([NODE_KINDS..., CHOREO_KINDS..., "flow"]),
     "subchoreo" => Set([NODE_KINDS..., CHOREO_KINDS..., "flow"]),
+    # language 0.7: the block of a decision, a business knowledge model, an entry, a
+    # result or an element, and the components of a DMN type
+    "box" => Set(["entry", "result", "element"]),
+    "itemdef" => Set(["item"]),
 )
 const KEYWORDS = union(values(ALLOWED)..., Set(["tok"]))
 
@@ -210,6 +215,8 @@ function statement!(p::Parser, line::Line, ctx::Ctx)::StResult
     if first.kind == ROW
         if ctx.kind == "decision"
             row!(p, line, ctx.owner)
+        elseif ctx.kind == "box"
+            row07!(p, line, ctx.owner, ctx.scope)
         else
             err!(p, "P004", line.number; keyword="|", context=ctx.kind)
         end
@@ -219,7 +226,7 @@ function statement!(p::Parser, line::Line, ctx::Ctx)::StResult
         err!(p, "P010", line.number)
         return noresult("tok")
     end
-    if kw === nothing || !(kw in KEYWORDS)
+    if kw === nothing || !(kw in KEYWORDS) || (kw in KEYWORDS_07 && !lang_07(p.doc))
         err!(p, "P001", line.number; word=first.value)
         return noresult("?")
     end
@@ -232,7 +239,13 @@ function statement!(p::Parser, line::Line, ctx::Ctx)::StResult
     kw == "flow" && return st_flow!(p, line, ctx)
     kw == "message" && return st_message!(p, line, ctx)
     kw in ("data", "store", "input", "output", "property") && return st_data!(p, line, ctx, kw)
+    kw == "item" && ctx.kind == "itemdef" && return st_component!(p, line, ctx)
+    kw == "item" && lang_07(p.doc) && return st_item07!(p, line)
     kw in ("item", "global") && return st_declaration!(p, line, kw)
+    kw in ("inputdata", "source") && return st_drg_element!(p, line, kw)
+    kw == "bkm" && return st_box_root!(p, line, true)
+    kw == "decision" && lang_07(p.doc) && return st_box_root!(p, line, false)
+    kw in ("entry", "result", "element") && return st_box_line!(p, line, ctx, kw)
     kw in ("interface", "key") && return st_block_declaration!(p, line, kw)
     kw in ("operation", "prop") && return st_member!(p, line, ctx, kw)
     kw in CONVERSATION_KINDS && return st_conversation!(p, line, ctx, kw)

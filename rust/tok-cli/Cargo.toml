@@ -20,8 +20,6 @@ path = "src/main.rs"
 tok-core = { path = "../tok-core" }
 tok-bpmn = { path = "../tok-bpmn" }
 tok-sim = { path = "../tok-sim" }
-
-[dev-dependencies]
 serde_json = "1.0.154"
 
 [lints]

@@ -24,6 +24,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.6.0** — language 0.6: conversations, choreographies, participant multiplicity; BPMN conformance classes (`tok check --class`); layout sidecar keeping the drawing of imported files.
 - **0.7.0** — language 0.7: decision requirements graphs (input data, knowledge sources, business knowledge models), boxed expressions, FEEL of DMN 1.5 conformance level 3, DMN 1.5 export and DMN import, `tok eval` for graphs; DMN TCK gate (level 2: all, level 3: 99.5 %); decisions verified on Camunda 8 Run.
 - **0.8.0** — Julia on the Rust engine: the C interface `tokengine` (`docs/c-api.md`), `Tok.Engine` with the whole language in Julia, the native simulator `Tok.Sim` checked statistically against the engine (Kolmogorov–Smirnov, 44 models), calibration on event logs (`Tok.Fit`, Bayesian with Turing.jl), the BinaryBuilder recipe of `tok_jll` and the precompiled `tok` application.
+- **0.9.0** — tooling: the language server `tok-lsp` and the VS Code extension with a live diagram, the MCP server `tok-mcp`, the browser playground on WebAssembly with the bpmn-js viewer; the agent skill for the whole of language 0.7. Fuzzing, benchmarks and the frozen specification follow as the 1.0 release candidate.
 
 ## State at 0.1
 

@@ -5,9 +5,10 @@
 //! string holding a JSON object, `{"ok": VALUE}` on success or `{"error": {"kind",
 //! "message"}}` on failure, which the caller frees with [`tok_free`]. [`tok_version`]
 //! and [`tok_abi_version`] identify the library. No function panics across the
-//! boundary. The functions, options and results are documented in `docs/c-api.md`.
+//! boundary. The functions, options and results are documented in `docs/c-api.md`; they
+//! call the functions of [`tok_cli::api`], which the MCP server and the WebAssembly build
+//! share.
 
-mod api;
 #[allow(unsafe_code)]
 mod ffi;
 

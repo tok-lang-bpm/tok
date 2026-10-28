@@ -39,7 +39,10 @@ cannot be produced), 2 for a usage error.
   with route and label refinement, and SVG rendering.
 - `tok-sim`: the discrete-event simulator (`sim.py`), with a bit-exact port of
   Python's `random.Random`.
-- `tok-cli`: this command.
+- `tok-cli`: this command, and the module `tok_cli::api`: the commands as functions
+  from text and JSON options to a JSON result, which the C interface (`tok-capi`), the
+  language server (`tok-lsp`), the MCP server (`tok-mcp`) and the WebAssembly build
+  (`tok-wasm`) share (`docs/c-api.md`).
 
 ## How parity is verified
 

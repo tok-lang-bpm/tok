@@ -12,7 +12,7 @@ The package compiles its Rust engine during installation. You need:
 From a release archive `tokr_VERSION.tar.gz` (it contains every Rust crate it needs and installs without network access):
 
 ```r
-install.packages("tokr_0.8.0.tar.gz", repos = NULL, type = "source")
+install.packages("tokr_0.9.0.tar.gz", repos = NULL, type = "source")
 ```
 
 From a checkout of the repository:

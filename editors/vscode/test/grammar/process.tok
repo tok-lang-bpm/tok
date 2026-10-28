@@ -1,0 +1,52 @@
+# SYNTAX TEST "source.tok" "header, pools, lanes, flow nodes, flows"
+tok 0.1 "Wypożyczenie międzybiblioteczne" executable
+# <--- keyword.other.header.tok
+#   ^^^ constant.numeric.version.tok
+#       ^ punctuation.definition.string.begin.tok
+#        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.tok
+#                                         ^^^^^^^^^^ constant.language.flag.tok
+
+pool biblioteka "Biblioteka uczelniana" process=wypozyczenie
+# <---- storage.type.tok
+#    ^^^^^^^^^^ entity.name.function.tok
+#                                       ^^^^^^^ entity.other.attribute-name.tok
+#                                              ^ keyword.operator.assignment.tok
+  lane czytelnik "Czytelnik"
+# ^^^^ storage.type.tok
+#      ^^^^^^^^^ entity.name.function.tok
+    start potrzeba "Potrzeba książki" form=f-zamowienie
+#   ^^^^^ storage.type.tok
+#         ^^^^^^^^ entity.name.function.tok
+#                                     ^^^^ entity.other.attribute-name.tok
+    user zamowienie "Złożenie zamówienia" duration="tri(5m, 10m, 20m)" by=czytelnicy
+#   ^^^^ storage.type.tok
+#                                         ^^^^^^^^ entity.other.attribute-name.tok
+#                                                  ^^^^^^^^^^^^^^^^^^^ string.quoted.double.tok
+    boundary termin "Minęło 7 dni" on=zamowienie timer=P7D noninterrupting  # uwaga
+#   ^^^^^^^^ storage.type.tok
+#                                  ^^ entity.other.attribute-name.tok
+#                                                          ^^^^^^^^^^^^^^^ constant.language.flag.tok
+#                                                                           ^^^^^^^ comment.line.number-sign.tok
+    xor dostepna "Czy książka dostępna?"
+#   ^^^ storage.type.tok
+    end wskazany "Egzemplarz # wskazany"
+#                ^^^^^^^^^^^^^^^^^^^^^^^ string.quoted.double.tok
+#                             ^ - comment
+  lane bibliotekarz
+    service s "Wysyłka" type="send-mail" retries=3
+#                                                ^ constant.numeric.tok
+
+flow potrzeba -> zamowienie -> dostepna
+# <---- keyword.control.tok
+#             ^^ keyword.operator.arrow.tok
+flow dostepna -> wskazany "tak" when="dostepna = true" p=0.85
+#                         ^^^^^ string.quoted.double.tok
+#                               ^^^^ entity.other.attribute-name.tok
+#                                                        ^^^^ constant.numeric.tok
+flow dostepna -> termin "nie \"teraz\"" default
+#                            ^^ constant.character.escape.tok
+#                                       ^^^^^^^ constant.language.flag.tok
+message wyslanie -> inna "Zamówienie"
+# <------- keyword.control.tok
+reads zamowienie wniosek
+# <----- keyword.control.tok

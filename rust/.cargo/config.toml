@@ -1,0 +1,5 @@
+# The simulator moves tokens through gateways and events that take no time by nested
+# calls and runs on a thread with a deep stack (tok-sim); WebAssembly has no threads, so
+# the module of tok-wasm gets a deep stack of its own (32 MiB).
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-zstack-size=33554432"]

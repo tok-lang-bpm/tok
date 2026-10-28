@@ -1,0 +1,43 @@
+# SYNTAX TEST "source.tok" "decisions, tables, forms, simulation"
+tok 0.7 "Decyzje"
+
+inputdata wiek "Wiek czytelnika" type=number
+# <--------- storage.type.tok
+#         ^^^^ entity.name.function.tok
+bkm kara "Kara" params="dni: number" expr="dni * 0.5"
+# <--- storage.type.tok
+decision limit "Limit wypożyczeń" requires="wiek" hit=first
+# <-------- storage.type.tok
+#        ^^^^^ entity.name.function.tok
+  | wiek: number || limit: number |
+# ^ punctuation.separator.cell.tok
+#                ^^ keyword.operator.separator.tok
+  | < 18         || 5             |
+#                   ^ constant.numeric.tok
+  | -            || "dużo"        |  # inny
+#  ^^^ keyword.operator.any.tok
+#                   ^^^^^^ string.quoted.double.tok
+#                                    ^^^^^^ comment.line.number-sign.tok
+decision opis "Opis" requires="limit"
+  entry tekst expr="string(limit)"
+# ^^^^^ storage.type.tok
+#       ^^^^^ entity.name.function.tok
+  result expr="tekst"
+# ^^^^^^ storage.type.tok
+#        ^^^^ entity.other.attribute-name.tok
+
+form f-zamowienie "Zamówienie"
+# <---- storage.type.tok
+  text "## Zamówienie"
+# ^^^^ storage.type.tok
+  field tytul "Tytuł" type=textfield required
+# ^^^^^ storage.type.tok
+#                                    ^^^^^^^^ constant.language.flag.tok
+
+simulate cases=200 seed=1 arrival="exp(2h)"
+# <-------- storage.type.tok
+#              ^^^ constant.numeric.tok
+resource czytelnicy "Czytelnicy" count=2
+# <-------- storage.type.tok
+variable cena "unif(20, 300)"
+# <-------- storage.type.tok

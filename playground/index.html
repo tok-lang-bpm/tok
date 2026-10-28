@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tok playground</title>
+  <meta name="description" content="Write tok process models in the browser: diagnostics, canonical form, diagram, BPMN 2.0 XML, simulation and decisions, computed by the tok engine compiled to WebAssembly.">
+  <link rel="stylesheet" href="style.css">
+  <!-- bpmn-js viewer (bpmn.io, Camunda Services GmbH; licence: https://unpkg.com/bpmn-js@18.31.0/LICENSE) -->
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.31.0/dist/assets/diagram-js.css"
+        integrity="sha384-AWPGaNcjP5js21rXUd/M+PvbIelMmHlfQIYLIhp5MnZOK4mc4jwjwC6p5PZfoIjW" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://unpkg.com/bpmn-js@18.31.0/dist/assets/bpmn-js.css"
+        integrity="sha384-/nphkprXqZZHJ+7ep/MfvLJ9NR1E5ZoJX0faaFpWvQxq0RFnm0LPXBXOQVjAw5aO" crossorigin="anonymous">
+  <script src="https://unpkg.com/bpmn-js@18.31.0/dist/bpmn-viewer.production.min.js"
+          integrity="sha384-MBiz5xqted8UcsuPCO0bBA9r06e054WJppe0Iyxdu6LNdPmN6roFCPPG2dqe6KTY" crossorigin="anonymous" defer></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header>
+    <h1>tok <span>playground</span></h1>
+    <label class="field">Example
+      <select id="example"></select>
+    </label>
+    <div class="actions">
+      <button id="format" title="Print the canonical form (tok fmt)">Format</button>
+      <label class="button" title="Open a .tok, .bpmn or .dmn file">Open…<input id="open" type="file" accept=".tok,.bpmn,.dmn,.xml" hidden></label>
+      <button id="save-tok" title="Download the document">Download .tok</button>
+      <button id="save-bpmn" title="Download BPMN 2.0 XML with the diagram layout">Download BPMN</button>
+      <button id="share" title="Copy a link that holds the document">Copy link</button>
+      <label class="field">Messages
+        <select id="lang"><option value="en">English</option><option value="pl">Polski</option></select>
+      </label>
+    </div>
+    <span id="version" class="muted"></span>
+  </header>
+
+  <main>
+    <section class="editor-pane">
+      <div class="editor">
+        <pre id="gutter" aria-hidden="true"></pre>
+        <textarea id="source" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="tok document"></textarea>
+      </div>
+      <div class="diagnostics">
+        <div id="summary" class="summary">Loading the engine…</div>
+        <ul id="diagnostics"></ul>
+      </div>
+    </section>
+
+    <section class="output-pane">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="diagram" aria-selected="true">Diagram</button>
+        <button role="tab" data-tab="viewer">bpmn-js</button>
+        <button role="tab" data-tab="simulation">Simulation</button>
+        <button role="tab" data-tab="decisions">Decisions</button>
+        <button role="tab" data-tab="files">Files</button>
+      </nav>
+      <div class="panel" id="panel-diagram" role="tabpanel"><div id="diagram" class="diagram"></div></div>
+      <div class="panel" id="panel-viewer" role="tabpanel" hidden><div id="viewer" class="viewer"></div></div>
+      <div class="panel" id="panel-simulation" role="tabpanel" hidden>
+        <form id="sim-form" class="row">
+          <label class="field">Cases <input id="sim-cases" type="number" min="1" placeholder="from the model"></label>
+          <label class="field">Seed <input id="sim-seed" type="number" placeholder="from the model"></label>
+          <button type="submit">Run simulation</button>
+        </form>
+        <pre id="sim-report" class="output"></pre>
+      </div>
+      <div class="panel" id="panel-decisions" role="tabpanel" hidden>
+        <form id="eval-form">
+          <div class="row">
+            <label class="field">Decision <select id="eval-decision"></select></label>
+            <button type="submit">Evaluate</button>
+          </div>
+          <label class="field block">Input values (JSON object)
+            <textarea id="eval-values" rows="5" spellcheck="false">{}</textarea>
+          </label>
+        </form>
+        <pre id="eval-result" class="output"></pre>
+      </div>
+      <div class="panel" id="panel-files" role="tabpanel" hidden>
+        <p class="muted">Every file <code>tok export</code> writes: BPMN, SVG, DMN and Camunda forms.</p>
+        <div class="row"><button id="export">Export</button></div>
+        <ul id="files" class="files"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="muted">
+    The tok engine runs in this page as WebAssembly; nothing is sent to a server.
+    <a href="https://codeberg.org/MarekDeja/tok">tok on Codeberg</a> ·
+    <a href="https://codeberg.org/MarekDeja/tok/src/branch/main/docs/cheatsheet.md">language on one page</a> ·
+    GPL-3.0-or-later
+  </footer>
+</body>
+</html>

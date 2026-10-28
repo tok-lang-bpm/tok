@@ -1,0 +1,179 @@
+{
+  "name": "tok",
+  "displayName": "tok",
+  "description": "The tok process language: syntax highlighting, diagnostics, formatting, navigation, rename and a live diagram preview of BPMN 2.0 models written as text.",
+  "version": "0.9.0",
+  "publisher": "MarekDeja",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://codeberg.org/MarekDeja/tok"
+  },
+  "homepage": "https://codeberg.org/MarekDeja/tok/src/branch/main/docs/lsp.md",
+  "bugs": {
+    "url": "https://codeberg.org/MarekDeja/tok/issues"
+  },
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Visualization"
+  ],
+  "keywords": [
+    "tok",
+    "bpmn",
+    "dmn",
+    "process",
+    "camunda"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tok",
+        "aliases": [
+          "tok"
+        ],
+        "extensions": [
+          ".tok"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tok",
+        "scopeName": "source.tok",
+        "path": "./syntaxes/tok.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "tok.showDiagram",
+        "title": "Show diagram",
+        "category": "tok",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "tok.exportBpmn",
+        "title": "Export BPMN",
+        "category": "tok"
+      },
+      {
+        "command": "tok.exportAll",
+        "title": "Export all files",
+        "category": "tok"
+      },
+      {
+        "command": "tok.check",
+        "title": "Check",
+        "category": "tok"
+      },
+      {
+        "command": "tok.restartServer",
+        "title": "Restart language server",
+        "category": "tok"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "tok.showDiagram",
+          "when": "editorLangId == tok",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "tok.showDiagram",
+          "when": "editorLangId == tok"
+        },
+        {
+          "command": "tok.exportBpmn",
+          "when": "editorLangId == tok"
+        },
+        {
+          "command": "tok.exportAll",
+          "when": "editorLangId == tok"
+        },
+        {
+          "command": "tok.check",
+          "when": "editorLangId == tok"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "tok",
+      "properties": {
+        "tok.server.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "description": "Path of the tok-lsp program. Empty: the server bundled with the extension, else tok-lsp on the PATH."
+        },
+        "tok.lang": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "pl"
+          ],
+          "enumDescriptions": [
+            "The language of the VS Code display (Polish for Polish, else English)",
+            "English",
+            "Polish"
+          ],
+          "default": "auto",
+          "description": "Language of the diagnostics."
+        },
+        "tok.level": {
+          "type": "string",
+          "enum": [
+            "basic",
+            "analytic",
+            "full"
+          ],
+          "default": "full",
+          "description": "Teaching level: the elements a document may use (tok check --level)."
+        },
+        "tok.class": {
+          "type": "string",
+          "enum": [
+            "none",
+            "descriptive",
+            "analytic",
+            "common-executable",
+            "full"
+          ],
+          "default": "none",
+          "description": "BPMN 2.0.2 conformance class to check against (tok check --class); none: no class check."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "npm run build && npm run test:grammar && npm run test:examples",
+    "test:grammar": "vscode-tmgrammar-test -g syntaxes/tok.tmLanguage.json \"test/grammar/*.tok\"",
+    "test:examples": "node test/examples.mjs",
+    "bundle-server": "node scripts/bundle-server.mjs",
+    "package": "npm run build && npm run bundle-server && node scripts/package.mjs",
+    "smoke": "node test/smoke.mjs",
+    "test:vscode": "npm run build && npm run bundle-server && node test/vscode-run.mjs"
+  },
+  "dependencies": {
+    "vscode-languageclient": "10.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/vscode": "1.105.0",
+    "@vscode/vsce": "4.0.0",
+    "typescript": "6.0.3",
+    "vscode-oniguruma": "1.7.0",
+    "vscode-textmate": "7.0.4",
+    "vscode-tmgrammar-test": "0.1.3"
+  }
+}

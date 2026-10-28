@@ -7,7 +7,7 @@
 use std::ffi::{CStr, CString, c_char};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use crate::api::{self, ApiError, Res};
+use tok_cli::api::{self, ApiError, Res};
 
 /// Version of the C interface: incremented when a function is removed or changes its
 /// parameters or the shape of its result in an incompatible way.

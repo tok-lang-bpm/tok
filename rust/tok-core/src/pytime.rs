@@ -10,6 +10,26 @@ const MAX_ORDINAL: i64 = 3_652_059;
 const MAX_DELTA_DAYS: i64 = 999_999_999;
 const US_PER_DAY: i128 = 86_400_000_000;
 
+/// A clock set by the host when the system clock is not available (WebAssembly in a
+/// browser, where `SystemTime::now` panics): nanoseconds since the Unix epoch.
+static CLOCK: std::sync::OnceLock<fn() -> i128> = std::sync::OnceLock::new();
+
+/// Set the clock of `now()` and `today()`; returns `false` when one was set already.
+pub fn set_clock(clock: fn() -> i128) -> bool {
+    CLOCK.set(clock).is_ok()
+}
+
+/// Nanoseconds since the Unix epoch, from the clock set with [`set_clock`] or the system.
+pub fn unix_nanos() -> i128 {
+    if let Some(clock) = CLOCK.get() {
+        return clock();
+    }
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as i128)
+        .unwrap_or(0)
+}
+
 fn is_leap(y: i64) -> bool {
     y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
 }
@@ -290,10 +310,7 @@ pub struct DateTime {
 impl DateTime {
     /// The current time in UTC (`datetime.now(timezone.utc)`).
     pub fn now_utc() -> DateTime {
-        let us = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_micros() as i128)
-            .unwrap_or(0);
+        let us = unix_nanos() / 1000;
         let days = us.div_euclid(US_PER_DAY) as i64;
         let rest = us.rem_euclid(US_PER_DAY) as i64;
         let date = Date::from_unix_days(days).unwrap_or(Date {

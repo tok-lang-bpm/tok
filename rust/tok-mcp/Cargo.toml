@@ -1,0 +1,21 @@
+[package]
+name = "tok-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "MCP server of the tok process language: check, format, export, import, simulate and evaluate models from AI agents"
+publish = false
+
+[[bin]]
+name = "tok-mcp"
+path = "src/main.rs"
+
+[dependencies]
+tok-cli = { path = "../tok-cli" }
+serde_json = "1.0.154"
+
+[lints]
+workspace = true

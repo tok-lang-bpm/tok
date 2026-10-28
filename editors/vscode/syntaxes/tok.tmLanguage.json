@@ -1,0 +1,96 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "tok",
+  "scopeName": "source.tok",
+  "fileTypes": ["tok"],
+  "patterns": [
+    { "include": "#comment-line" },
+    { "include": "#row" },
+    { "include": "#header" },
+    { "include": "#declaration" },
+    { "include": "#statement" },
+    { "include": "#tail" }
+  ],
+  "repository": {
+    "comment-line": {
+      "name": "comment.line.number-sign.tok",
+      "match": "^\\s*(#).*$",
+      "captures": { "1": { "name": "punctuation.definition.comment.tok" } }
+    },
+    "comment": {
+      "name": "comment.line.number-sign.tok",
+      "match": "(#).*$",
+      "captures": { "1": { "name": "punctuation.definition.comment.tok" } }
+    },
+    "header": {
+      "match": "^\\s*(tok)(?=\\s|$)(?:\\s+([0-9]+(?:\\.[0-9]+)?))?",
+      "captures": {
+        "1": { "name": "keyword.other.header.tok" },
+        "2": { "name": "constant.numeric.version.tok" }
+      }
+    },
+    "declaration": {
+      "match": "^\\s*(start|end|catch|throw|boundary|task|user|service|manual|script|rule|send|receive|call|sub|eventsub|adhoc|transaction|xor|and|or|eventgw|complex|pool|lane|global|interface|operation|choreography|choreo|subchoreo|callchoreo|key|prop|conversation|subconversation|callconversation|data|store|item|input|output|property|resource|note|group|decision|inputdata|source|bkm|entry|result|element|form|text|field|simulate|variable)(?=\\s|$)(?:\\s+([A-Za-z_][A-Za-z0-9_-]*)(?=\\s|$))?",
+      "captures": {
+        "1": { "name": "storage.type.tok" },
+        "2": { "name": "entity.name.function.tok" }
+      }
+    },
+    "statement": {
+      "match": "^\\s*(flow|message|reads|writes)(?=\\s|$)",
+      "captures": { "1": { "name": "keyword.control.tok" } }
+    },
+    "tail": {
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#comment" },
+        { "include": "#attribute" },
+        { "include": "#arrow" },
+        { "include": "#flag" },
+        { "include": "#number" }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.tok",
+      "begin": "\"",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.tok" } },
+      "end": "\"|$",
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.tok" } },
+      "patterns": [
+        { "name": "constant.character.escape.tok", "match": "\\\\[\"\\\\n]" }
+      ]
+    },
+    "attribute": {
+      "match": "(?<![A-Za-z0-9_.:/+-])([A-Za-z_][A-Za-z0-9_.:/+-]*)(=)",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.tok" },
+        "2": { "name": "keyword.operator.assignment.tok" }
+      }
+    },
+    "arrow": {
+      "name": "keyword.operator.arrow.tok",
+      "match": "->"
+    },
+    "flag": {
+      "name": "constant.language.flag.tok",
+      "match": "(?<![A-Za-z0-9_.:/+=-])(executable|default|loop|parallel|sequential|noninterrupting|terminate|compensate|cancel|compensation|instantiate|test-before|wait|required|collection)(?![A-Za-z0-9_.:/+=-])"
+    },
+    "number": {
+      "name": "constant.numeric.tok",
+      "match": "(?<![A-Za-z0-9_.:/+-])-?[0-9]+(?:\\.[0-9]+)?(?![A-Za-z0-9_.:/+-])"
+    },
+    "row": {
+      "name": "meta.table.row.tok",
+      "begin": "^\\s*(?=\\|)",
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#comment" },
+        { "name": "keyword.operator.separator.tok", "match": "\\|\\|" },
+        { "name": "punctuation.separator.cell.tok", "match": "\\|" },
+        { "name": "keyword.operator.any.tok", "match": "(?<=\\|)\\s*-\\s*(?=\\|)" },
+        { "include": "#number" }
+      ]
+    }
+  }
+}

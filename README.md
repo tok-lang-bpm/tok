@@ -31,30 +31,30 @@ message wyslanie -> inna "Zamówienie"
 ## Why a text language
 
 - **Readable and reviewable.** Every line starts with a keyword and describes one element. Changes show up as clear diffs in version control.
-- **Made for people and for AI agents.** The whole language fits on one page (`tok cheatsheet`). An agent can write a model, run `tok check --json`, read the line-numbered diagnostics and fix them, without ever touching XML or coordinates.
+- **Made for people and for AI agents.** The whole language fits on one page (`tok cheatsheet`). An agent can write a model, run `tok check --json` (or call the `check` tool of the MCP server `tok-mcp`), read the line-numbered diagnostics and fix them, without ever touching XML or coordinates.
 - **Standards on the outside.** tok is a notation for BPMN 2.0 and DMN, not a replacement. Everything you write is exported to the OMG formats that modelling tools and process engines read; `tok import` converts existing BPMN and DMN files back to text.
 - **Executable and measurable.** The same file can carry the details Camunda 8 needs to run the process, and the times, resources and probabilities a simulation needs to estimate cycle times and workloads.
 - **Simple to implement.** A line-based grammar with six token types. Python, Rust and Julia implementations pass the same conformance corpus byte for byte.
 
 ## Install
 
-Python 3.8 or newer, no other dependencies (on Windows use `py -m pip` if `pip` is not on the path):
+The `tok` command is the Rust engine. Until the 1.0 release puts the Python package on PyPI, there are two ways to get it.
+
+The engine wheel of the Python package `tok-lang` (Python 3.8 or newer; wheels for Windows, Linux and macOS are built by `tools/wheel.sh`; on Windows use `py -m pip` if `pip` is not on the path):
 
 ```
-pip install https://codeberg.org/MarekDeja/tok/archive/main.zip
+pip install tok_lang-0.9.0-cp38-abi3-win_amd64.whl
 tok --version
 ```
 
-Without installation: `PYTHONPATH=python/src python -m tok …`.
-
-Native build from source (Rust 1.99 or newer):
+Or a native build from source (Rust 1.99 or newer):
 
 ```
 cd rust
 cargo build --release -p tok-cli      # target/release/tok
 ```
 
-It gives the same output as the Python command.
+Both read every version of the language. Installing the source archive without a wheel (`pip install https://codeberg.org/MarekDeja/tok/archive/main.zip`) gives the pure-Python implementation, which is frozen at language 0.3: it reads documents with the headers `tok 0.1` and `tok 0.3`, and reports the newer elements as unknown keywords.
 
 ## Julia
 
@@ -87,6 +87,24 @@ tok sim model.tok --seed 1       # simulation indicators; --log log.csv for the 
 tok eval model.tok DECISION a=1  # evaluate a decision
 ```
 
+## Tools
+
+| Tool | What it gives | Documentation |
+|---|---|---|
+| `tok` | the command line: check, format, export, import, simulate, evaluate | [docs/cli.md](docs/cli.md) |
+| `tok-lsp` | language server (LSP 3.17) for any editor: diagnostics, formatting, go to definition, references, rename, outline, hover, completion, the diagram | [docs/lsp.md](docs/lsp.md) |
+| VS Code extension | syntax highlighting, the language server, a live diagram preview, export of BPMN and every file | [editors/vscode](editors/vscode/README.md) |
+| `tok-mcp` | MCP server for AI agents: the tools `check`, `fmt`, `export`, `import`, `sim`, `eval` and the language reference | [docs/mcp.md](docs/mcp.md) |
+| playground | the engine in the browser (WebAssembly): editor, diagnostics, diagram, bpmn-js viewer, simulation, decisions, downloads | [docs/playground.md](docs/playground.md) |
+| Python, R, Julia | `tok-lang` (Python), `tokr` (R), `Tok.jl` (Julia) on the same engine | [docs/julia.md](docs/julia.md), `r/tokr` |
+| C library | `tokengine` with `tok.h`, for any language that calls C | [docs/c-api.md](docs/c-api.md) |
+
+```
+cd rust
+cargo build --release -p tok-lsp -p tok-mcp      # target/release/tok-lsp, target/release/tok-mcp
+bash tools/playground.sh                          # the playground in rust/target/playground
+```
+
 ## Documentation
 
 | Document | Contents |
@@ -102,6 +120,9 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 | [docs/julia.md](docs/julia.md) | Tok.jl: the engine in Julia, the independent core, native simulation, calibration |
 | [docs/calibration.md](docs/calibration.md) | the `fit` layer: estimating simulation parameters from event logs |
 | [docs/c-api.md](docs/c-api.md) | the C interface of the engine (library `tokengine`, header `tok.h`) |
+| [docs/lsp.md](docs/lsp.md) | the language server `tok-lsp` and its use in VS Code, Neovim, Helix and Emacs |
+| [docs/mcp.md](docs/mcp.md) | the MCP server `tok-mcp`: tools, resources, configuration of MCP clients |
+| [docs/playground.md](docs/playground.md) | the browser playground on the WebAssembly build of the engine |
 | [docs/roadmap.md](docs/roadmap.md) | plans from 0.1 to 1.0: full Camunda 8 and BPMN 2.0.2 coverage, Rust engine for Python and R, Julia standalone |
 | [skills/tok-modelling](skills/tok-modelling/SKILL.md) | a skill that teaches an AI agent to model in tok |
 | [examples/](examples/) | example models |
@@ -111,13 +132,15 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 | Folder | Contents |
 |---|---|
 | `python/` | reference implementation (package `tok-lang`, command `tok`) and its tests |
-| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-sim` (simulator), `tok-cli` (native `tok`), `tok-py` (Python bindings), `tok-capi` (C interface) |
+| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-sim` (simulator), `tok-cli` (native `tok`), `tok-py` (Python bindings), `tok-capi` (C interface), `tok-lsp` (language server), `tok-mcp` (MCP server), `tok-wasm` (WebAssembly build) |
+| `editors/vscode` | VS Code extension: grammar, language client, diagram preview |
+| `playground/` | the page of the browser playground |
 | `r/tokr` | R package `tokr` on the Rust engine: diagnostics as data frames, diagrams in the viewer, knitr engine `{tok}` |
 | `julia/Tok.jl` | Julia package: the engine through the C interface, the independent core, native simulation and calibration; `julia/app` (the `tok` application), `julia/binarybuilder` (the recipe of `tok_jll`) |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |
 | `docs/`, `examples/`, `skills/` | documentation, examples, agent skill |
 
-`tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program, the C library of the engine) on Linux, macOS or Windows with Git Bash.
+`tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program, the C library of the engine, the language and MCP servers, the VS Code extension and the playground) on Linux, macOS or Windows with Git Bash.
 
 The BPMN validation comes from the `bpmn.py` validator used in the course *Modelowanie procesów informacyjnych* (Jagiellonian University), shipped here as `tok.bpmnlib`; its rule messages are in Polish and `tok` adds English equivalents. The diagram layout and SVG rendering started as a port of `bpmn.py` and, from 0.4, are developed in the Rust engine (`rust/tok-bpmn`), in the same style: left to right, pools stacked, lanes as rows.
 

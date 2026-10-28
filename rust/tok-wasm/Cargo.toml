@@ -1,0 +1,28 @@
+[package]
+name = "tok-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "WebAssembly build of the tok engine for the browser playground"
+publish = false
+
+[lib]
+# cdylib: the WebAssembly module; rlib: the tests on the host call the functions directly
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+tok-core = { path = "../tok-core" }
+tok-cli = { path = "../tok-cli" }
+# exact version: the wasm-bindgen command that writes the JavaScript glue must be the same
+# version (tools/playground.sh installs it)
+wasm-bindgen = "=0.2.129"
+
+[dev-dependencies]
+serde_json = "1.0.154"
+wasm-bindgen-test = "=0.3.79"
+
+[lints]
+workspace = true

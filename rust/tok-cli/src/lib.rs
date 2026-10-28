@@ -66,6 +66,7 @@ macro_rules! errln {
     ($($t:tt)*) => { $crate::emit(&(format!($($t)*) + "\n"), true) };
 }
 
+pub mod api;
 mod argparse;
 
 use argparse::{Conv, Opt};

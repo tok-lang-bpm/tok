@@ -1,6 +1,6 @@
 # C interface
 
-The tok engine is also a C library, `tokengine`, built from the crate `rust/tok-capi`. It gives every function of the engine to any language that can call C: the Julia package `Tok.jl` uses it through `ccall` (see [julia.md](julia.md)), and C, C++, Go, Zig or Fortran programs can link it directly. The declarations are in the header `rust/tok-capi/include/tok.h`.
+The tok engine is also a C library, `tokengine`, built from the crate `rust/tok-capi`. It gives every function of the engine to any language that can call C: the Julia package `Tok.jl` uses it through `ccall` (see [julia.md](julia.md)), and C, C++, Go, Zig or Fortran programs can link it directly. The declarations are in the header `rust/tok-capi/include/tok.h`. The functions behind it (the module `tok_cli::api` of the crate `tok-cli`) also serve the MCP server ([mcp.md](mcp.md)), the requests of the language server ([lsp.md](lsp.md)) and the WebAssembly build of the playground ([playground.md](playground.md)), so all of them take the same options and give the same results.
 
 ## Building
 

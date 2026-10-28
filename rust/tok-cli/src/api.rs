@@ -1,6 +1,9 @@
-//! The functions of the C interface on Rust strings: each takes the text of a document (or
-//! of an XML file or an expression) and the options as JSON text, and returns the JSON
-//! value of a successful call or an [`ApiError`].
+//! The commands of tok as functions on strings: each takes the text of a document (or of
+//! an XML file or an expression) and the options as JSON text, and returns the JSON value
+//! of a successful call or an [`ApiError`]. The C interface (`tok-capi`), the MCP server
+//! (`tok-mcp`), the language server (`tok-lsp`) and the WebAssembly build (`tok-wasm`)
+//! call them, so every one of them gives the same results; `docs/c-api.md` documents the
+//! options and results.
 
 use serde_json::{Map, Value as JValue};
 
@@ -633,6 +636,6 @@ pub fn cli(args: &str, options: &str) -> Res {
         };
         argv.push(s);
     }
-    let status = tok_cli::main_with_args(&argv);
+    let status = crate::main_with_args(&argv);
     Ok(obj(vec![("status", Json::Int(i64::from(status)))]))
 }

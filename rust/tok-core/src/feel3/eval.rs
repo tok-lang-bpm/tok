@@ -94,10 +94,7 @@ pub fn temporal_literal(s: &str) -> Value {
 
 /// The current time in UTC.
 pub fn now_utc() -> DateTime {
-    let d = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let nanos = d.as_nanos() as i128;
+    let nanos = crate::pytime::unix_nanos();
     DateTime::from_local(nanos / 1_000_000 * 1_000_000, Zone::Offset(0)).unwrap_or(DateTime {
         date: Date {
             year: 1970,

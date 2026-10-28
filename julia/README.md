@@ -1,25 +1,26 @@
-# Tok.jl
+# Julia
 
-Julia implementation of the tok core: lexer, parser, text-layer diagnostics, canonical printer and semantic BPMN 2.0 export, for language versions 0.1 and 0.3 (including `adhoc` and the executable layer of spec §10.3). It produces byte-identical output to the Python reference implementation on the conformance corpus (`../conformance`): the canonical text (`expected/*.tok`), the core diagnostic codes (`expected/*.diag`) and the semantic XML (`expected/*.bpmn`).
+| Folder | Contents |
+|---|---|
+| `Tok.jl/` | the package `Tok`: the whole language through the Rust engine (`Tok.Engine`), the independent core (lexer, parser, canonical printer, semantic BPMN export), the native simulator (`Tok.Sim`) and the calibration on event logs (`Tok.Fit`, with Bayesian estimates in the extension `TokTuringExt`) |
+| `app/` | the `tok` application for Julia users, built with PackageCompiler (`julia app/build.jl`) |
+| `binarybuilder/` | the BinaryBuilder recipe of `tok_jll`, the engine library for every platform, and how it is submitted to Yggdrasil |
 
-The files `expected/*.levels` list every code of the full checker (BPMN rules, executable profile, FEEL, decisions, simulation) at the levels basic, analytic and full. The full checker is not part of the Julia core yet (roadmap 0.8), so the Julia tests do not read these files.
+The package and its use are described in [../docs/julia.md](../docs/julia.md), the calibration in [../docs/calibration.md](../docs/calibration.md), the C interface it calls in [../docs/c-api.md](../docs/c-api.md).
 
-Requires Julia 1.10 or newer and no packages.
+Requires Julia 1.10 or newer. The independent core needs no other package and no library:
 
 ```
 cd julia/Tok.jl
 julia --project=. bin/tok.jl check  ../../examples/propozycja-zakupu.tok
 julia --project=. bin/tok.jl fmt    ../../examples/propozycja-zakupu.tok
 julia --project=. bin/tok.jl xml    ../../examples/propozycja-zakupu.tok
-julia --project=. -e "using Pkg; Pkg.test()"      # conformance tests
 ```
 
-From Julia code:
+It produces byte-identical output to the conformance corpus (`../conformance`): the canonical text (`expected/*.tok`), the core diagnostic codes (`expected/*.diag`) and the semantic XML (`expected/*.bpmn`), for every language version. The engine, the native simulator and the calibration need the engine library (`cargo build --release -p tok-capi` in `../rust`, the environment variable `TOK_LIBTOK`, or the package `tok_jll`).
 
-```julia
-using Tok
-doc, diags = Tok.parse_tok(read("model.tok", String))
-print(Tok.fmt(doc))
+```
+julia --project=. -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
 ```
 
-Layout, SVG, FEEL, decisions, forms, import and simulation are provided by the Python implementation; see `../docs/roadmap.md` for the plan to bring them to Julia.
+runs the conformance tests of the core and, when the library is found, the tests of the engine, the native simulator (with its statistical comparison with the engine's), the calibration and the application.

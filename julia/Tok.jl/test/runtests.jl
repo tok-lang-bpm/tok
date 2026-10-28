@@ -1,7 +1,8 @@
 using Test
 using Tok
 
-const CONFORMANCE = normpath(joinpath(@__DIR__, "..", "..", "..", "conformance"))
+const ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
+const CONFORMANCE = joinpath(ROOT, "conformance")
 
 readtext(path) = replace(read(path, String), "\r\n" => "\n")
 
@@ -42,4 +43,15 @@ end
     @test message(diags[1]) == "unknown keyword 'procez'"
     @test message(diags[1], "pl") == "nieznane słowo kluczowe „procez”"
     @test format_diag(diags[1], "pl") == "wiersz 2: błąd P001: nieznane słowo kluczowe „procez”"
+end
+
+# The Rust engine, the native simulator and the calibration need the engine library
+# (TOK_LIBTOK, the package tok_jll, or rust/target/release of the repository).
+if Tok.Engine.available()
+    include("engine.jl")
+    include("sim.jl")
+    include("fit.jl")
+    include("app.jl")
+else
+    @info "tok engine library not found: the tests of Tok.Engine, Tok.Sim and Tok.Fit are skipped"
 end

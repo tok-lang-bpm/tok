@@ -2,7 +2,7 @@
 
 tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decisions it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
-This document is normative. The reference implementation is the Rust engine in `rust/` (the `tok` command and the Python and R packages run it); the pure-Python implementation in `python/` is frozen at language 0.3, and the Julia package in `julia/` implements the core (parsing, formatting, core diagnostics, BPMN export) against the same conformance corpus.
+This document is normative. The reference implementation is the Rust engine in `rust/` (the `tok` command and the Python and R packages run it); the pure-Python implementation in `python/` is frozen at language 0.3, and the Julia package in `julia/` runs the Rust engine through its C interface and implements the core independently (parsing, formatting, core diagnostics, BPMN export) against the same conformance corpus.
 
 Language 0.5 adds the elements of BPMN 2.0.2 process modelling that Camunda 8 does not execute: transactions and cancel events (§5.3), the complex gateway (§5.4), the attributes of the standard loop (§5.2.1), multiple and parallel multiple events (§5.1.1), instantiating receive tasks and event-based gateways (§5.2, §5.4), process data (§7.1), resources and performers (§7.2), global tasks, interfaces and operations (§5.6) and correlation keys (§6.3). Every BPMN 2.0.2 rule the checker enforces is listed with its clause in `bpmn-rules.md`.
 

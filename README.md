@@ -56,6 +56,24 @@ cargo build --release -p tok-cli      # target/release/tok
 
 It gives the same output as the Python command.
 
+## Julia
+
+`Tok.jl` gives the whole language to Julia through the C interface of the engine, keeps an independent implementation of the core of the specification, and adds a native simulator for large experiments and the calibration of simulation parameters on event logs:
+
+```julia
+using Pkg; Pkg.add(url="https://codeberg.org/MarekDeja/tok", subdir="julia/Tok.jl")
+using Tok
+text = read("model.tok", String)
+Tok.Engine.check(text)                                  # the engine: every layer of the language
+m = Tok.Sim.model(text)                                 # native simulation (julia -t auto)
+e = Tok.Sim.experiment([m, Tok.Sim.scenario(m; name="+1", resources=Dict("staff" => 3))]; replications=200)
+Tok.Sim.summarize(e)
+f = Tok.Fit.fit(text, Tok.Fit.read_xes("log.xes"))      # calibration on an event log
+Tok.Fit.apply(text, f)                                  # the document with the fitted parameters
+```
+
+The engine library is found through `TOK_LIBTOK`, the package `tok_jll`, or the repository build (`cargo build --release -p tok-capi`); see [docs/julia.md](docs/julia.md).
+
 ## Use
 
 ```
@@ -81,6 +99,9 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 | [docs/dmn-tck.md](docs/dmn-tck.md) | DMN TCK conformance results |
 | [docs/simulation.md](docs/simulation.md) | simulation semantics, distributions and outputs |
 | [docs/import.md](docs/import.md) | converting BPMN and DMN XML to tok |
+| [docs/julia.md](docs/julia.md) | Tok.jl: the engine in Julia, the independent core, native simulation, calibration |
+| [docs/calibration.md](docs/calibration.md) | the `fit` layer: estimating simulation parameters from event logs |
+| [docs/c-api.md](docs/c-api.md) | the C interface of the engine (library `tokengine`, header `tok.h`) |
 | [docs/roadmap.md](docs/roadmap.md) | plans from 0.1 to 1.0: full Camunda 8 and BPMN 2.0.2 coverage, Rust engine for Python and R, Julia standalone |
 | [skills/tok-modelling](skills/tok-modelling/SKILL.md) | a skill that teaches an AI agent to model in tok |
 | [examples/](examples/) | example models |
@@ -90,13 +111,13 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 | Folder | Contents |
 |---|---|
 | `python/` | reference implementation (package `tok-lang`, command `tok`) and its tests |
-| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-sim` (simulator), `tok-cli` (native `tok`), `tok-py` (Python bindings) |
+| `rust/` | Rust engine: `tok-core`, `tok-bpmn` (BPMN rules, layout, SVG), `tok-sim` (simulator), `tok-cli` (native `tok`), `tok-py` (Python bindings), `tok-capi` (C interface) |
 | `r/tokr` | R package `tokr` on the Rust engine: diagnostics as data frames, diagrams in the viewer, knitr engine `{tok}` |
-| `julia/Tok.jl` | Julia implementation of the core |
+| `julia/Tok.jl` | Julia package: the engine through the C interface, the independent core, native simulation and calibration; `julia/app` (the `tok` application), `julia/binarybuilder` (the recipe of `tok_jll`) |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |
 | `docs/`, `examples/`, `skills/` | documentation, examples, agent skill |
 
-`tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program) on Linux, macOS or Windows with Git Bash.
+`tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program, the C library of the engine) on Linux, macOS or Windows with Git Bash.
 
 The BPMN validation comes from the `bpmn.py` validator used in the course *Modelowanie procesów informacyjnych* (Jagiellonian University), shipped here as `tok.bpmnlib`; its rule messages are in Polish and `tok` adds English equivalents. The diagram layout and SVG rendering started as a port of `bpmn.py` and, from 0.4, are developed in the Rust engine (`rust/tok-bpmn`), in the same style: left to right, pools stacked, lanes as rows.
 

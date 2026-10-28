@@ -3,11 +3,12 @@
 #
 #   tools/check.sh            formatting, lints and tests of Rust, Python, R and Julia; wheel of
 #                             tok-lang with the Rust engine and its parity with the pure-Python
-#                             implementation; native tok program
+#                             implementation; native tok program; C library of the engine
 #   tools/check.sh --cross    additionally cross-compiles wheels for the other platforms
 #                             with zig (Linux host: Linux aarch64 and macOS universal2; not tested)
 #
-# Built wheels and the tok program are written to dist/. Julia is skipped when it is not installed.
+# Built wheels, the tok program and the C library of the engine (with tok.h) are written to
+# dist/. Julia is skipped when it is not installed.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,9 +19,9 @@ CROSS=0
 step() { printf '\n== %s\n' "$*"; }
 
 case "$(uname -s)" in
-  MINGW* | MSYS* | CYGWIN*) PLATFORM=windows; PY=python; BIN=Scripts; EXE=tok.exe ;;
-  Darwin) PLATFORM=macos; PY=python3; BIN=bin; EXE=tok ;;
-  *) PLATFORM=linux; PY=python3; BIN=bin; EXE=tok ;;
+  MINGW* | MSYS* | CYGWIN*) PLATFORM=windows; PY=python; BIN=Scripts; EXE=tok.exe; LIB=tokengine.dll ;;
+  Darwin) PLATFORM=macos; PY=python3; BIN=bin; EXE=tok; LIB=libtokengine.dylib ;;
+  *) PLATFORM=linux; PY=python3; BIN=bin; EXE=tok; LIB=libtokengine.so ;;
 esac
 
 rm -rf dist
@@ -32,9 +33,9 @@ step "Rust: formatting, lints, tests"
   cargo fmt --all --check
   cargo clippy --workspace --all-targets -- -D warnings
   cargo test --workspace
-  cargo build --release -p tok-cli
+  cargo build --release -p tok-cli -p tok-capi
 )
-cp "rust/target/release/$EXE" dist/
+cp "rust/target/release/$EXE" "rust/target/release/$LIB" rust/tok-capi/include/tok.h dist/
 
 step "tok program on the examples"
 for f in examples/*.tok; do "dist/$EXE" check "$f"; done
@@ -87,10 +88,13 @@ else
 fi
 
 if command -v julia > /dev/null; then
-  step "Julia core"
-  julia --project=julia/Tok.jl -e 'using Pkg; Pkg.test()'
+  step "Julia: core, engine through the C interface, native simulation, calibration"
+  # the engine library just built; the tests use two threads for the parallel runs
+  TOK_LIBTOK="$ROOT/rust/target/release/$LIB"
+  [ "$PLATFORM" = windows ] && TOK_LIBTOK="$(cygpath -w "$TOK_LIBTOK")"
+  TOK_LIBTOK="$TOK_LIBTOK" julia --project=julia/Tok.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
 else
-  step "Julia core: skipped (julia not installed)"
+  step "Julia: skipped (julia not installed)"
 fi
 
 step "All checks passed"

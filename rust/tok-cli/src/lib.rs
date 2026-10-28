@@ -186,18 +186,19 @@ fn run(argv: &[String]) -> Result<u8, u8> {
 }
 
 /// Read a text file like Python's `open(path, encoding="utf-8")` (universal newlines).
-fn read(path: &str) -> String {
+/// A file that cannot be read is reported; the error is the exit status.
+fn read(path: &str) -> Result<String, u8> {
     match std::fs::read(path) {
         Ok(bytes) => {
             let text = String::from_utf8_lossy(&bytes).to_string();
-            text.replace("\r\n", "\n").replace('\r', "\n")
+            Ok(text.replace("\r\n", "\n").replace('\r', "\n"))
         }
         Err(e) => {
             errln!(
                 "tok: cannot read {path}: {}",
                 tok_sim::result::os_error(&e, path).message
             );
-            std::process::exit(EXIT_USAGE as i32);
+            Err(EXIT_USAGE)
         }
     }
 }
@@ -217,13 +218,13 @@ fn write_lf(path: &Path, text: &str) -> std::io::Result<()> {
     std::fs::write(path, text)
 }
 
-fn load(a: &Args, bpmn: bool) -> (tok_core::Document, Vec<Diag>) {
+fn load(a: &Args, bpmn: bool) -> Result<(tok_core::Document, Vec<Diag>), u8> {
     let rules = Rules;
-    tok_core::load(
-        &read(&a.file),
+    Ok(tok_core::load(
+        &read(&a.file)?,
         &a.level,
         if bpmn { Some(&rules) } else { None },
-    )
+    ))
 }
 
 fn report(a: &Args, diags: &[Diag]) -> usize {
@@ -273,7 +274,10 @@ fn report_class(a: &Args, diags: &[Diag], class: Option<&str>) -> usize {
 }
 
 fn cmd_check(a: &Args) -> u8 {
-    let (doc, mut diags) = load(a, true);
+    let (doc, mut diags) = match load(a, true) {
+        Ok(r) => r,
+        Err(code) => return code,
+    };
     if let Some(class) = &a.class {
         diags.extend(tok_core::classes::check_class(&doc, class));
         tok_core::diagnostics::sort(&mut diags);
@@ -287,7 +291,10 @@ fn cmd_check(a: &Args) -> u8 {
 }
 
 fn cmd_fmt(a: &Args) -> u8 {
-    let text = read(&a.file);
+    let text = match read(&a.file) {
+        Ok(t) => t,
+        Err(code) => return code,
+    };
     let (doc, diags) = tok_core::parse(&text);
     if diags.iter().any(Diag::is_error) {
         report(a, &diags);
@@ -399,7 +406,10 @@ fn nothing_to_draw(a: &Args, doc: &tok_core::model::Document) -> Option<u8> {
 }
 
 fn cmd_bpmn(a: &Args) -> u8 {
-    let (doc, diags) = load(a, true);
+    let (doc, diags) = match load(a, true) {
+        Ok(r) => r,
+        Err(code) => return code,
+    };
     if diags.iter().any(Diag::is_error) {
         report(a, &diags);
         return EXIT_ERRORS;
@@ -427,7 +437,10 @@ fn cmd_bpmn(a: &Args) -> u8 {
 }
 
 fn cmd_svg(a: &Args) -> u8 {
-    let (doc, diags) = load(a, true);
+    let (doc, diags) = match load(a, true) {
+        Ok(r) => r,
+        Err(code) => return code,
+    };
     if diags.iter().any(Diag::is_error) {
         report(a, &diags);
         return EXIT_ERRORS;
@@ -488,7 +501,10 @@ fn normpath(p: &Path) -> String {
 }
 
 fn cmd_export(a: &Args) -> u8 {
-    let (doc, diags) = load(a, true);
+    let (doc, diags) = match load(a, true) {
+        Ok(r) => r,
+        Err(code) => return code,
+    };
     if diags.iter().any(Diag::is_error) {
         report(a, &diags);
         return EXIT_ERRORS;
@@ -880,7 +896,7 @@ fn eval_command(argv: &[String]) -> Result<u8, u8> {
         level: "full".into(),
         ..Default::default()
     };
-    let (doc, diags) = load(&a, false);
+    let (doc, diags) = load(&a, false)?;
     if diags.iter().any(Diag::is_error) {
         report(&a, &diags);
         return Ok(EXIT_ERRORS);
@@ -985,7 +1001,7 @@ fn sim_command(argv: &[String]) -> Result<u8, u8> {
         level: "full".into(),
         ..Default::default()
     };
-    let (doc, diags) = load(&a, true);
+    let (doc, diags) = load(&a, true)?;
     if diags.iter().any(Diag::is_error) {
         report(&a, &diags);
         return Ok(EXIT_ERRORS);

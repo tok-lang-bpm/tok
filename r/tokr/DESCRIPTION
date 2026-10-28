@@ -1,7 +1,7 @@
 Package: tokr
 Type: Package
 Title: Plain-Text Information-Process Models in tok (BPMN 2.0, DMN, Forms)
-Version: 0.7.0
+Version: 0.8.0
 Authors@R: person("Marek", "Deja", email = "marek.deja@uj.edu.pl", role = c("aut", "cre", "cph"))
 Description: Reads, checks, formats and exports process models written in tok,
     a plain-text language for BPMN 2.0 processes with decision tables (DMN),

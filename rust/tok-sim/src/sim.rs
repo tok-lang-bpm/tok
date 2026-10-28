@@ -531,6 +531,51 @@ pub struct Simulator<'a> {
     loop_iter: u64,
 }
 
+/// The start event of a scope (the process or a sub-process): the first plain start
+/// event, else the first start event, else the instantiating receive task or event-based
+/// gateway of a scope without a start event (language 0.5).
+pub fn start_of(doc: &Document, scope: &str) -> Option<String> {
+    let starts: Vec<&Node> = doc
+        .nodes
+        .values()
+        .filter(|n| n.scope.as_deref() == Some(scope) && n.base.kind == "start")
+        .collect();
+    let plain: Vec<&&Node> = starts
+        .iter()
+        .filter(|n| !TRIGGERS.iter().any(|k| n.base.attrs.contains_key(*k)))
+        .collect();
+    match plain.first() {
+        Some(n) => Some(node_id(n).to_string()),
+        None => starts
+            .first()
+            .map(|n| node_id(n).to_string())
+            .or_else(|| instantiating(doc, scope)),
+    }
+}
+
+/// The instantiating receive task or event-based gateway of a scope without a start
+/// event (language 0.5): it starts each case as a start event would.
+fn instantiating(doc: &Document, scope: &str) -> Option<String> {
+    doc.nodes
+        .values()
+        .find(|n| {
+            n.scope.as_deref() == Some(scope)
+                && (n.base.kind == "receive" || n.base.kind == "eventgw")
+                && n.base.has("instantiate")
+        })
+        .map(|n| node_id(n).to_string())
+}
+
+/// The process the simulator runs: that of the first pool that has one, or the
+/// top-level process.
+pub fn main_scope(doc: &Document) -> String {
+    doc.pools
+        .iter()
+        .find(|p| !p.blackbox)
+        .map(|p| p.process_id())
+        .unwrap_or_else(|| doc.default_process_id())
+}
+
 fn node_id(n: &Node) -> &str {
     n.base.id()
 }
@@ -578,12 +623,7 @@ impl<'a> Simulator<'a> {
                 },
             );
         }
-        let scope = doc
-            .pools
-            .iter()
-            .find(|p| !p.blackbox)
-            .map(|p| p.process_id())
-            .unwrap_or_else(|| doc.default_process_id());
+        let scope = main_scope(doc);
         let mut out: HashMap<String, Vec<usize>> = HashMap::new();
         let mut inc: HashMap<String, usize> = HashMap::new();
         for (i, f) in doc.flows.iter().enumerate() {
@@ -653,37 +693,7 @@ impl<'a> Simulator<'a> {
     }
 
     fn start_of(&self, scope: &str) -> Option<String> {
-        let starts: Vec<&Node> = self
-            .doc
-            .nodes
-            .values()
-            .filter(|n| n.scope.as_deref() == Some(scope) && n.base.kind == "start")
-            .collect();
-        let plain: Vec<&&Node> = starts
-            .iter()
-            .filter(|n| !TRIGGERS.iter().any(|k| n.base.attrs.contains_key(*k)))
-            .collect();
-        match plain.first() {
-            Some(n) => Some(node_id(n).to_string()),
-            None => starts
-                .first()
-                .map(|n| node_id(n).to_string())
-                .or_else(|| self.instantiating(scope)),
-        }
-    }
-
-    /// The instantiating receive task or event-based gateway of a scope without a start
-    /// event (language 0.5): it starts each case as a start event would.
-    fn instantiating(&self, scope: &str) -> Option<String> {
-        self.doc
-            .nodes
-            .values()
-            .find(|n| {
-                n.scope.as_deref() == Some(scope)
-                    && (n.base.kind == "receive" || n.base.kind == "eventgw")
-                    && n.base.has("instantiate")
-            })
-            .map(|n| node_id(n).to_string())
+        start_of(self.doc, scope)
     }
 
     fn schedule(&mut self, dt: &Sample, event: Event) -> R<()> {

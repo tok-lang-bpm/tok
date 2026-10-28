@@ -6,7 +6,7 @@ The dependency tree is kept small so that the R package can vendor it for offlin
 |---|---|---|
 | thiserror | all library crates | error types |
 | roxmltree | tok-core (import), tok-bpmn, tok-sim (tests only) | reading BPMN/DMN XML; the tests of the XES event log parse it back |
-| serde, serde_json | tok-core, tok-cli, tok-bpmn, tok-sim (tests only) | JSON diagnostics, Camunda forms (tok-bpmn reads `.form` ids for the Camunda profile; its parity test compares JSON); the parity tests read their fixtures as JSON |
+| serde, serde_json | tok-core, tok-cli, tok-bpmn, tok-capi, tok-sim (tests only) | JSON diagnostics, Camunda forms (tok-bpmn reads `.form` ids for the Camunda profile; its parity test compares JSON); the parity tests read their fixtures as JSON; the C interface reads its options |
 | indexmap | tok-core, tok-sim | ordered maps that keep declaration order (and the insertion order of Python dicts in case variables) |
 | pyo3 (0.29, features `abi3-py38`, `extension-module`) | tok-py only | Python bindings (module `tok._engine` of the package `tok-lang`); 0.29 is the newest release that still builds an abi3 module for Python 3.8, the minimum version of `tok-lang` |
 
@@ -18,4 +18,7 @@ The simulator's parity tests (`tok-sim/tests/sim_parity.rs`, `tok-cli/tests/sim_
 
 ## Unsafe code
 
-The workspace forbids `unsafe` code. The only exception is `tok-py`: the code that PyO3's `#[pymodule]` and `#[pyfunction]` macros generate contains `unsafe` blocks, so `tok-py` does not inherit the workspace lint table (it keeps the Clippy settings). `tok-py` itself contains no handwritten `unsafe` code.
+The workspace forbids `unsafe` code. There are two exceptions, both at a foreign-function boundary:
+
+- `tok-py`: the code that PyO3's `#[pymodule]` and `#[pyfunction]` macros generate contains `unsafe` blocks, so `tok-py` does not inherit the workspace lint table (it keeps the Clippy settings). `tok-py` itself contains no handwritten `unsafe` code.
+- `tok-capi`, the C interface: reading the C strings passed in and taking back the strings handed out needs `unsafe`. The crate denies `unsafe` code and allows it only in its module `ffi`, which holds the exported functions; every `unsafe` block there has a `SAFETY` comment (Clippy `undocumented_unsafe_blocks` is denied), and every exported function catches panics so that none unwinds into C.

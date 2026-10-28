@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="1.0" id="definitions" name="Wypożyczenia i zakupy biblioteki" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:documentation>Dokument języka 1.0 z elementami każdej warstwy języka.</bpmn:documentation>
+  <bpmn:itemDefinition id="zamowienie-typ" structureRef="Zamowienie">
+    <bpmn:documentation>Zamówienie książki</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="konto-t">
+    <bpmn:documentation>Rodzaj konta</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:message id="Message_E_mail" name="E-mail" />
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Formularz" name="Formularz" />
+  <bpmn:message id="Message_Potwierdzenie" name="Potwierdzenie" />
+  <bpmn:message id="Message_Platnosc" name="Płatność" />
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:message id="Message_Rekord" name="Rekord" />
+  <bpmn:signal id="Signal_Zamowienie_zlozone" name="Zamówienie złożone" />
+  <bpmn:error id="Error_Brak_rekordu" name="Brak rekordu" />
+  <bpmn:dataStore id="akta-store" name="Akta wypożyczeń" />
+  <bpmn:resource id="bibliotekarz" name="Bibliotekarz" />
+  <bpmn:correlationProperty id="CorrelationProperty_numer" name="numer">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_Zamowienie">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">zamowienie.numer</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:interface id="katalog" name="Katalog biblioteczny">
+    <bpmn:operation id="szukaj" name="Wyszukanie rekordu">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+      <bpmn:outMessageRef>Message_Rekord</bpmn:outMessageRef>
+      <bpmn:errorRef>Error_Brak_rekordu</bpmn:errorRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:globalUserTask id="sprawdzenie" name="Sprawdzenie tożsamości" />
+  <bpmn:category id="categories">
+    <bpmn:categoryValue id="obsluga-zgloszenia-value" value="Obsługa zgłoszenia" />
+  </bpmn:category>
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="czytelnik" name="Czytelnik" />
+    <bpmn:participant id="biblioteka" name="Biblioteka uczelniana" processRef="obsluga" />
+    <bpmn:participant id="hurtownia" name="Hurtownia">
+      <bpmn:participantMultiplicity maximum="3" minimum="1" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="m-email" messageRef="Message_E_mail" name="E-mail" sourceRef="czytelnik" targetRef="zgloszenie" />
+    <bpmn:messageFlow id="m-zamowienie" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="zamowienie" targetRef="hurtownia" />
+    <bpmn:group categoryValueRef="obsluga-zgloszenia-value" id="obsluga-zgloszenia" />
+    <bpmn:conversation id="wypozyczenie" name="Wypożyczenie">
+      <bpmn:participantRef>czytelnik</bpmn:participantRef>
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:messageFlowRef>m-email</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:conversation id="zakup" name="Zakup książek">
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:participantRef>hurtownia</bpmn:participantRef>
+      <bpmn:messageFlowRef>m-zamowienie</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:correlationKey id="numer" name="Numer zamówienia">
+      <bpmn:correlationPropertyRef>CorrelationProperty_numer</bpmn:correlationPropertyRef>
+    </bpmn:correlationKey>
+    <bpmn:conversationLink id="wypozyczenie-link-czytelnik" sourceRef="czytelnik" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="wypozyczenie-link-biblioteka" sourceRef="biblioteka" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="zakup-link-biblioteka" sourceRef="biblioteka" targetRef="zakup" />
+    <bpmn:conversationLink id="zakup-link-hurtownia" sourceRef="hurtownia" targetRef="zakup" />
+  </bpmn:collaboration>
+  <bpmn:process id="obsluga" isExecutable="false" name="Wypożyczenia i zakupy biblioteki">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:ioSpecification id="obsluga-io">
+      <bpmn:dataInput id="wniosek" itemSubjectRef="zamowienie-typ" name="Zamówienie czytelnika" />
+      <bpmn:inputSet id="obsluga-inputs">
+        <bpmn:dataInputRefs>wniosek</bpmn:dataInputRefs>
+      </bpmn:inputSet>
+      <bpmn:outputSet id="obsluga-outputs" />
+    </bpmn:ioSpecification>
+    <bpmn:laneSet id="biblioteka-lanes">
+      <bpmn:lane id="dyzur" name="Dyżurny bibliotekarz">
+        <bpmn:flowNodeRef>zgloszenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>tozsamosc</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wyszukaj</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>dostepna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>limit-czytelnika</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rezerwacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>anulowano</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>informacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przypomnienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przypomnij</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>przypomniano</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>odwolano</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="wypozyczalnia" name="Wypożyczalnia">
+        <bpmn:flowNodeRef>razem</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wydanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>archiwizacja</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>scalenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>wydano</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>zamowiono</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="zgloszenie" name="Zgłoszenie e-mailem lub formularzem">
+      <bpmn:messageEventDefinition id="zgloszenie-def" messageRef="Message_E_mail" />
+      <bpmn:messageEventDefinition id="zgloszenie-def-2" messageRef="Message_Formularz" />
+    </bpmn:startEvent>
+    <bpmn:callActivity calledElement="sprawdzenie" id="tozsamosc" name="Sprawdzenie tożsamości">
+      <bpmn:ioSpecification id="tozsamosc-io">
+        <bpmn:dataInput id="tozsamosc-in-1" name="Zamówienie czytelnika" />
+        <bpmn:dataInput id="tozsamosc-in-2" name="Karta czytelnika" />
+        <bpmn:inputSet id="tozsamosc-inputs">
+          <bpmn:dataInputRefs>tozsamosc-in-1</bpmn:dataInputRefs>
+          <bpmn:dataInputRefs>tozsamosc-in-2</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="tozsamosc-outputs" />
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="tozsamosc-dia-1">
+        <bpmn:sourceRef>wniosek</bpmn:sourceRef>
+        <bpmn:targetRef>tozsamosc-in-1</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="tozsamosc-dia-2">
+        <bpmn:sourceRef>karta</bpmn:sourceRef>
+        <bpmn:targetRef>tozsamosc-in-2</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:performer id="tozsamosc-performer">
+        <bpmn:resourceRef>bibliotekarz</bpmn:resourceRef>
+      </bpmn:performer>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="wyszukaj" name="Wyszukanie w katalogu" operationRef="szukaj">
+      <bpmn:property id="proby" name="Liczba prób wyszukania" />
+      <bpmn:standardLoopCharacteristics loopMaximum="3" testBefore="true">
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">proby &lt; 3</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway default="f-dostepna-zamowienie" id="dostepna" name="Czy książka jest dostępna?" />
+    <bpmn:businessRuleTask id="limit-czytelnika" name="Ustalenie limitu wypożyczeń" />
+    <bpmn:transaction id="rezerwacja" name="Rezerwacja egzemplarza">
+      <bpmn:startEvent id="ts" />
+      <bpmn:serviceTask id="odlozenie" name="Odłożenie egzemplarza" />
+      <bpmn:boundaryEvent attachedToRef="odlozenie" id="odlozenie-compensate">
+        <bpmn:compensateEventDefinition id="odlozenie-compensate-def" />
+      </bpmn:boundaryEvent>
+      <bpmn:serviceTask id="cofniecie" isForCompensation="true" name="Cofnięcie odłożenia" />
+      <bpmn:exclusiveGateway default="f-odlozono-anuluj" id="odlozono" name="Czy odłożono egzemplarz?" />
+      <bpmn:endEvent id="zarezerwowano" name="Zarezerwowano" />
+      <bpmn:endEvent id="anuluj" name="Anulowanie">
+        <bpmn:cancelEventDefinition id="anuluj-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ts-odlozenie" sourceRef="ts" targetRef="odlozenie" />
+      <bpmn:sequenceFlow id="f-odlozenie-odlozono" sourceRef="odlozenie" targetRef="odlozono" />
+      <bpmn:sequenceFlow id="f-odlozono-zarezerwowano" name="tak" sourceRef="odlozono" targetRef="zarezerwowano">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">odlozono</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:sequenceFlow id="f-odlozono-anuluj" name="nie" sourceRef="odlozono" targetRef="anuluj" />
+      <bpmn:association associationDirection="One" id="odlozenie-compensate-assoc" sourceRef="odlozenie-compensate" targetRef="cofniecie" />
+    </bpmn:transaction>
+    <bpmn:boundaryEvent attachedToRef="rezerwacja" id="anulowano" name="Rezerwacja anulowana">
+      <bpmn:cancelEventDefinition id="anulowano-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="informacja" name="Informacja dla czytelnika">
+      <bpmn:humanPerformer id="informacja-performer">
+        <bpmn:resourceRef>bibliotekarz</bpmn:resourceRef>
+      </bpmn:humanPerformer>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent attachedToRef="informacja" cancelActivity="false" id="przypomnienie" name="Minęły 3 dni">
+      <bpmn:timerEventDefinition id="przypomnienie-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="przypomnij" name="Przypomnienie czytelnikowi" />
+    <bpmn:endEvent id="przypomniano" name="Przypomniano" />
+    <bpmn:endEvent id="odwolano" name="Wypożyczenie odwołane" />
+    <bpmn:parallelGateway id="razem" name="Wydanie i archiwizacja" />
+    <bpmn:manualTask id="wydanie" name="Wydanie książki">
+      <bpmn:ioSpecification id="wydanie-io">
+        <bpmn:dataOutput id="wydanie-out-3" name="Akta wypożyczeń" />
+        <bpmn:inputSet id="wydanie-inputs" />
+        <bpmn:outputSet id="wydanie-outputs">
+          <bpmn:dataOutputRefs>wydanie-out-3</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataOutputAssociation id="wydanie-doa-3">
+        <bpmn:sourceRef>wydanie-out-3</bpmn:sourceRef>
+        <bpmn:targetRef>akta</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+      <bpmn:humanPerformer id="wydanie-performer">
+        <bpmn:resourceRef>bibliotekarz</bpmn:resourceRef>
+      </bpmn:humanPerformer>
+    </bpmn:manualTask>
+    <bpmn:task id="archiwizacja" name="Archiwizacja zgłoszenia" />
+    <bpmn:complexGateway id="scalenie" name="Czy wydano książkę?">
+      <bpmn:activationCondition xsi:type="bpmn:tFormalExpression">_activationCount &gt;= 1</bpmn:activationCondition>
+    </bpmn:complexGateway>
+    <bpmn:endEvent id="wydano" name="Książka wydana" />
+    <bpmn:sendTask id="zamowienie" messageRef="Message_Zamowienie" name="Zamówienie w hurtowni" />
+    <bpmn:endEvent id="zamowiono" name="Zamówienie złożone">
+      <bpmn:signalEventDefinition id="zamowiono-def" signalRef="Signal_Zamowienie_zlozone" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-zgloszenie-tozsamosc" sourceRef="zgloszenie" targetRef="tozsamosc" />
+    <bpmn:sequenceFlow id="f-tozsamosc-wyszukaj" sourceRef="tozsamosc" targetRef="wyszukaj" />
+    <bpmn:sequenceFlow id="f-wyszukaj-dostepna" sourceRef="wyszukaj" targetRef="dostepna" />
+    <bpmn:sequenceFlow id="f-dostepna-limit-czytelnika" name="tak" sourceRef="dostepna" targetRef="limit-czytelnika">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">dostepna</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-dostepna-zamowienie" name="nie" sourceRef="dostepna" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-limit-czytelnika-rezerwacja" sourceRef="limit-czytelnika" targetRef="rezerwacja" />
+    <bpmn:sequenceFlow id="f-rezerwacja-razem" sourceRef="rezerwacja" targetRef="razem" />
+    <bpmn:sequenceFlow id="f-razem-wydanie" sourceRef="razem" targetRef="wydanie" />
+    <bpmn:sequenceFlow id="f-razem-archiwizacja" sourceRef="razem" targetRef="archiwizacja" />
+    <bpmn:sequenceFlow id="f-wydanie-scalenie" sourceRef="wydanie" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-archiwizacja-scalenie" sourceRef="archiwizacja" targetRef="scalenie" />
+    <bpmn:sequenceFlow id="f-scalenie-wydano" sourceRef="scalenie" targetRef="wydano" />
+    <bpmn:sequenceFlow id="f-anulowano-informacja" sourceRef="anulowano" targetRef="informacja" />
+    <bpmn:sequenceFlow id="f-informacja-odwolano" sourceRef="informacja" targetRef="odwolano" />
+    <bpmn:sequenceFlow id="f-przypomnienie-przypomnij" sourceRef="przypomnienie" targetRef="przypomnij" />
+    <bpmn:sequenceFlow id="f-przypomnij-przypomniano" sourceRef="przypomnij" targetRef="przypomniano" />
+    <bpmn:sequenceFlow id="f-zamowienie-zamowiono" sourceRef="zamowienie" targetRef="zamowiono" />
+    <bpmn:dataObject id="karta-object" name="Karta czytelnika" />
+    <bpmn:dataObjectReference dataObjectRef="karta-object" id="karta" name="Karta czytelnika">
+      <bpmn:dataState id="karta-state" name="ważna" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataStoreReference dataStoreRef="akta-store" id="akta" name="Akta wypożyczeń" />
+    <bpmn:textAnnotation id="uwaga">
+      <bpmn:text>Zgłoszenia przyjmuje dyżurny bibliotekarz.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="uwaga-assoc" sourceRef="uwaga" targetRef="zgloszenie" />
+  </bpmn:process>
+  <bpmn:choreography id="dostawa" name="Dostawa z hurtowni">
+    <bpmn:participant id="dostawa-biblioteka" name="Biblioteka uczelniana" />
+    <bpmn:participant id="dostawa-hurtownia" name="Hurtownia">
+      <bpmn:participantMultiplicity maximum="3" minimum="1" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="potwierdzenie-message" messageRef="Message_Potwierdzenie" sourceRef="dostawa-hurtownia" targetRef="dostawa-biblioteka" />
+    <bpmn:messageFlow id="potwierdzenie-reply" messageRef="Message_Platnosc" sourceRef="dostawa-biblioteka" targetRef="dostawa-hurtownia" />
+    <bpmn:startEvent id="ds" />
+    <bpmn:choreographyTask id="potwierdzenie" initiatingParticipantRef="dostawa-hurtownia" name="Potwierdzenie zamówienia">
+      <bpmn:participantRef>dostawa-hurtownia</bpmn:participantRef>
+      <bpmn:participantRef>dostawa-biblioteka</bpmn:participantRef>
+      <bpmn:messageFlowRef>potwierdzenie-message</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>potwierdzenie-reply</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="de" />
+    <bpmn:sequenceFlow id="f-ds-potwierdzenie" sourceRef="ds" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-de" sourceRef="potwierdzenie" targetRef="de" />
+  </bpmn:choreography>
+</bpmn:definitions>

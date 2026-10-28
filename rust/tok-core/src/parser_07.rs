@@ -223,6 +223,8 @@ impl Parser {
             dec.header_done = true;
             dec.relation = relation_header;
             dec.header_line = Some(line.number);
+            dec.no_inputs = groups[0].is_empty();
+            dec.no_outputs = groups.len() >= 2 && groups[1].is_empty();
             let mut errs = Vec::new();
             for cell in &groups[0] {
                 match split_header_cell_07(cell) {

@@ -78,14 +78,20 @@ for (const command of ["tok.showDiagram", "tok.exportBpmn", "tok.exportAll", "to
 const exe = process.platform === "win32" ? "tok-lsp.exe" : "tok-lsp";
 for (const file of [
   "out/extension.js",
-  "out/preview.js",
-  "out/server.js",
   "syntaxes/tok.tmLanguage.json",
   "language-configuration.json",
   `server/${exe}`,
-  "node_modules/vscode-languageclient/package.json",
 ]) {
   if (!existsSync(join(ext, ...file.split("/")))) fail(`${file} is not in the package`);
+}
+// the code is one bundled file: the language client is inside it, and no node_modules
+// are packaged
+if ([...entries.keys()].some((name) => name.includes("/node_modules/"))) fail("the package holds node_modules");
+const scripts = [...entries.keys()].filter((name) => name.endsWith(".js"));
+if (scripts.length !== 1) fail(`the package holds ${scripts.length} JavaScript files, not one bundle`);
+const bundle = readFileSync(join(ext, "out", "extension.js"), "utf8");
+if (!bundle.includes("LanguageClient") || /require\(["']vscode-languageclient/.test(bundle)) {
+  fail("out/extension.js does not bundle the language client");
 }
 console.log(`smoke: ${vsix} holds ${entries.size} entries with the manifest, code, grammar and server`);
 

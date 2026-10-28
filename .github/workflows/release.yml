@@ -1,0 +1,279 @@
+# Release artifacts of the GitHub mirror, built for a version tag (v1.0.0, …) or by hand:
+#
+# - wheels of tok-lang (abi3, Python 3.8 or newer): Windows x64, Linux x86_64 and aarch64
+#   (manylinux2014), macOS universal2; and the source archive of tok-lang;
+# - the programs tok, tok-lsp, tok-mcp and the C library tokengine (with tok.h) for Windows
+#   x64, Linux x86_64, macOS arm64 and x86_64;
+# - the .vsix of the VS Code extension for Windows x64, Linux x64 and macOS arm64;
+# - the source archive of the R package tokr and the browser playground.
+#
+# A tag creates a GitHub release with the artifacts (with the built-in GITHUB_TOKEN); the
+# Zenodo integration of the repository archives such a release with a DOI. Publishing to the
+# registries runs only when the secrets of the publishing steps are set:
+# PYPI_API_TOKEN, CARGO_REGISTRY_TOKEN, VSCE_PAT, OVSX_PAT. Without them the
+# steps are skipped and the artifacts are published by hand.
+#
+# The workflow runs only on GitHub: the jobs are skipped where another forge reads this
+# folder (Forgejo Actions on Codeberg falls back to .github/workflows).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  WASM_BINDGEN: "0.2.129"
+
+jobs:
+  wheels:
+    name: wheel ${{ matrix.name }}
+    if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x86_64, os: windows-latest, target: x64, manylinux: "", native: true }
+          - { name: linux-x86_64, os: ubuntu-latest, target: x86_64, manylinux: "2014", native: true }
+          - { name: linux-aarch64, os: ubuntu-latest, target: aarch64, manylinux: "2014", native: false }
+          - { name: macos-universal2, os: macos-latest, target: universal2-apple-darwin, manylinux: "", native: true }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the abi3 wheel (pyproject.toml of the root)
+        uses: PyO3/maturin-action@v1
+        with:
+          rust-toolchain: "1.99"
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: --release -o dist
+      - name: Parity of the installed wheel with the pure-Python implementation
+        if: matrix.native
+        shell: bash
+        run: |
+          python -m pip install --quiet --no-index --find-links dist tok-lang
+          python -m unittest python/tests/test_engine_parity.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.name }}
+          path: dist/*.whl
+
+  sdist:
+    name: source archive of tok-lang
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the source archive and check it installs (the engine is built from it)
+        run: |
+          python -m pip install --quiet build twine
+          python -m build --sdist -o dist .
+          python -m twine check --strict dist/*
+          python -m venv /tmp/sdist
+          /tmp/sdist/bin/python -m pip install --quiet dist/*.tar.gz
+          /tmp/sdist/bin/tok --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  programs:
+    name: programs ${{ matrix.name }}
+    if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x86_64, os: windows-latest, target: x86_64-pc-windows-msvc, exe: .exe, lib: tokengine.dll, native: true, vsix: win32-x64 }
+          - { name: linux-x86_64, os: ubuntu-latest, target: x86_64-unknown-linux-gnu, exe: "", lib: libtokengine.so, native: true, vsix: linux-x64 }
+          - { name: macos-aarch64, os: macos-latest, target: aarch64-apple-darwin, exe: "", lib: libtokengine.dylib, native: true, vsix: darwin-arm64 }
+          # cross-compiled on Apple silicon: not run, and no .vsix (the extension carries the
+          # server of the platform it is packaged on)
+          - { name: macos-x86_64, os: macos-latest, target: x86_64-apple-darwin, exe: "", lib: libtokengine.dylib, native: false, vsix: "" }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        working-directory: rust
+        run: rustup toolchain install && rustup target add ${{ matrix.target }}
+      - name: Build tok, tok-lsp, tok-mcp and the C library
+        working-directory: rust
+        run: cargo build --release --locked --target ${{ matrix.target }} -p tok-cli -p tok-lsp -p tok-mcp -p tok-capi
+      - name: Smoke test
+        if: matrix.native
+        run: for f in examples/*.tok; do "rust/target/${{ matrix.target }}/release/tok${{ matrix.exe }}" check "$f"; done
+      - name: Archive
+        run: |
+          out="tok-${GITHUB_REF_NAME#v}-${{ matrix.name }}"
+          mkdir -p "$out" dist
+          for p in tok tok-lsp tok-mcp; do cp "rust/target/${{ matrix.target }}/release/$p${{ matrix.exe }}" "$out/"; done
+          cp "rust/target/${{ matrix.target }}/release/${{ matrix.lib }}" rust/tok-capi/include/tok.h LICENSE "$out/"
+          if [ "${{ runner.os }}" = Windows ]; then 7z a "dist/$out.zip" "$out" > /dev/null; else tar -czf "dist/$out.tar.gz" "$out"; fi
+      - uses: actions/setup-node@v4
+        if: matrix.vsix != ''
+        with:
+          node-version: "22"
+      - name: VS Code extension for this platform
+        if: matrix.vsix != ''
+        working-directory: editors/vscode
+        run: |
+          mkdir -p ../../rust/target/release
+          cp "../../rust/target/${{ matrix.target }}/release/tok-lsp${{ matrix.exe }}" ../../rust/target/release/
+          npm ci --no-audit --no-fund --loglevel=error
+          npm test
+          npm run package
+          node test/smoke.mjs tok-${{ matrix.vsix }}-*.vsix
+          cp tok-${{ matrix.vsix }}-*.vsix ../../dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: programs-${{ matrix.name }}
+          path: dist/*
+
+  tokr:
+    name: source archive of tokr
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust toolchain
+        working-directory: rust
+        run: rustup toolchain install
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: r/tokr
+      - name: Build and check the archive
+        run: |
+          bash r/build.sh
+          R CMD check --as-cran --no-manual dist/tokr_*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tokr
+          path: dist/tokr_*.tar.gz
+
+  playground:
+    name: playground
+    if: github.server_url == 'https://github.com'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Rust target and wasm-bindgen
+        working-directory: rust
+        run: |
+          rustup toolchain install
+          rustup target add wasm32-unknown-unknown
+          cargo install --locked wasm-bindgen-cli --version "$WASM_BINDGEN"
+      - name: Build and test the playground
+        run: |
+          bash tools/playground.sh --test -o playground-site
+          tar -czf "playground-${GITHUB_REF_NAME#v}.tar.gz" playground-site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playground
+          path: playground-*.tar.gz
+
+  github-release:
+    name: GitHub release
+    if: github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist, programs, tokr, playground]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create the release with the artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" artifacts/* --repo "$GITHUB_REPOSITORY" \
+            --title "tok $version" --notes "tok $version, see docs/changelog.md."
+
+  publish-pypi:
+    name: publish tok-lang to PyPI
+    if: github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v')
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    env:
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+    steps:
+      - uses: actions/download-artifact@v4
+        if: env.PYPI_API_TOKEN != ''
+        with:
+          path: dist
+          pattern: "{wheel-*,sdist}"
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        if: env.PYPI_API_TOKEN != ''
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+      - if: env.PYPI_API_TOKEN == ''
+        run: echo "PYPI_API_TOKEN is not set; tok-lang is published by hand"
+
+  publish-crates:
+    name: publish the crates to crates.io
+    if: github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v')
+    needs: [programs]
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CARGO_REGISTRY_TOKEN != ''
+      - name: cargo publish in dependency order
+        if: env.CARGO_REGISTRY_TOKEN != ''
+        working-directory: rust
+        run: |
+          rustup toolchain install
+          cargo publish -p tok-core -p tok-bpmn -p tok-sim -p tok-cli -p tok-lsp -p tok-mcp
+      - if: env.CARGO_REGISTRY_TOKEN == ''
+        run: echo "CARGO_REGISTRY_TOKEN is not set; the crates are published by hand"
+
+  publish-vscode:
+    name: publish the VS Code extension
+    if: github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v')
+    needs: [programs]
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/download-artifact@v4
+        if: env.VSCE_PAT != '' || env.OVSX_PAT != ''
+        with:
+          path: dist
+          pattern: programs-*
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        if: env.VSCE_PAT != '' || env.OVSX_PAT != ''
+        with:
+          node-version: "22"
+      - name: Visual Studio Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx --yes @vscode/vsce@4.0.0 publish --packagePath dist/*.vsix
+      - name: Open VSX
+        if: env.OVSX_PAT != ''
+        run: for f in dist/*.vsix; do npx --yes ovsx publish "$f" -p "$OVSX_PAT"; done
+      - if: env.VSCE_PAT == '' && env.OVSX_PAT == ''
+        run: echo "VSCE_PAT and OVSX_PAT are not set; the extension is published by hand"

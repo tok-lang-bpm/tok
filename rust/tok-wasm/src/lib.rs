@@ -42,7 +42,7 @@ pub fn use_page_clock() {
     }
 }
 
-/// The version of the engine, for example `0.9.0`.
+/// The version of the engine, for example `1.0.0`.
 #[wasm_bindgen]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()

@@ -6,11 +6,11 @@ The skill `skills/tok-modelling` teaches an agent the workflow of modelling in t
 
 ## Installing
 
-Build it from the repository (Rust 1.99 or newer):
+Install it from crates.io, or build it from the repository (Rust 1.99 or newer):
 
 ```
-cd rust
-cargo build --release -p tok-mcp      # target/release/tok-mcp (tok-mcp.exe on Windows)
+cargo install tok-mcp
+cd rust && cargo build --release -p tok-mcp      # target/release/tok-mcp (tok-mcp.exe on Windows)
 ```
 
 `tools/check.sh` builds it and copies it to `dist/`. Put the program on the `PATH` or give the client its full path. `tok-mcp --version` prints the version; without arguments it serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends.
@@ -61,7 +61,7 @@ Every tool that reads a document takes it either as `text` (the tok text) or as 
 |---|---|---|
 | `check` | `text` or `path`, `lang`, `level` (`basic`, `analytic`, `full`), `class` (`descriptive`, `analytic`, `common-executable`, `full`), `bpmn` (boolean, default `true`: also the BPMN 2.0 rules) | `{"errors", "bpmn_class", "diagnostics": [{"code", "severity", "line", "id", "message"}]}`, as `tok check --json`; the text content lists the diagnostics one per line |
 | `fmt` | `text` or `path`, `lang` | `{"text"}`: the canonical form, as `tok fmt` (the server does not write the file) |
-| `export` | `text` or `path`, `formats` (a list of `bpmn`, `svg`, `dmn`, `forms`; all when left out), `name` (stem of the BPMN and SVG names; default the stem of `path`, or `model`), `sidecar` (boolean, default `true`), `lang` | `{"files": {NAME: CONTENT}}`: the files `tok export` writes — `NAME.bpmn` with diagram layout, `NAME.svg`, the DMN files of the decisions (`dmn` includes the `.drd.svg` pictures of language 0.7) and the Camunda forms `ID.form` |
+| `export` | `text` or `path`, `formats` (a list of `bpmn`, `svg`, `dmn`, `forms`; all when left out), `name` (stem of the BPMN and SVG names; default the stem of `path`, or `model`), `sidecar` (boolean, default `true`), `lang` | `{"files": {NAME: CONTENT}}`: the files `tok export` writes — `NAME.bpmn` with diagram layout, `NAME.svg`, the DMN files of the decisions (`dmn` includes the `.drd.svg` pictures of languages 0.7 and 1.0) and the Camunda forms `ID.form` |
 | `import` | `xml` or `path`, `format` (`auto`, `bpmn`, `dmn`), `flow_ids` (boolean, default `true`), `layout` (boolean, default `true`) | `{"format", "text", "warnings", "layout"}`: the tok document, what the import did not keep, and for BPMN the layout sidecar to save as `FILE.tok.layout` |
 | `sim` | `text` or `path`, `cases`, `seed`, `log`, `cases_table`, `csv`, `xes` (booleans, default `false`), `lang` | `{"kpi", "report"}` and, on request, `log`, `cases`, `log_csv`, `cases_csv`, `xes`, as the C interface gives them (`c-api.md`, Simulation) |
 | `eval` | `text` or `path`, `decision` (required), `values` (an object input name → JSON value), `lang` | `{"value"}`: the value of the decision, as `tok eval` prints it |

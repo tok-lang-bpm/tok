@@ -35,7 +35,9 @@ for crate in $CRATES; do
         -e "s|^license.workspace = true|license = $(ws license)|" \
         -e "s|^authors.workspace = true|authors = $(ws authors)|" \
         -e "s|^repository.workspace = true|repository = $(ws repository)|" \
+        -e "s|^homepage.workspace = true|homepage = $(ws homepage)|" \
     > "$dst/Cargo.toml"
+  cp "$ROOT/rust/$crate/README.md" "$dst/"
 done
 sed -i 's|path = "../../../../rust/|path = "engine/|' "$PKG/src/rust/Cargo.toml"
 
@@ -45,6 +47,16 @@ sed -i 's|path = "../../../../rust/|path = "engine/|' "$PKG/src/rust/Cargo.toml"
   # the archive is unpacked next to Makevars, one level above the manifest
   printf '%s\n' '[source.crates-io]' 'replace-with = "vendored-sources"' '' \
     '[source.vendored-sources]' 'directory = "vendor"' > vendor-config.toml
+  # the copyright holders of the bundled crates, as CRAN asks for code of other authors
+  mkdir -p "$PKG/inst"
+  {
+    printf '%s\n' 'tokr bundles the Rust engine of tok (Marek Deja, GPL-3.0-or-later) and, in' \
+      'src/rust/vendor.tar.xz, these Rust crates; the copyright of each crate belongs to its' \
+      'authors, named in the Cargo.toml of the crate, and each crate is used under its licence.' ''
+    cargo tree --offline --edges normal --prefix none --format '{p}: {l}, {r}' |
+      sed -e 's/ (\*)$//' | grep -v '^tok' | sort -u
+  } > "$PKG/inst/AUTHORS"
+  printf '%s\n' 'Copyright: Marek Deja; the authors of the bundled Rust crates listed in inst/AUTHORS.' >> "$PKG/DESCRIPTION"
   tar -cJf vendor.tar.xz vendor
   rm -rf vendor
 )

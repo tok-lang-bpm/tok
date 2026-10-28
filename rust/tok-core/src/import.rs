@@ -1,7 +1,7 @@
 //! Import BPMN 2.0 XML into a tok [`Document`] (the inverse of the exporter).
 //! Mirrors `bpmn_import.py`, including its warning texts.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use indexmap::IndexMap;
 use roxmltree::Node as X;
@@ -209,6 +209,8 @@ struct Importer<'a, 'i> {
     direct_objects: HashSet<String>,
     /// participant of a choreography -> the pool that stands for it (language 0.6)
     choreo_pools: IndexMap<String, String>,
+    /// identifier of the file -> the element declared with it first
+    declared: HashMap<String, roxmltree::NodeId>,
 }
 
 mod lang06;
@@ -232,6 +234,9 @@ pub fn import_bpmn_mapped(xml: &str, keep_ids: bool) -> Result<Imported, ImportE
     };
     let tree = roxmltree::Document::parse_with_options(xml, opts)
         .map_err(|e| ImportError(e.to_string()))?;
+    if let Some(e) = crate::xml::too_deep(&tree) {
+        return Err(ImportError(e));
+    }
     let root = tree.root_element();
     let mut by_id = IndexMap::new();
     for e in root.descendants().filter(|n| n.is_element()) {
@@ -257,6 +262,7 @@ pub fn import_bpmn_mapped(xml: &str, keep_ids: bool) -> Result<Imported, ImportE
         object_refs: IndexMap::new(),
         direct_objects: HashSet::new(),
         choreo_pools: IndexMap::new(),
+        declared: HashMap::new(),
     };
     imp.run()
 }
@@ -274,7 +280,7 @@ impl<'a, 'i> Importer<'a, 'i> {
     }
 
     fn tid(&mut self, xml_id: Option<&str>) -> Option<String> {
-        let x = xml_id?;
+        let x = xml_id.filter(|x| !x.is_empty())?;
         if let Some(v) = self.idmap.get(x) {
             return Some(v.clone());
         }
@@ -296,6 +302,49 @@ impl<'a, 'i> Importer<'a, 'i> {
 
     fn tid_s(&mut self, xml_id: Option<&str>) -> String {
         self.tid(xml_id).unwrap_or_default()
+    }
+
+    /// The tok identifier of an element the import declares. An element without an
+    /// `id`, or with the `id` of an element declared before it, gets one of its own,
+    /// named after its tag, so that two elements never share an identifier (a container
+    /// sharing it with its content would contain itself).
+    fn tid_of(&mut self, e: X<'a, 'i>) -> String {
+        let xml_id = e.attribute("id").filter(|v| !v.is_empty());
+        if let Some(x) = xml_id {
+            match self.declared.get(x) {
+                None => {
+                    self.declared.insert(x.to_string(), e.id());
+                    return self.tid_s(Some(x));
+                }
+                Some(first) if *first == e.id() => return self.tid_s(Some(x)),
+                Some(_) => {}
+            }
+        }
+        // a key no identifier of the file can have: XML text holds no NUL character
+        let key = format!("\0{}", e.id().get_usize());
+        if let Some(t) = self.idmap.get(&key) {
+            return t.clone();
+        }
+        let tag = e.tag_name().name();
+        let base = if is_id(tag) {
+            tag.to_string()
+        } else {
+            slug(tag)
+        };
+        let mut new = base.clone();
+        let mut n = 2;
+        while self.used.contains(&new) {
+            new = format!("{base}-{n}");
+            n += 1;
+        }
+        let msg = match xml_id {
+            Some(_) => format!("identifier used by an earlier element; this one is '{new}'"),
+            None => format!("{tag} without an identifier is '{new}'"),
+        };
+        self.warn(xml_id, &msg, None);
+        self.idmap.insert(key, new.clone());
+        self.used.insert(new.clone());
+        new
     }
 
     /// `doc=` from the first `documentation` of an element (language 0.5). Further
@@ -590,7 +639,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         if let Some(c) = collab
             && c.attribute("id") != Some("collaboration")
         {
-            let t = self.tid(c.attribute("id")).unwrap_or_else(|| "None".into());
+            let t = self.tid_of(c);
             self.doc.attrs.insert("collaboration".into(), t);
         }
         let n_exec = processes
@@ -609,7 +658,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         if collab.is_none() && processes.len() == 1 {
             let p = processes[0];
             if p.attribute("id") != Some("process") {
-                let t = self.tid(p.attribute("id")).unwrap_or_else(|| "None".into());
+                let t = self.tid_of(p);
                 self.doc.attrs.insert("process".into(), t);
             }
             if self.doc.title.is_none() {
@@ -623,7 +672,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 .flat_map(|c| findall(*c, "participant"))
                 .collect();
             for part in participants {
-                let pid = self.tid_s(part.attribute("id"));
+                let pid = self.tid_of(part);
                 let mut attrs = Attrs::new();
                 self.doc(part, &mut attrs);
                 self.multiplicity(part, &mut attrs);
@@ -666,7 +715,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 {
                     continue;
                 }
-                let pid = self.tid_s(p.attribute("id"));
+                let pid = self.tid_of(*p);
                 let mut pool_id = format!("{pid}-pool");
                 while self.used.contains(&pool_id) {
                     pool_id.push('_');
@@ -712,7 +761,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             let mut proc = proc_by_id.get(&Some(target.as_str())).copied();
             if proc.is_none() {
                 for p in &processes {
-                    if self.tid(p.attribute("id")).as_deref() == Some(target.as_str()) {
+                    if self.tid_of(*p) == target {
                         proc = Some(*p);
                         break;
                     }
@@ -770,7 +819,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         self.doc.pools[pool_idx].blackbox = false;
         let pool_id = self.doc.pools[pool_idx].base.id().to_string();
         if p.attribute("id") != Some(format!("{pool_id}-process").as_str()) {
-            let t = self.tid(p.attribute("id")).unwrap_or_else(|| "None".into());
+            let t = self.tid_of(p);
             self.doc.pools[pool_idx]
                 .base
                 .attrs
@@ -933,7 +982,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         pool: Option<&str>,
         lane_of: &mut IndexMap<String, String>,
     ) -> String {
-        let lid = self.tid_s(e.attribute("id"));
+        let lid = self.tid_of(e);
         let mut attrs = Attrs::new();
         self.doc(e, &mut attrs);
         let base = Base::new(
@@ -1166,7 +1215,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         if t == "subProcess" && e.attribute("triggeredByEvent") == Some("true") {
             kind = "eventsub";
         }
-        let nid = self.tid_s(e.attribute("id"));
+        let nid = self.tid_of(e);
         let mut n = Node {
             base: Base::new(
                 kind,
@@ -1738,7 +1787,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         if kind == "property" && x.attribute("name") == Some("__targetRef_placeholder") {
             return None;
         }
-        let did = self.tid(x.attribute("id"))?;
+        let did = self.tid_of(x);
         let mut base = Base::new(
             kind,
             Some(did.clone()),
@@ -1790,7 +1839,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             let name = || clean_label(e.attribute("name"));
             match t {
                 "itemDefinition" => {
-                    let id = self.tid_s(e.attribute("id"));
+                    let id = self.tid_of(e);
                     // the label of an item is its documentation (an item definition has no name)
                     let docs = find(e, "documentation");
                     if let Some(d) = docs {
@@ -1843,7 +1892,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                     self.doc.items.insert(id, b);
                 }
                 "resource" => {
-                    let id = self.tid_s(e.attribute("id"));
+                    let id = self.tid_of(e);
                     let label = name().filter(|l| *l != id);
                     let b = Base::new(
                         "resource",
@@ -1857,7 +1906,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                     self.doc.resources.insert(id, b);
                 }
                 "interface" => {
-                    let id = self.tid_s(e.attribute("id"));
+                    let id = self.tid_of(e);
                     let label = name().filter(|l| *l != id);
                     let mut attrs = Attrs::new();
                     self.doc(e, &mut attrs);
@@ -1866,7 +1915,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                     let mut operations = Vec::new();
                     let ops: Vec<X> = findall(e, "operation").collect();
                     for op in ops {
-                        let oid = self.tid_s(op.attribute("id"));
+                        let oid = self.tid_of(op);
                         let label = clean_label(op.attribute("name")).filter(|l| *l != oid);
                         let mut attrs = Attrs::new();
                         self.doc(op, &mut attrs);
@@ -1906,7 +1955,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 }
                 _ => {
                     if let Some((kind, _)) = GLOBAL_KINDS.iter().find(|(_, g)| *g == t) {
-                        let id = self.tid_s(e.attribute("id"));
+                        let id = self.tid_of(e);
                         let mut attrs = Attrs::new();
                         self.doc(e, &mut attrs);
                         let mut b =
@@ -1937,7 +1986,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         };
         let keys: Vec<X> = findall(c, "correlationKey").collect();
         for k in keys {
-            let id = self.tid_s(k.attribute("id"));
+            let id = self.tid_of(k);
             let base = Base::new(
                 "key",
                 Some(id.clone()),
@@ -2415,7 +2464,7 @@ impl<'a, 'i> Importer<'a, 'i> {
     }
 
     fn data(&mut self, e: X<'a, 'i>, t: &str, scope: &str, block: Option<String>) -> String {
-        let did = self.tid_s(e.attribute("id"));
+        let did = self.tid_of(e);
         let mut attrs = Attrs::new();
         self.doc(e, &mut attrs);
         let mut x = if t == "dataObjectReference" || t == "dataObject" {
@@ -2594,7 +2643,7 @@ impl<'a, 'i> Importer<'a, 'i> {
         }
         for e in notes {
             let t = find(e, "text").and_then(text);
-            let id = self.tid_s(e.attribute("id"));
+            let id = self.tid_of(e);
             let label = clean_label(Some(t.unwrap_or(""))).unwrap_or_default();
             let mut attrs = Attrs::new();
             self.doc(e, &mut attrs);
@@ -2629,7 +2678,7 @@ impl<'a, 'i> Importer<'a, 'i> {
                 .attribute("categoryValueRef")
                 .and_then(|r| self.by_id.get(r).copied());
             let label = cv.and_then(|c| clean_label(c.attribute("value")));
-            let id = self.tid_s(e.attribute("id"));
+            let id = self.tid_of(e);
             let mut attrs = Attrs::new();
             self.doc(e, &mut attrs);
             self.doc.groups.push(Base::new(
@@ -2666,7 +2715,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             );
             return;
         }
-        let fid = self.tid_s(e.attribute("id"));
+        let fid = self.tid_of(e);
         let mut base = Base::new(
             "flow",
             Some(fid),
@@ -2825,7 +2874,15 @@ impl<'a, 'i> Importer<'a, 'i> {
     fn message_flow(&mut self, e: X<'a, 'i>) {
         let src = self.tid_s(e.attribute("sourceRef"));
         let tgt = self.tid_s(e.attribute("targetRef"));
-        let mid = self.tid_s(e.attribute("id"));
+        if src.is_empty() || tgt.is_empty() {
+            self.warn(
+                e.attribute("id"),
+                "message flow without sourceRef or targetRef was dropped",
+                None,
+            );
+            return;
+        }
+        let mid = self.tid_of(e);
         let label = clean_label(e.attribute("name"));
         let mut base = Base::new(
             "message",

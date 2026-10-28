@@ -6,7 +6,7 @@ The crate builds the extension module `tok._engine` of the Python package `tok-l
 - the functions of `tok.api` call the engine;
 - with the environment variable `TOK_ENGINE=python` both use the pure-Python implementation instead, which is frozen at language 0.3 and serves as the reference of the parity tests.
 
-Installing from the source archive (`pip install https://codeberg.org/MarekDeja/tok/archive/main.zip`) builds the pure-Python package of the repository root and needs no Rust compiler.
+The package is defined by `pyproject.toml` at the root of the repository (maturin backend, `python-source = "python/src"`, `manifest-path = "rust/tok-py/Cargo.toml"`): `pip install tok-lang` installs a wheel, and the source archive (`maturin sdist`, or `pip install` of a checkout or of the archive of a release on Codeberg) builds this crate with Rust.
 
 ## Functions
 
@@ -44,7 +44,7 @@ PATH="$PWD/.venv-engine/Scripts:$PATH" bash tools/wheel.sh -o dist
 .venv-engine/Scripts/python -m pip install dist/tok_lang-*.whl
 ```
 
-`tools/wheel.sh` copies the Python package into `rust/tok-py/python/` (ignored by git) and runs `maturin build`; its arguments go to maturin (`--zig --compatibility manylinux2014` for Linux wheels that run on old distributions, `--target …` for other platforms). The wheel is abi3: one file per platform for every Python from 3.8.
+`tools/wheel.sh` runs `maturin build --release` in the root of the repository; its arguments go to maturin (`--zig --compatibility manylinux2014` for Linux wheels that run on old distributions, `--target …` for other platforms). The wheel is abi3: one file per platform for every Python from 3.8.
 
 ## Parity tests
 

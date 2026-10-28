@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="1.0" id="definitions" name="Wypożyczenie z należnością" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="wypozyczenie-10" isExecutable="true" name="Wypożyczenie z należnością">
+    <bpmn:extensionElements>
+      <zeebe:versionTag value="1.0" />
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="wniosek" name="Wniosek o wypożyczenie">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="f-wniosek" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="naleznosc" name="Wyliczenie należności">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=sum(for d in dni return d * 0.5)" resultVariable="naleznosc" />
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:exclusiveGateway default="f-czy-oplata-potwierdzenie" id="czy-oplata" name="Czy jest należność?" />
+    <bpmn:serviceTask id="oplata" name="Naliczenie opłaty">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition retries="3" type="naliczenie" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="waluta" value="PLN" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="potwierdzenie" name="Potwierdzenie wypożyczenia">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="f-potwierdzenie" />
+        <zeebe:assignmentDefinition assignee="bibliotekarz" />
+        <zeebe:priorityDefinition priority="60" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="wydano" name="Książka wypożyczona" />
+    <bpmn:sequenceFlow id="f-wniosek-naleznosc" sourceRef="wniosek" targetRef="naleznosc" />
+    <bpmn:sequenceFlow id="f-naleznosc-czy-oplata" sourceRef="naleznosc" targetRef="czy-oplata" />
+    <bpmn:sequenceFlow id="f-czy-oplata-oplata" name="tak" sourceRef="czy-oplata" targetRef="oplata">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=naleznosc &gt; 0</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-czy-oplata-potwierdzenie" name="nie" sourceRef="czy-oplata" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-oplata-potwierdzenie" sourceRef="oplata" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-wydano" sourceRef="potwierdzenie" targetRef="wydano" />
+  </bpmn:process>
+</bpmn:definitions>

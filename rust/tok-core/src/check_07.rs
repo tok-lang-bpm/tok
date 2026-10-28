@@ -3,6 +3,8 @@
 //! D006, D007, D010), FEEL at conformance level 3 (F001, F002) and, in executable
 //! documents for Camunda, C130–C132.
 
+use std::collections::{HashMap, HashSet};
+
 use super::{Checker, s};
 use crate::diagnostics::Diag;
 use crate::drg::{self, Kind, bindings, kind_of, params, requires, var_name};
@@ -229,7 +231,7 @@ impl Checker<'_> {
     fn cycles_07(&mut self) {
         let d = &*self.doc;
         let mut found = Vec::new();
-        let edges = |id: &str| -> Vec<String> {
+        let edges_of = |id: &str| -> Vec<String> {
             let mut out = drg::base_of(d, id).map(requires).unwrap_or_default();
             if let Some(b) = d.decisions.get(id).or_else(|| d.bkms.get(id)) {
                 drg::invoked(b, &mut out);
@@ -237,25 +239,50 @@ impl Checker<'_> {
             out.retain(|x| kind_of(d, x).is_some());
             out
         };
-        for (b, _) in drg::elements(d) {
+        let elements = drg::elements(d);
+        // the requirements of every element reached, once
+        let mut edges: HashMap<String, Vec<String>> = HashMap::new();
+        let mut pending: Vec<String> = elements.iter().map(|(b, _)| b.id().to_string()).collect();
+        while let Some(id) = pending.pop() {
+            if !edges.contains_key(&id) {
+                let out = edges_of(&id);
+                pending.extend(out.iter().filter(|n| !edges.contains_key(*n)).cloned());
+                edges.insert(id, out);
+            }
+        }
+        let on_cycle = on_cycles(&edges);
+        for (b, _) in &elements {
             let start = b.id().to_string();
-            // depth-first search for a path back to `start`
-            let mut stack: Vec<(String, Vec<String>)> = vec![(start.clone(), vec![start.clone()])];
-            let mut seen: Vec<String> = Vec::new();
+            if !on_cycle.contains(&start) {
+                continue;
+            }
+            // depth-first search for a path back to `start`; the path of a node is that of
+            // the node it was reached from, plus itself
+            let mut stack: Vec<String> = vec![start.clone()];
+            let mut from: HashMap<String, String> = HashMap::new();
+            let mut seen: HashSet<String> = HashSet::new();
+            let path_to = |n: &str, from: &HashMap<String, String>| -> Vec<String> {
+                let mut p = vec![n.to_string()];
+                let mut cur = n;
+                while let Some(prev) = from.get(cur) {
+                    p.push(prev.clone());
+                    cur = prev;
+                }
+                p.reverse();
+                p
+            };
             let mut cycle = None;
-            while let Some((cur, path)) = stack.pop() {
-                for n in edges(&cur) {
-                    if n == start {
-                        let mut p = path.clone();
-                        p.push(n);
+            while let Some(cur) = stack.pop() {
+                for n in &edges[&cur] {
+                    if *n == start {
+                        let mut p = path_to(&cur, &from);
+                        p.push(n.clone());
                         cycle = Some(p);
                         break;
                     }
-                    if !seen.contains(&n) {
-                        seen.push(n.clone());
-                        let mut p = path.clone();
-                        p.push(n.clone());
-                        stack.push((n, p));
+                    if seen.insert(n.clone()) {
+                        from.insert(n.clone(), cur.clone());
+                        stack.push(n.clone());
                     }
                 }
                 if cycle.is_some() {
@@ -815,4 +842,64 @@ impl Checker<'_> {
         }
         self.diags.extend(found);
     }
+}
+
+/// The nodes of a graph that lie on a cycle: in a strongly connected component of two or
+/// more nodes, or with an edge to themselves (Tarjan's algorithm, without recursion).
+fn on_cycles(edges: &HashMap<String, Vec<String>>) -> HashSet<String> {
+    let mut index: HashMap<&str, usize> = HashMap::new();
+    let mut low: HashMap<&str, usize> = HashMap::new();
+    let mut on_stack: HashSet<&str> = HashSet::new();
+    let mut stack: Vec<&str> = Vec::new();
+    let mut out = HashSet::new();
+    let mut nodes: Vec<&str> = edges.keys().map(String::as_str).collect();
+    nodes.sort_unstable();
+    for root in nodes {
+        if index.contains_key(root) {
+            continue;
+        }
+        // (node, position of the next edge to follow)
+        let mut work: Vec<(&str, usize)> = vec![(root, 0)];
+        while let Some(&mut (v, ref mut next)) = work.last_mut() {
+            if *next == 0 && !index.contains_key(v) {
+                let i = index.len();
+                index.insert(v, i);
+                low.insert(v, i);
+                stack.push(v);
+                on_stack.insert(v);
+            }
+            let succ = edges.get(v).map_or(&[][..], Vec::as_slice);
+            if let Some(w) = succ.get(*next) {
+                *next += 1;
+                let w = w.as_str();
+                if !index.contains_key(w) {
+                    work.push((w, 0));
+                } else if on_stack.contains(w) {
+                    let m = low[v].min(index[w]);
+                    low.insert(v, m);
+                }
+                continue;
+            }
+            work.pop();
+            if let Some(&(parent, _)) = work.last() {
+                let m = low[parent].min(low[v]);
+                low.insert(parent, m);
+            }
+            if low[v] == index[v] {
+                let mut component = Vec::new();
+                while let Some(w) = stack.pop() {
+                    on_stack.remove(w);
+                    component.push(w);
+                    if w == v {
+                        break;
+                    }
+                }
+                let self_edge = succ.iter().any(|w| w == v);
+                if component.len() > 1 || self_edge {
+                    out.extend(component.into_iter().map(str::to_string));
+                }
+            }
+        }
+    }
+    out
 }

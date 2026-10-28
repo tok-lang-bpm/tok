@@ -1,0 +1,89 @@
+# Continuous integration of the GitHub mirror: the release gates of tools/check.sh on Linux,
+# Windows and macOS for every push and pull request. The engine wheel, the source archive
+# of tok-lang, the tok, tok-lsp and tok-mcp programs, the C library and the .vsix of each
+# platform are kept as artifacts. Nothing is published.
+#
+# The workflow runs only on GitHub: the jobs are skipped where another forge reads this
+# folder (Forgejo Actions on Codeberg falls back to .github/workflows).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # the version of the crate wasm-bindgen in rust/tok-wasm/Cargo.toml
+  WASM_BINDGEN: "0.2.129"
+
+jobs:
+  check:
+    name: tools/check.sh (${{ matrix.os }})
+    if: github.server_url == 'https://github.com'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain of rust/rust-toolchain.toml
+        working-directory: rust
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup show active-toolchain
+      - name: Rust target of R on Windows (Rtools links the GNU target)
+        if: runner.os == 'Windows'
+        working-directory: rust
+        run: rustup target add x86_64-pc-windows-gnu
+      - name: Rust target and wasm-bindgen of the playground (Linux)
+        if: runner.os == 'Linux'
+        working-directory: rust
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install --locked wasm-bindgen-cli --version "$WASM_BINDGEN"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: R packages of tokr (testthat, knitr, rmarkdown)
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: r/tokr
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.10"
+
+      - name: Release gates
+        env:
+          CARGO_BUILD_JOBS: "4"
+        run: bash tools/check.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ runner.os }}
+          path: dist/
+          if-no-files-found: error

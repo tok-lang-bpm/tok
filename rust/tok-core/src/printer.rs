@@ -724,7 +724,7 @@ impl Printer<'_> {
             let cell = |k: usize| cells.get(k).map(|s| s.as_str()).unwrap_or("");
             let left: Vec<String> = (0..nin).map(|k| ljust(cell(k), widths[k])).collect();
             let right: Vec<String> = (nin..ncol).map(|k| ljust(cell(k), widths[k])).collect();
-            let mut text = format!("| {} || {} |", left.join(" | "), right.join(" | "));
+            let mut text = table_row(dec, &left, &right);
             if ann {
                 text.push_str(&format!(
                     "| {} |",
@@ -746,4 +746,18 @@ impl Printer<'_> {
             ));
         }
     }
+}
+
+/// A row of a decision table: the input cells, `||`, the output cells. A side the header
+/// has no cells on is left out (`|| out |`, `| in ||`), so that the row reads back the same.
+pub(crate) fn table_row(dec: &Decision, left: &[String], right: &[String]) -> String {
+    let mut text = if dec.no_inputs && left.is_empty() {
+        "||".to_string()
+    } else {
+        format!("| {} ||", left.join(" | "))
+    };
+    if !(dec.no_outputs && right.is_empty()) {
+        text.push_str(&format!(" {} |", right.join(" | ")));
+    }
+    text
 }

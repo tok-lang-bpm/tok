@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="oplata-zwloka-definitions" name="Opłata za zwłokę" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="1.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="dni-zwloki" name="dni zwłoki" label="Dni zwłoki">
+    <variable id="dni-zwloki-variable" name="dni zwłoki" typeRef="number" />
+  </inputData>
+  <businessKnowledgeModel id="kara" name="kara" label="Kara za zwłokę">
+    <variable id="kara-variable" name="kara" />
+    <encapsulatedLogic id="kara-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="kara-param-1" name="dni" typeRef="number" />
+      <literalExpression id="kara-expr">
+        <text>dni * 0.5</text>
+      </literalExpression>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <decision id="oplata-zwloka" name="oplata-zwloka" label="Opłata za zwłokę">
+    <variable id="oplata-zwloka-variable" name="oplata-zwloka" typeRef="number" />
+    <informationRequirement id="oplata-zwloka-requires-dni-zwloki">
+      <requiredInput href="#dni-zwloki" />
+    </informationRequirement>
+    <knowledgeRequirement id="oplata-zwloka-requires-kara">
+      <requiredKnowledge href="#kara" />
+    </knowledgeRequirement>
+    <literalExpression id="oplata-zwloka-expr">
+      <text>kara(`dni zwłoki`)</text>
+    </literalExpression>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_oplata-zwloka">
+      <dmndi:DMNShape id="DMNShape_oplata-zwloka" dmnElementRef="oplata-zwloka">
+        <dc:Bounds height="80" width="180" x="208" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_dni-zwloki" dmnElementRef="dni-zwloki">
+        <dc:Bounds height="45" width="125" x="151" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_kara" dmnElementRef="kara">
+        <dc:Bounds height="46" width="135" x="316" y="247" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_oplata-zwloka-requires-kara" dmnElementRef="oplata-zwloka-requires-kara">
+        <di:waypoint x="383" y="247" />
+        <di:waypoint x="268" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_oplata-zwloka-requires-dni-zwloki" dmnElementRef="oplata-zwloka-requires-dni-zwloki">
+        <di:waypoint x="213" y="248" />
+        <di:waypoint x="328" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

@@ -628,6 +628,12 @@ fn barycentre_sweeps(
     #[allow(clippy::cast_precision_loss)]
     let pos = |i: &str, row: &HashMap<String, i64>| lane_idx[i] as f64 * 1000.0 + row[i] as f64;
     let nlay = ids.iter().map(|i| layer[i]).max().map_or(0, |x| x + 1);
+    // the nodes of each layer and lane, in the order of `ids` (layers and lanes do not
+    // change during the sweeps)
+    let mut groups: HashMap<(i64, usize), Vec<&String>> = HashMap::new();
+    for i in ids {
+        groups.entry((layer[i], lane_idx[i])).or_default().push(i);
+    }
     let mut moved = false;
     for sweep in 0..4 {
         let forward = sweep % 2 == 0;
@@ -638,10 +644,9 @@ fn barycentre_sweeps(
         };
         for l in layers {
             for k in 0..nl {
-                let group: Vec<&String> = ids
-                    .iter()
-                    .filter(|i| layer[*i] == l && lane_idx[*i] == k)
-                    .collect();
+                let Some(group) = groups.get(&(l, k)) else {
+                    continue;
+                };
                 if group.len() < 2 {
                     continue;
                 }
@@ -737,48 +742,174 @@ fn score(pts: &[Pt], obstacles: &[[f64; 4]]) -> usize {
     hits * 100 + pts.len()
 }
 
-/// `min(cands, key=score)`: first candidate with the lowest score, and all candidates.
-fn best(cands: Vec<Vec<Pt>>, obs: &[[f64; 4]]) -> (Vec<Pt>, Vec<Vec<Pt>>) {
-    let mut best: Option<(usize, &Vec<Pt>)> = None;
-    for c in &cands {
-        let s = score(c, obs);
-        if best.as_ref().is_none_or(|(bs, _)| s < *bs) {
-            best = Some((s, c));
-        }
-    }
-    let b = best.map(|(_, c)| c.clone()).unwrap_or_default();
-    (b, cands)
+/// Side of a cell of the grid of [`Obstacles`].
+const OBSTACLE_CELL: f64 = 200.0;
+
+/// The shapes that routes avoid (flow nodes, data and annotations, in the order of the
+/// placement), with the element a boundary event is attached to, and a grid of their boxes
+/// by columns and by cells. A route counts the shapes it runs through, so the grid gives
+/// the same counts as a scan of all shapes, without one per candidate route.
+struct Obstacles {
+    items: Vec<(String, Option<String>, [f64; 4])>,
+    cells: HashMap<(i64, i64), Vec<usize>>,
+    columns: HashMap<i64, Vec<usize>>,
+    /// shapes too large (or too far out) for the grid: every query returns them
+    everywhere: Vec<usize>,
 }
 
-fn obstacles_for(
-    md: &Model,
-    out: &OMap<Rect>,
-    skip: &HashSet<String>,
-    container: Option<Id>,
-) -> Vec<[f64; 4]> {
-    let mut anc: HashSet<String> = HashSet::new();
-    let mut c = container;
-    while let Some(x) = c {
-        anc.insert(key(md.id_of(x)));
-        c = md.container(x);
-    }
-    let mut obs = Vec::new();
-    for (i, bx) in out.items() {
-        if skip.contains(&i) || anc.contains(&i) {
-            continue;
-        }
-        let Some(e) = md.get(Some(&i)) else {
-            continue;
+/// A shape covering more cells than this is kept in `Obstacles::everywhere`.
+const OBSTACLE_MAX_CELLS: i64 = 4096;
+
+/// The cells from `a` to `b` (widened by a margin for rounding at cell borders), or
+/// `None` for values out of range.
+fn cell_range(a: f64, b: f64) -> Option<(i64, i64)> {
+    let c = |v: f64| (v / OBSTACLE_CELL).floor();
+    let (lo, hi) = (c(a.min(b) - 2.0), c(a.max(b) + 2.0));
+    #[allow(clippy::cast_possible_truncation)]
+    (lo.is_finite() && hi.is_finite() && lo.abs() < 1e12 && hi.abs() < 1e12 && hi - lo < 1e6)
+        .then_some((lo as i64, hi as i64))
+}
+
+impl Obstacles {
+    fn new(md: &Model, out: &OMap<Rect>) -> Obstacles {
+        let mut o = Obstacles {
+            items: Vec::new(),
+            cells: HashMap::new(),
+            columns: HashMap::new(),
+            everywhere: Vec::new(),
         };
-        let t = md.tag(e);
-        if is_flownode(&t) || is_data_shape(&t) || t == "textAnnotation" {
-            if t == "boundaryEvent" && skip.contains(&key(md.attr(e, "attachedToRef"))) {
+        for i in &out.keys {
+            let Some(e) = md.get(Some(i)) else {
+                continue;
+            };
+            let t = md.tag(e);
+            if !(is_flownode(&t) || is_data_shape(&t) || t == "textAnnotation") {
                 continue;
             }
-            obs.push(rf(bx));
+            let attached = (t == "boundaryEvent").then(|| key(md.attr(e, "attachedToRef")));
+            let b = rf(out.map[i]);
+            let k = o.items.len();
+            match (cell_range(b[0], b[0] + b[2]), cell_range(b[1], b[1] + b[3])) {
+                (Some((x0, x1)), Some((y0, y1)))
+                    if (x1 - x0 + 1).saturating_mul(y1 - y0 + 1) <= OBSTACLE_MAX_CELLS =>
+                {
+                    for x in x0..=x1 {
+                        o.columns.entry(x).or_default().push(k);
+                        for y in y0..=y1 {
+                            o.cells.entry((x, y)).or_default().push(k);
+                        }
+                    }
+                }
+                _ => o.everywhere.push(k),
+            }
+            o.items.push((i.clone(), attached, b));
         }
+        o
     }
-    obs
+
+    /// The shapes in the cells of `x0..x1` × `y0..y1` (all rows when `ys` is `None`), in
+    /// the order of the placement; every shape whose box meets the area is among them.
+    fn near(&self, xs: (f64, f64), ys: Option<(f64, f64)>) -> Vec<usize> {
+        let (Some((x0, x1)), y) = (cell_range(xs.0, xs.1), ys.map(|(a, b)| cell_range(a, b)))
+        else {
+            return (0..self.items.len()).collect();
+        };
+        let cells = match y {
+            Some(Some((y0, y1))) => (x1 - x0 + 1).saturating_mul(y1 - y0 + 1),
+            _ => x1 - x0 + 1,
+        };
+        if cells > OBSTACLE_MAX_CELLS {
+            return (0..self.items.len()).collect();
+        }
+        let mut out = self.everywhere.clone();
+        match y {
+            Some(None) => return (0..self.items.len()).collect(),
+            Some(Some((y0, y1))) => {
+                for x in x0..=x1 {
+                    for y in y0..=y1 {
+                        if let Some(v) = self.cells.get(&(x, y)) {
+                            out.extend_from_slice(v);
+                        }
+                    }
+                }
+            }
+            None => {
+                for x in x0..=x1 {
+                    if let Some(v) = self.columns.get(&x) {
+                        out.extend_from_slice(v);
+                    }
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+}
+
+/// The obstacles of one route: the shapes except its ends (`skip`), the boundary events
+/// attached to them and the containers of the route.
+struct RouteObstacles<'a> {
+    all: &'a Obstacles,
+    skip: HashSet<String>,
+    anc: HashSet<String>,
+}
+
+impl RouteObstacles<'_> {
+    fn new<'a>(
+        md: &Model,
+        all: &'a Obstacles,
+        skip: HashSet<String>,
+        container: Option<Id>,
+    ) -> RouteObstacles<'a> {
+        let mut anc: HashSet<String> = HashSet::new();
+        let mut c = container;
+        while let Some(x) = c {
+            anc.insert(key(md.id_of(x)));
+            c = md.container(x);
+        }
+        RouteObstacles { all, skip, anc }
+    }
+
+    fn counts(&self, k: usize) -> bool {
+        let (id, attached, _) = &self.all.items[k];
+        !self.skip.contains(id)
+            && !self.anc.contains(id)
+            && !attached.as_ref().is_some_and(|a| self.skip.contains(a))
+    }
+
+    /// The boxes of the obstacles meeting the area (all rows when `ys` is `None`).
+    fn boxes(&self, xs: (f64, f64), ys: Option<(f64, f64)>) -> Vec<[f64; 4]> {
+        self.all
+            .near(xs, ys)
+            .into_iter()
+            .filter(|&k| self.counts(k))
+            .map(|k| self.all.items[k].2)
+            .collect()
+    }
+
+    /// `score` of a route against these obstacles.
+    fn score(&self, pts: &[Pt]) -> usize {
+        let (mut x0, mut y0) = (f64::INFINITY, f64::INFINITY);
+        let (mut x1, mut y1) = (f64::NEG_INFINITY, f64::NEG_INFINITY);
+        for p in pts {
+            (x0, y0, x1, y1) = (x0.min(p.0), y0.min(p.1), x1.max(p.0), y1.max(p.1));
+        }
+        score(pts, &self.boxes((x0, x1), Some((y0, y1))))
+    }
+
+    /// `min(cands, key=score)`: first candidate with the lowest score, and all candidates.
+    fn best(&self, cands: Vec<Vec<Pt>>) -> (Vec<Pt>, Vec<Vec<Pt>>) {
+        let mut best: Option<(usize, &Vec<Pt>)> = None;
+        for c in &cands {
+            let s = self.score(c);
+            if best.as_ref().is_none_or(|(bs, _)| s < *bs) {
+                best = Some((s, c));
+            }
+        }
+        let b = best.map(|(_, c)| c.clone()).unwrap_or_default();
+        (b, cands)
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -786,6 +917,7 @@ fn route_seq(
     md: &Model,
     f: Id,
     out: &OMap<Rect>,
+    shapes: &Obstacles,
     back_ids: &HashSet<String>,
     counter: &mut i64,
 ) -> (Vec<Pt>, Vec<Vec<Pt>>) {
@@ -806,7 +938,7 @@ fn route_seq(
     if stag == "boundaryEvent" {
         skip.insert(key(se.and_then(|e| md.attr(e, "attachedToRef"))));
     }
-    let obs = obstacles_for(md, out, &skip, md.parent.get(&f).copied());
+    let obs = RouteObstacles::new(md, shapes, skip, md.parent.get(&f).copied());
     let mut cands: Vec<Vec<Pt>> = Vec::new();
     #[allow(clippy::cast_precision_loss)]
     let cnt = |c: i64| c as f64;
@@ -836,7 +968,7 @@ fn route_seq(
         *counter += 1;
         let yb = sb.max(tb) + 25.0 + 8.0 * cnt(counter.rem_euclid(4));
         cands.push(vec![(scx, sb), (scx, yb), (tcx, yb), (tcx, tb)]);
-        return best(cands, &obs);
+        return obs.best(cands);
     }
 
     let backward = back_ids.contains(&key(md.id_of(f))) || tx < sx + sw - 1.0;
@@ -870,7 +1002,7 @@ fn route_seq(
                 (tx, tcy),
             ]);
         }
-        return best(cands, &obs);
+        return obs.best(cands);
     }
     // backward flow (loop)
     if ty - 20.0 > sb + 5.0 {
@@ -891,8 +1023,9 @@ fn route_seq(
     }
     *counter += 1;
     let k = 8.0 * cnt(counter.rem_euclid(4));
-    let lo: Vec<&[f64; 4]> = obs
-        .iter()
+    let lo: Vec<[f64; 4]> = obs
+        .boxes((scx.min(tcx), scx.max(tcx)), None)
+        .into_iter()
         .filter(|b| b[0] < scx.max(tcx) && b[0] + b[2] > scx.min(tcx))
         .collect();
     let yb = sb.max(tb) + 25.0 + k;
@@ -909,7 +1042,7 @@ fn route_seq(
         let yb2 = m_ + 25.0 + k;
         cands.push(vec![(scx, sb), (scx, yb2), (tcx, yb2), (tcx, tb)]);
     }
-    best(cands, &obs)
+    obs.best(cands)
 }
 
 fn event_side_point(b: Rect, right: bool) -> Pt {
@@ -937,6 +1070,7 @@ fn route_msg_node_pool(
     node_id: &str,
     pool: Rect,
     out: &OMap<Rect>,
+    shapes: &Obstacles,
     from_node: bool,
     k: i64,
 ) -> (Vec<Pt>, Vec<Vec<Pt>>) {
@@ -947,7 +1081,7 @@ fn route_msg_node_pool(
     let below = py >= ny + nh;
     let edge_y = if below { py } else { py + ph };
     let skip: HashSet<String> = std::iter::once(node_id.to_string()).collect();
-    let obs = obstacles_for(md, out, &skip, None);
+    let obs = RouteObstacles::new(md, shapes, skip, None);
     let mut cands: Vec<Vec<Pt>> = Vec::new();
     if below {
         cands.push(vec![(ncx, ny + nh), (ncx, edge_y)]);
@@ -965,7 +1099,7 @@ fn route_msg_node_pool(
         };
         cands.push(vec![p0, (chx, p0.1), (chx, edge_y)]);
     }
-    let (mut b, mut all) = best(cands, &obs);
+    let (mut b, mut all) = obs.best(cands);
     if !from_node {
         b.reverse();
         for c in &mut all {
@@ -1329,11 +1463,12 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
     let mut wp: OMap<Vec<Pt>> = OMap::default();
     let mut classic: HashMap<String, Vec<Vec<Pt>>> = HashMap::new();
     let mut counter = 0i64;
+    let shapes = Obstacles::new(md, &out);
     for &f in &md.seq {
         if out.contains(&key(md.attr(f, "sourceRef")))
             && out.contains(&key(md.attr(f, "targetRef")))
         {
-            let (pts, cands) = route_seq(md, f, &out, &back, &mut counter);
+            let (pts, cands) = route_seq(md, f, &out, &shapes, &back, &mut counter);
             wp.insert(&key(md.id_of(f)), pts);
             classic.insert(key(md.id_of(f)), cands);
         }
@@ -1379,13 +1514,13 @@ fn plan(md: &mut Model, reorder: bool, limit: Option<&refine::Quality>) -> Optio
         mcount.insert(kk, k + 1);
         let fid = key(md.id_of(f));
         if t_is_pool && !s_is_pool && out.contains(&s_id) {
-            let (pts, cands) = route_msg_node_pool(md, &s_id, t, &out, true, k);
+            let (pts, cands) = route_msg_node_pool(md, &s_id, t, &out, &shapes, true, k);
             wp.insert(&fid, pts);
             classic.insert(fid, cands);
             continue;
         }
         if s_is_pool && !t_is_pool && out.contains(&t_id) {
-            let (pts, cands) = route_msg_node_pool(md, &t_id, s, &out, false, k);
+            let (pts, cands) = route_msg_node_pool(md, &t_id, s, &out, &shapes, false, k);
             wp.insert(&fid, pts);
             classic.insert(fid, cands);
             continue;

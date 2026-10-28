@@ -396,8 +396,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tok-bench"
+version = "1.0.0"
+dependencies = [
+ "tok-bpmn",
+ "tok-cli",
+ "tok-core",
+ "tok-sim",
+]
+
+[[package]]
 name = "tok-bpmn"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "roxmltree",
  "serde_json",
@@ -407,7 +417,7 @@ dependencies = [
 
 [[package]]
 name = "tok-capi"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "serde_json",
  "tok-bpmn",
@@ -418,7 +428,7 @@ dependencies = [
 
 [[package]]
 name = "tok-cli"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "serde_json",
  "tok-bpmn",
@@ -428,7 +438,7 @@ dependencies = [
 
 [[package]]
 name = "tok-core"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "indexmap",
  "roxmltree",
@@ -438,7 +448,7 @@ dependencies = [
 
 [[package]]
 name = "tok-lsp"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "serde_json",
  "tok-bpmn",
@@ -448,7 +458,7 @@ dependencies = [
 
 [[package]]
 name = "tok-mcp"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "serde_json",
  "tok-cli",
@@ -456,7 +466,7 @@ dependencies = [
 
 [[package]]
 name = "tok-py"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "pyo3",
  "tok-bpmn",
@@ -467,7 +477,7 @@ dependencies = [
 
 [[package]]
 name = "tok-sim"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "indexmap",
  "roxmltree",
@@ -478,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "tok-wasm"
-version = "0.9.0"
+version = "1.0.0"
 dependencies = [
  "serde_json",
  "tok-cli",

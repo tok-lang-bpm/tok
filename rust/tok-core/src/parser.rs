@@ -165,7 +165,14 @@ struct Parser {
     lines: Vec<Line>,
     pending: Vec<String>,
     counter: std::collections::HashMap<String, usize>,
+    /// Blocks open around the line parsed.
+    depth: usize,
 }
+
+/// The deepest nesting of blocks the parser reads. Everything that walks a document
+/// (checker, printer, exporters, layout) recurses into blocks, so the nesting is bounded
+/// to keep them within the stack; deeper blocks are `P008`.
+pub const MAX_BLOCK_DEPTH: usize = 64;
 
 /// Parse tok text. Returns the document and parser diagnostics.
 pub fn parse(text: &str) -> (Document, Vec<Diag>) {
@@ -176,6 +183,7 @@ pub fn parse(text: &str) -> (Document, Vec<Diag>) {
         lines,
         pending: Vec::new(),
         counter: Default::default(),
+        depth: 0,
     };
     for (code, line, msg) in errors {
         p.diags
@@ -188,6 +196,15 @@ pub fn parse(text: &str) -> (Document, Vec<Diag>) {
 impl Parser {
     fn err(&mut self, code: &str, line: usize, id: Option<&str>, args: &[(&str, String)]) {
         self.diags.push(Diag::new(code, line, id, args));
+    }
+
+    /// Note a key or flag given again on line `line_no`; the checker reports it in a
+    /// document of language 1.0 (`R090`).
+    fn repeated(&mut self, line_no: usize, key: &str) {
+        let entry = (line_no, key.to_string());
+        if !self.doc.repeated.contains(&entry) {
+            self.doc.repeated.push(entry);
+        }
     }
 
     fn take_comments(&mut self, base: &mut Base, line: &Line) {
@@ -271,11 +288,17 @@ impl Parser {
                     tail.extra
                         .push((t.value.clone(), toks[i + 2].value.clone()));
                 } else {
+                    if tail.attrs.contains_key(&t.value) {
+                        self.repeated(line_no, &t.value);
+                    }
                     tail.attrs
                         .insert(t.value.clone(), toks[i + 2].value.clone());
                 }
                 i += 3;
             } else if t.kind == Kind::Word {
+                if tail.flags.contains(&t.value) {
+                    self.repeated(line_no, &t.value);
+                }
                 tail.flags.push(t.value.clone());
                 i += 1;
             } else {
@@ -344,6 +367,18 @@ impl Parser {
                         i = self.skip_block(i, ind);
                         prev = Some(Prev::plain(&p.kind));
                     }
+                    Some(p) if p.accepts && self.depth >= MAX_BLOCK_DEPTH => {
+                        let detail =
+                            format!("its block is nested more than {MAX_BLOCK_DEPTH} levels deep");
+                        self.err(
+                            "P008",
+                            line.number,
+                            None,
+                            &[("keyword", p.kind.clone()), ("detail", detail)],
+                        );
+                        i = self.skip_block(i, ind);
+                        prev = Some(Prev::plain(&p.kind));
+                    }
                     Some(p) if p.accepts => {
                         let child = p.ctx.clone().unwrap_or_else(|| ctx.clone());
                         if p.kind == "pool"
@@ -352,7 +387,9 @@ impl Parser {
                         {
                             pool.blackbox = false;
                         }
+                        self.depth += 1;
                         i = self.block(i, ind as i64, &child);
+                        self.depth -= 1;
                         prev = Some(Prev::plain(&p.kind));
                     }
                     other => {
@@ -1058,6 +1095,8 @@ impl Parser {
             dec.has_annotations = groups.len() == 3;
             dec.annotation_title = ann;
             dec.header_line = Some(line.number);
+            dec.no_inputs = ins.is_empty();
+            dec.no_outputs = outs.is_empty();
             for cell in errs {
                 self.err("D004", line.number, Some(did), &[("cell", cell)]);
             }

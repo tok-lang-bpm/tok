@@ -4,11 +4,11 @@
 
 ## Installing
 
-Build it from the repository (Rust 1.99 or newer):
+Install it from crates.io, or build it from the repository (Rust 1.99 or newer):
 
 ```
-cd rust
-cargo build --release -p tok-lsp      # target/release/tok-lsp (tok-lsp.exe on Windows)
+cargo install tok-lsp
+cd rust && cargo build --release -p tok-lsp      # target/release/tok-lsp (tok-lsp.exe on Windows)
 ```
 
 and put the program on the `PATH`, or give its full path to the editor. `tools/check.sh` builds it and copies it to `dist/` together with `tok`. `tok-lsp --version` prints the version; without arguments (or with `--stdio`, which editors often add) it serves one editor on its standard streams and ends when the editor sends `exit`.
@@ -17,7 +17,7 @@ and put the program on the `PATH`, or give its full path to the editor. `tools/c
 
 ### Diagnostics
 
-When a document is opened and after every change the server checks it completely, as `tok check` does: tokens and lines, statements, references and structure, the BPMN 2.0 rules of the exported model (`E`, `W`, `L` codes), the executable profile for Camunda 8, decisions, FEEL and simulation parameters (spec §13). The language version of the header decides what the document may contain, as it does for the command line, so a 0.5 document is checked as 0.5 and a 0.7 document as 0.7.
+The editor sends the text of a document with `textDocument/didOpen`, every change as the whole new text with `textDocument/didChange` (full synchronization) and the end of editing with `textDocument/didClose`. When a document is opened and after every change the server checks it completely, as `tok check` does, and sends the diagnostics with `textDocument/publishDiagnostics`: tokens and lines, statements, references and structure, the BPMN 2.0 rules of the exported model (`E`, `W`, `L` codes), the executable profile for Camunda 8, decisions, FEEL and simulation parameters (spec §13). The language version of the header decides what the document may contain, as it does for the command line, so a 0.5 document is checked as 0.5, a 0.7 document as 0.7 and a 1.0 document as 1.0 (with the deprecation warnings of 1.0, `R090`).
 
 Each diagnostic carries its code (`R002`, `E008`, …), its severity (error, warning, or information for the style notes) and its message. It points at the identifier it is about when that identifier stands on its line, otherwise at the whole statement. Messages are in English, or in Polish when the editor runs in Polish (the `locale` of the editor is `pl`) or the setting `lang` is `pl`.
 
@@ -42,7 +42,7 @@ Identifiers are the names of the elements of a model (spec §2): flow nodes, poo
 - the node names of `flow` and `message` lines (`flow a -> b -> c`, `message a -> pool`);
 - the activity and the data of `reads` and `writes`;
 - the values of the attributes that name elements: `on=`, `process=`, `task=`, `form=`, `decision=`, `by=`, `operation=`, `compensate=`, `activity=`, `from=`, `to=`, `choreography=`, `collaboration=`, `input=`, `output=`, `invoke=`, `type=` (a DMN type or item definition), and the lists `members=`, `pools=`, `messages=`, `requires=` and the pairs of `map=`;
-- in a document of language 0.7, the FEEL names of the decision requirements graph in the expressions of decisions and business knowledge models (`expr=`, the right-hand sides of `with=`, `default=`, the input expressions in the header of a decision table and the cells of its rules). The FEEL name of an element is its identifier unless `name=` gives another one; a decision sees only what it `requires`, so a parameter or a context entry with the same name as an element is not a reference to it. Names inside FEEL string literals are not references.
+- in a document of language 0.7 or 1.0, the FEEL names of the decision requirements graph in the expressions of decisions and business knowledge models (`expr=`, the right-hand sides of `with=`, `default=`, the input expressions in the header of a decision table and the cells of its rules), and the DMN types named as the types of table columns (`| konto: konto-t || … |`). The FEEL name of an element is its identifier unless `name=` gives another one; a decision sees only what it `requires`, so a parameter or a context entry with the same name as an element is not a reference to it. FEEL reads the longest name of the document, so a word at the start of a longer name (`kara` in an entry `kara za tydzień`) is not a reference, and neither is the key of a context (`{kara: …}`). Names inside FEEL string literals are not references.
 
 With this the server answers:
 
@@ -57,11 +57,11 @@ With this the server answers:
 
 ### Hover
 
-Over an identifier the server shows the kind of the element, its label, the element of BPMN or DMN it exports and the line of its declaration; over the keyword of a statement, what the statement declares; over a diagnostic, its code with the layer it belongs to, its message, and the English and Polish templates of the code; over a diagnostic code written anywhere (in a comment, for example), the same explanation.
+`textDocument/hover`: over an identifier the server shows the kind of the element, its label, the element of BPMN or DMN it exports and the line of its declaration; over the keyword of a statement, what the statement declares; over a diagnostic, its code with the layer it belongs to, its message, and the English and Polish templates of the code; over a diagnostic code written anywhere (in a comment, for example), the same explanation.
 
 ### Completion
 
-The server offers the keywords at the start of a statement, the identifiers of the right kind after the keys that name elements (activities after `on=`, forms after `form=`, decisions after `decision=`, resources after `by=`, pools after `from=` and `to=`, business knowledge models after `invoke=`, …), the hit policies after `hit=` and the field types after `type=` on a form field, the flow nodes after `->` on a `flow` line (and pools on a `message` line), the activities and data of `reads` and `writes`, and the attribute keys and flags of a statement after its identifier.
+`textDocument/completion`: the server offers the keywords at the start of a statement, the identifiers of the right kind after the keys that name elements (activities after `on=`, forms after `form=`, decisions after `decision=`, resources after `by=`, pools after `from=` and `to=`, business knowledge models after `invoke=`, …), the hit policies after `hit=` and the field types after `type=` on a form field, the flow nodes after `->` on a `flow` line (and pools on a `message` line), the activities and data of `reads` and `writes`, and the attribute keys and flags of a statement after its identifier.
 
 ### Positions
 

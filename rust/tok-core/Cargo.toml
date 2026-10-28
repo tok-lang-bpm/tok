@@ -6,7 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Parser, checker, printer and exporters of the tok process language"
+homepage.workspace = true
+documentation = "https://docs.rs/tok-core"
+readme = "README.md"
+# the tests and examples read the conformance corpus and the fixtures of the repository
+exclude = ["tests/", "examples/"]
+keywords = ["bpmn", "dmn", "feel", "process-modelling", "tok"]
+categories = ["parser-implementations", "science"]
+description = "Parser, checker, canonical printer, BPMN 2.0 and DMN 1.5 export and import, and FEEL of the tok process language"
 
 [dependencies]
 indexmap = "2"

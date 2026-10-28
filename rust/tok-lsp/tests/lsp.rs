@@ -463,6 +463,51 @@ decision opis \"Opis\" requires=\"limit kara wiek\" expr=\"if wiek > 60 then \\\
 }
 
 #[test]
+fn rename_skips_longer_names_and_context_keys_and_follows_column_types() {
+    let text = "tok 1.0 \"Konto\"
+item konto-t \"Rodzaj konta\" type=string
+inputdata konto \"Konto\" type=konto-t
+bkm kara \"Kara\" params=\"dni: number\" type=number expr=\"dni * 0.5\"
+decision limit \"Limit\" requires=\"konto kara\" type=number
+  entry \"kara za tydzień\" type=number expr=\"kara(7)\"
+  result expr=\"{kara: kara za tydzień, razem: kara(1)}\"
+decision tabela \"Tabela\" requires=\"konto\"
+  | konto: konto-t || wynik: number |
+  | \"student\"    || 1             |
+";
+    let mut c = Client::new();
+    assert_eq!(c.open(URI, text), Vec::<Value>::new());
+    let starts = |c: &mut Client, line: u32, col: u32| {
+        let mut p = at(line, col);
+        p["newName"] = json!("zz");
+        let edit = c.request("textDocument/rename", p);
+        let mut out: Vec<(u64, u64)> = edit["changes"][URI]
+            .as_array()
+            .expect("present")
+            .iter()
+            .map(|e| {
+                (
+                    e["range"]["start"]["line"].as_u64().expect("present"),
+                    e["range"]["start"]["character"].as_u64().expect("present"),
+                )
+            })
+            .collect();
+        out.sort();
+        out
+    };
+    // `kara`: its declaration, `requires`, the call in the entry and the call after
+    // `razem:`, but not the key `kara:` nor the first word of the entry `kara za tydzień`
+    let l6 = text.lines().nth(6).expect("present");
+    let call = l6[..l6.find("kara(1)").expect("present")].chars().count() as u64;
+    assert_eq!(
+        starts(&mut c, 3, 5),
+        vec![(3, 4), (4, 39), (5, 44), (6, call)]
+    );
+    // `konto-t`: its declaration, `type=` of the input data and the type of the column
+    assert_eq!(starts(&mut c, 1, 6), vec![(1, 5), (2, 29), (8, 11)]);
+}
+
+#[test]
 fn document_symbols_give_the_outline() {
     let mut c = Client::new();
     c.open(URI, MODEL);

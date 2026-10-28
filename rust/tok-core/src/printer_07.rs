@@ -172,7 +172,7 @@ impl Printer<'_> {
                 format!("| {} |", left.join(" | "))
             } else {
                 let right: Vec<String> = (nin..ncol).map(|k| ljust(cell(k), widths[k])).collect();
-                format!("| {} || {} |", left.join(" | "), right.join(" | "))
+                super::table_row(dec, &left, &right)
             };
             if ann {
                 text.push_str(&format!(

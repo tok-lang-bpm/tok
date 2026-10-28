@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="1" id="definitions" name="Wersja bez części dziesiętnej" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Wersja bez części dziesiętnej">
+    <bpmn:startEvent id="s" name="Początek" />
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-e" sourceRef="s" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d" targetNamespace="x">
+  <bpmn:collaboration id="c">
+    <bpmn:participant name="Pool" processRef="p" />
+    <bpmn:participant id="b" name="Other" />
+    <bpmn:messageFlow sourceRef="t" targetRef="b" />
+    <bpmn:messageFlow id="m2" targetRef="b" />
+  </bpmn:collaboration>
+  <bpmn:process id="p">
+    <bpmn:startEvent name="Start" />
+    <bpmn:startEvent id="" name="Start" />
+    <bpmn:task id="t" name="Task" />
+    <bpmn:boundaryEvent attachedToRef="t"><bpmn:timerEventDefinition /></bpmn:boundaryEvent>
+    <bpmn:transaction name="T"><bpmn:endEvent /></bpmn:transaction>
+    <bpmn:exclusiveGateway />
+    <bpmn:sequenceFlow sourceRef="t" targetRef="t" />
+    <bpmn:sequenceFlow id="f2" targetRef="t" />
+  </bpmn:process>
+</bpmn:definitions>

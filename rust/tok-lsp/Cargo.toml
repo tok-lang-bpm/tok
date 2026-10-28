@@ -6,17 +6,23 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tok-lsp"
+readme = "README.md"
+# the tests and examples read the conformance corpus and the fixtures of the repository
+exclude = ["tests/", "examples/"]
+keywords = ["lsp", "language-server", "bpmn", "dmn", "tok"]
+categories = ["development-tools", "text-editors"]
 description = "Language server of the tok process language (LSP 3.17 over standard input and output)"
-publish = false
 
 [[bin]]
 name = "tok-lsp"
 path = "src/main.rs"
 
 [dependencies]
-tok-core = { path = "../tok-core" }
-tok-bpmn = { path = "../tok-bpmn" }
-tok-cli = { path = "../tok-cli" }
+tok-core = { path = "../tok-core", version = "1.0.0" }
+tok-bpmn = { path = "../tok-bpmn", version = "1.0.0" }
+tok-cli = { path = "../tok-cli", version = "1.0.0" }
 serde_json = "1.0.154"
 
 [lints]

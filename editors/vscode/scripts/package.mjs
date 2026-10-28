@@ -1,6 +1,7 @@
 // Packages the extension as a .vsix for the platform of this computer (the bundled
 // tok-lsp is a native program): tok-PLATFORM-VERSION.vsix, for example
-// tok-win32-x64-0.8.0.vsix. Nothing is published.
+// tok-win32-x64-1.0.0.vsix. Nothing is published. The code is one bundled file
+// (scripts/bundle.mjs), so no node_modules go into the package.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -13,5 +14,5 @@ const platform = process.platform === "win32" ? "win32" : process.platform === "
 const target = `${platform}-${process.arch}`;
 const out = `tok-${target}-${version}.vsix`;
 const vsce = join(here, "node_modules", "@vscode", "vsce", "vsce");
-execFileSync(process.execPath, [vsce, "package", "--target", target, "--out", out], { cwd: here, stdio: "inherit" });
+execFileSync(process.execPath, [vsce, "package", "--no-dependencies", "--target", target, "--out", out], { cwd: here, stdio: "inherit" });
 console.log(out);

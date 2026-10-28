@@ -274,6 +274,12 @@ pub const MESSAGES: &[(&str, Severity, &str, &str)] = &[
     ),
     ("R081", E, "{detail}", "{detail_pl}"),
     (
+        "R090",
+        W,
+        "'{key}' is given more than once on this line; only the last value counts (deprecated in language 1.0)",
+        "„{key}” występuje w tym wierszu więcej niż raz; liczy się tylko ostatnia wartość (przestarzałe w języku 1.0)",
+    ),
+    (
         "C100",
         E,
         "transaction '{id}' is not executed by Camunda 8.10",

@@ -25,6 +25,7 @@ Why Rust for the shared engine: mature bindings for both Python (PyO3) and R (ex
 - **0.7.0** — language 0.7: decision requirements graphs (input data, knowledge sources, business knowledge models), boxed expressions, FEEL of DMN 1.5 conformance level 3, DMN 1.5 export and DMN import, `tok eval` for graphs; DMN TCK gate (level 2: all, level 3: 99.5 %); decisions verified on Camunda 8 Run.
 - **0.8.0** — Julia on the Rust engine: the C interface `tokengine` (`docs/c-api.md`), `Tok.Engine` with the whole language in Julia, the native simulator `Tok.Sim` checked statistically against the engine (Kolmogorov–Smirnov, 44 models), calibration on event logs (`Tok.Fit`, Bayesian with Turing.jl), the BinaryBuilder recipe of `tok_jll` and the precompiled `tok` application.
 - **0.9.0** — tooling: the language server `tok-lsp` and the VS Code extension with a live diagram, the MCP server `tok-mcp`, the browser playground on WebAssembly with the bpmn-js viewer; the agent skill for the whole of language 0.7. Fuzzing, benchmarks and the frozen specification follow as the 1.0 release candidate.
+- **1.0.0** — language 1.0, the stable language: the content of 0.7 with its limits as rules, the deprecation `R090` and the compatibility promise of 1.x (`design-1.0.md`); fuzzing of the engine, benchmarks and the faster layout of large models, the documentation checked by the test suite, conformance tables for Camunda 8 and BPMN 2.0.2; the packages prepared for their registries (PyPI with the engine in the wheels, crates.io, CRAN, the Julia General registry, `tok_jll`, the VS Code Marketplace and Open VSX), continuous integration and release workflows for a GitHub mirror, citation metadata for Zenodo, and the steps of a release in `RELEASING.md`.
 
 ## State at 0.1
 
@@ -121,12 +122,14 @@ Elements beyond Camunda, as defined by the BPMN 2.0.2 specification:
 - Language server (diagnostics, formatting, go to definition, rename of identifiers) and a VS Code extension with syntax highlighting and live diagram preview.
 - MCP server exposing `check`, `fmt`, `export`, `import`, `sim`, `eval` for AI agents; agent skill updated for the full language.
 - Browser playground on the WebAssembly build with the bpmn-js viewer.
-- Fuzzing of the parser and importers; performance benchmarks on large models; documentation complete for every construct.
+- Fuzzing of the parser and importers (`fuzzing.md`); performance benchmarks on large models (`performance.md`); documentation complete for every construct, checked by the test suite.
 - Specification frozen as 1.0 release candidate; deprecation of anything that will not survive into 1.0.
 
 ## 1.0 — stable
 
-- Specification 1.0: every BPMN 2.0.2 element reachable from the language, conformance tables for Camunda 8 and BPMN 2.0.2 published with the release.
+- Specification 1.0: every BPMN 2.0.2 element reachable from the language, conformance tables for Camunda 8 and BPMN 2.0.2 published with the release (`conformance-camunda.md`, `conformance-bpmn.md`).
 - Hosted continuous integration running `tools/check.sh` on Windows, macOS and Linux for every change, so that the macOS wheel is tested on its platform before the first registry release.
 - First registry releases, from one version number: crates.io, PyPI (`tok-lang`), CRAN and the Julia General registry; archived release with a DOI on Zenodo.
 - Semantic versioning promise: 1.x keeps every valid 1.0 document valid and prints it identically; new Camunda versions and DMN revisions are tracked in minor releases.
+
+Done in 1.0.0: the specification 1.0 with its compatibility promise (`spec.md` §4.3), the conformance tables, the workflows of the GitHub mirror (`.github/workflows`), and every package built and checked for its registry. The registry releases (PyPI, crates.io, CRAN, the Julia General registry, the VS Code Marketplace and Open VSX), the hosted runs on the GitHub mirror, the playground on Codeberg Pages and the archived release with a DOI follow from the 1.0.0 tag.

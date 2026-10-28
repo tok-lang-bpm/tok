@@ -2,31 +2,27 @@
 //! schemas) and their calls, which go through [`tok_cli::api`] like the C interface.
 
 use serde_json::{Map, Value, json};
-use tok_cli::api;
+use tok_cli::{api, reference};
 
 /// The language reference: topic, title, text.
 pub const REFERENCE: &[(&str, &str, &str)] = &[
     (
         "cheatsheet",
         "The tok language on one page",
-        include_str!("../../../docs/cheatsheet.md"),
+        reference::CHEATSHEET,
     ),
     (
         "spec",
         "Language specification (normative)",
-        include_str!("../../../docs/spec.md"),
+        reference::SPEC,
     ),
     (
         "diagnostics",
         "Diagnostic codes in English and Polish",
-        include_str!("../../../docs/diagnostics.md"),
+        reference::DIAGNOSTICS,
     ),
-    ("feel", "FEEL in tok", include_str!("../../../docs/feel.md")),
-    (
-        "cli",
-        "The tok command line",
-        include_str!("../../../docs/cli.md"),
-    ),
+    ("feel", "FEEL in tok", reference::FEEL),
+    ("cli", "The tok command line", reference::CLI),
 ];
 
 /// The outcome of a tool call: the structured result, or a message for the model.
@@ -111,7 +107,7 @@ pub fn definitions() -> Vec<Value> {
         json!({
             "name": "export",
             "title": "Export a tok model",
-            "description": "Export a checked tok document and return the contents of the files `tok export` writes: BPMN 2.0 XML with diagram layout (NAME.bpmn), its SVG picture (NAME.svg), DMN files of the decisions (with NAME.drd.svg pictures in language 0.7) and Camunda form files (ID.form). With path, the layout sidecar FILE.tok.layout next to the file is used. A document with errors is a tool error listing them.",
+            "description": "Export a checked tok document and return the contents of the files `tok export` writes: BPMN 2.0 XML with diagram layout (NAME.bpmn), its SVG picture (NAME.svg), DMN files of the decisions (with NAME.drd.svg pictures in languages 0.7 and 1.0) and Camunda form files (ID.form). With path, the layout sidecar FILE.tok.layout next to the file is used. A document with errors is a tool error listing them.",
             "inputSchema": object(json!({
                 "text": text_prop(),
                 "path": path_prop(),
@@ -173,7 +169,7 @@ pub fn definitions() -> Vec<Value> {
         json!({
             "name": "eval",
             "title": "Evaluate a decision",
-            "description": "Evaluate a decision of a tok document for input values, as `tok eval`. In language 0.7 the decision is evaluated with everything it requires and values are given by the FEEL names of input data; in earlier languages the decision table alone is evaluated over its input columns. Values are JSON (numbers, text, booleans, null, lists, objects as contexts).",
+            "description": "Evaluate a decision of a tok document for input values, as `tok eval`. In languages 0.7 and 1.0 the decision is evaluated with everything it requires and values are given by the FEEL names of input data; in earlier languages the decision table alone is evaluated over its input columns. Values are JSON (numbers, text, booleans, null, lists, objects as contexts).",
             "inputSchema": object(json!({
                 "text": text_prop(),
                 "path": path_prop(),

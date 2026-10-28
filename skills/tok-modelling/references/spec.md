@@ -1,4 +1,4 @@
-# tok — Language Specification, version 0.7
+# tok — Language Specification, version 1.0
 
 tok is a plain-text language for information-process models. A tok document describes a BPMN 2.0 process (pools, lanes, events, activities, gateways, flows, data), the DMN decisions it calls, the forms people fill in, and the parameters needed to simulate it. Every tool built on tok reads the same text and produces the same projections: BPMN 2.0 XML with diagram layout, SVG, DMN XML, Camunda form JSON and simulation logs.
 
@@ -9,6 +9,8 @@ Language 0.5 adds the elements of BPMN 2.0.2 process modelling that Camunda 8 do
 Language 0.6 adds the interactions between participants: conversations (§6.4), choreographies (§5.7), and the multiplicity of participants with the participant associations of calls (§5.5, §5.7, §6.4). The tools check a document against the conformance classes of BPMN 2.0.2 (§13) and keep the diagram of an imported file in a layout sidecar (§16).
 
 Language 0.7 adds decision models of DMN 1.5: decision requirements graphs with input data, business knowledge models and knowledge sources (§9.1), boxed expressions (§9.2), the hit policies, aggregations, output values and default outputs of decision tables (§9.3), DMN types (§9.4), and FEEL at conformance level 3 in every expression of a 0.7 document (§12). `tok eval` evaluates decisions with everything they require; the tools export DMN 1.5 with diagrams and import DMN (§9.5).
+
+Language 1.0 is the stable language: the content of language 0.7, the limits of §2.1 as rules, the deprecations of §4.2 and the compatibility promise of §4.3. It adds no statement, attribute or flag. Wherever this specification says "a document of language 0.7", "a 0.7 document" or "language 0.7", it means a document whose header declares `tok 0.7` or `tok 1.0`; "0.5 or later" and "0.6 or later" include 1.0.
 
 ## 1. Design goals
 
@@ -45,6 +47,19 @@ A `WORD` immediately followed by `=` is an attribute key. Keywords are lowercase
 
 **Identifiers** (`ID`) are `WORD`s that match `[A-Za-z_][A-Za-z0-9_-]*`. They must be unique in the document (`R001`). Identifiers become XML `id` attributes, so they are ASCII. Labels carry the human-readable text.
 
+### 2.1 Limits
+
+Everything that reads or walks a document, an expression or an XML file recurses into its nesting, so the nesting is bounded. The bounds hold for documents of every language version; a conforming implementation reads everything within them and reports what lies beyond them with these diagnostics, without failing:
+
+| What | Bound | Beyond the bound |
+|---|---|---|
+| blocks of a document (a statement in the block of another statement is one level deeper: pools, lanes, sub-processes, choreographies, interfaces, keys, decisions, the lines of boxed expressions, DMN types, forms) | 64 levels | `P008` on the first line of a block nested deeper (detail `its block is nested more than 64 levels deep`); that block is skipped |
+| a FEEL expression (each parenthesis, list, context, call, `if`, unary minus, type expression and filter is one level, and so is each operator of a chain such as `a + b + c`) | 160 levels | `F002` (detail `the expression is nested too deeply`); the expression is not evaluated |
+| the elements of a BPMN or DMN file read by `tok import` | 64 levels | the file is refused with a message naming the bound |
+| the elements of an XML file read by the BPMN tools (validation, layout, the layout sidecar) | 256 levels | the file is refused with a message naming the bound |
+
+The bounds are far above what modelling tools write (the deepest model of the MIWG suite and of the DMN TCK nests 12 levels) and above what the tools write themselves for the deepest document they read (`fuzzing.md`).
+
 ## 3. Attributes
 
 Most statements end with attributes:
@@ -65,12 +80,12 @@ A key is normally given once; when it is repeated, the last value counts. In a d
 The first statement is the header:
 
 ```
-tok 0.7 "Interlibrary loan" executable
+tok 1.0 "Interlibrary loan" executable
 ```
 
 | Part | Meaning |
 |---|---|
-| `tok 0.7` | language version (required). Accepted versions: `0.1`, `0.3`, `0.5`, `0.6` and `0.7`; a document written for an earlier version means the same under 0.7. The language version follows the minor version of the release that changed the language. Three things depend on the declared version, so that older documents keep their meaning: only a document of 0.5 or later may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), only there do `resource` and `by=` also describe BPMN resources and performers (§7.2), and only in a document of 0.6 or later do `min=` and `max=` give a pool a multiplicity (§5.5; in older documents they are unknown attributes, `R010`). Everything else of 0.5 and 0.6 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5` or `tok 0.6`. The statements and attributes of language 0.7 (§9.1–§9.5) need the header `tok 0.7`: in earlier documents `inputdata`, `bkm`, `source`, `entry`, `result` and `element` are unknown keywords (`P001`), the new attributes unknown attributes (`R010`) and the new hit policies unknown (`D003`); a 0.7 document uses FEEL at conformance level 3 with numbers of 34 digits (§12), earlier documents the FEEL subset with numbers of 28 digits. |
+| `tok 1.0` | language version (required): a number with its minor part. Accepted versions: `0.1`, `0.3`, `0.5`, `0.6`, `0.7` and `1.0`; a document written for an earlier version means the same under 1.0 (§4.1). Another number is `P006` (a warning; the document is read with every statement of 0.7 and without the deprecation warnings of 1.0), a version that is not a number `P005`, and a second header `P010`. The language version follows the minor version of the release that changed the language. Three things depend on the declared version, so that older documents keep their meaning: only a document of 0.5 or later may give an event several triggers (in 0.1 and 0.3 two triggers are `R012` and a repeated key keeps its last value), only there do `resource` and `by=` also describe BPMN resources and performers (§7.2), and only in a document of 0.6 or later do `min=` and `max=` give a pool a multiplicity (§5.5; in older documents they are unknown attributes, `R010`). Everything else of 0.5 and 0.6 may be used under any header; a document imported from BPMN that uses it is printed as `tok 0.5` or `tok 0.6`. The statements and attributes of language 0.7 (§9.1–§9.5) need the header `tok 0.7`: in earlier documents `inputdata`, `bkm`, `source`, `entry`, `result` and `element` are unknown keywords (`P001`), the new attributes unknown attributes (`R010`) and the new hit policies unknown (`D003`); a 0.7 document uses FEEL at conformance level 3 with numbers of 34 digits (§12), earlier documents the FEEL subset with numbers of 28 digits. |
 | label | document title; becomes `definitions/@name` and the default process name |
 | `id=` | identifier of the definitions element (default: `definitions`) |
 | `executable` | flag: every process in the document is executable (`isExecutable="true"`) |
@@ -88,6 +103,38 @@ After the header come top-level statements in any order:
 - **decisions** and, in language 0.7, **input data**, **knowledge sources**, **business knowledge models** and DMN types (§9), **forms** (§10.2), **simulation statements** (§11).
 
 References may point forward: a flow may name a node declared later.
+
+### 4.1 Language 1.0
+
+A document with the header `tok 1.0` is read, checked, printed, exported, imported, evaluated and simulated exactly as the same document with the header `tok 0.7` (§9, §12): every statement, attribute and flag of languages 0.1–0.7 is available, decisions are DMN 1.5 decision models, and FEEL is at conformance level 3 with numbers of 34 digits. The differences are only these:
+
+- **Outputs.** The BPMN and DMN files carry the language version of the document as `exporterVersion` (`1.0`), as they carry `0.1`–`0.7` for older documents; everything else in a file is what the same document with the header `tok 0.7` gives. The decisions of a 1.0 document are exported as DMN 1.5 (namespace `https://www.omg.org/spec/DMN/20230324/MODEL/`); documents of 0.1–0.6 keep the DMN 1.3 export of their decision tables.
+- **Deprecations** (§4.2) are reported only in documents with the header `tok 1.0`.
+
+The header stays as written: `tok fmt` never changes the version of a document, and `tok import` writes the oldest version that expresses what it read (`0.1`, `0.3`, `0.5` or `0.6` for BPMN, `0.7` for DMN), each of which is a valid document with the same meaning in every 1.x release.
+
+Documents of 0.1, 0.3, 0.5, 0.6 and 0.7 stay valid, mean what they meant and give every output they gave, byte for byte: their canonical text, diagnostics, BPMN, DMN, forms, SVG, `tok eval` results and simulations. What depends on the declared version (the table above) keeps depending on it; a 1.0 document has all of it.
+
+### 4.2 Deprecations
+
+A deprecated form keeps its meaning in every 1.x version; a document of language 1.0 that uses it gets a warning, and a later major version of the language may refuse it. Documents of earlier versions are not warned. Deprecated in language 1.0:
+
+| Form | Warning | Instead |
+|---|---|---|
+| an attribute key given more than once on one line, except the keys that may repeat (§3: the trigger keys on flow nodes, `error` on an `operation`) | `R090` | the key once: only the last value has ever counted, and `tok fmt` prints only that one |
+| a flag given more than once on one line | `R090` | the flag once; `tok fmt` prints it once |
+
+### 4.3 Compatibility of 1.x
+
+Language 1.0 is the language of every release 1.x of the tools. A release 1.x guarantees:
+
+1. **Validity.** Every document that is valid under language 1.0 (without errors at the level `full`) stays valid, and a document with errors keeps its error codes. A new warning may be added to the documents of an existing version only as a documented bug fix (item 3); deprecations (§4.2) come only with a new language version in the header.
+2. **Canonical form.** `tok fmt` prints every valid 1.0 document exactly as 1.0 prints it, and every document of an earlier version as before.
+3. **Outputs.** The conformance corpus (§15) fixes the outputs of the tools. An output changes only for a bug fix that the changelog documents with the documents it affects; the expected files of the corpus change in the same release.
+4. **New revisions of Camunda and DMN in minor releases.** A minor release may follow a new revision of Camunda 8 (attributes of the executable layer, codes of what it does not execute) or of DMN and FEEL. What changes the meaning or the outputs of a document comes with a new language version (`tok 1.1`, …) declared in the header; documents with the header `tok 1.0` keep the meaning and outputs of 1.0. A patch release never changes the language.
+5. **Earlier versions.** Documents of 0.1, 0.3, 0.5, 0.6 and 0.7 are read in every release 1.x with the meaning and outputs of this specification.
+
+A change that breaks one of these guarantees is reserved for language 2.0.
 
 ## 5. Flow nodes
 
@@ -803,7 +850,7 @@ An implementation conforms at level **core** if, for every document in `conforma
 
 Level **full** adds the diagnostic codes of `tok check` at the three levels (`expected/*.levels`), DMN and form export (for documents of language 0.7 the DMN files of every decision requirements graph, `expected/NAME.GRAPH.dmn`), FEEL evaluation and simulation with a fixed seed (compared within tolerance, since random number generators differ between languages).
 
-Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33–46 cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects). Cases 47 and following cover language 0.6: conversations (47), choreographies with sub-choreographies, calls and loop markers (48), the events and gateways of choreographies (49), participant multiplicity (50), the Camunda codes `C120`–`C123` (51) and the errors `R070`–`R074` (52). Cases 53 and following cover language 0.7: decision requirements graphs (53), boxed expressions and DMN types (54), the decision tables of 0.7 (55), FEEL of level 3 in a process with a rule task (56), the Camunda codes `C130`–`C132` (57), the errors `R076`–`R081`, `D003`, `D006`, `D007` and `F002` (58), the statements of 0.7 under an older header (59), the rows of relations and headers (`D008`, `D009`, 60) and an executable decision model for Camunda 8 with names of several words (61), which `conformance/camunda/run.py` also evaluates on Camunda. The expected outputs of cases 33 and following are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
+Cases 01–32 are written for languages 0.1 and 0.3; their expected outputs are produced by the pure-Python implementation. Cases 33–46 cover language 0.5, one or more per section (transactions, complex gateway, standard loop, multiple events, instantiation, process data, resources, global tasks and interfaces, correlation, the Camunda codes `C100`–`C110`, the errors `R060`–`R066`, and in cases 44–46 documentation, trigger flags without a value, process names, namespaces of structures, named data inputs and outputs of associations, data of events and shared data objects). Cases 47 and following cover language 0.6: conversations (47), choreographies with sub-choreographies, calls and loop markers (48), the events and gateways of choreographies (49), participant multiplicity (50), the Camunda codes `C120`–`C123` (51) and the errors `R070`–`R074` (52). Cases 53 and following cover language 0.7: decision requirements graphs (53), boxed expressions and DMN types (54), the decision tables of 0.7 (55), FEEL of level 3 in a process with a rule task (56), the Camunda codes `C130`–`C132` (57), the errors `R076`–`R081`, `D003`, `D006`, `D007` and `F002` (58), the statements of 0.7 under an older header (59), the rows of relations and headers (`D008`, `D009`, 60) and an executable decision model for Camunda 8 with names of several words (61), which `conformance/camunda/run.py` also evaluates on Camunda. Cases 62 and following cover language 1.0: a document with the elements of every layer of the language (62), an executable document for Camunda 8 with a process, forms and a decision model (63), which `run.py` runs and evaluates on Camunda, the errors of the header — a version that does not exist and a second header (64), a version without its minor part (65), a version that is not a number (66) — and the deprecations of 1.0 (`R090`, 67). The expected outputs of cases 33 and following are produced by the Rust engine (`conformance/README.md`). The Julia core passes the core level for all cases.
 
 The reference models of the BPMN Model Interchange Working Group in `conformance/miwg` are the conformance gate of BPMN import and export: their semantic content must survive import, printing and export; `miwg.md` lists, per model, what is kept and what is not.
 

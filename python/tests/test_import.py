@@ -72,6 +72,16 @@ note n1 "Podstawa: regulamin udostępniania" on=rejestracja
 '''
 
 
+def language_version(path):
+    """The language version in the header of a tok document (None without a header)."""
+    with open(path, encoding="utf-8") as f:
+        for line in f.read().lstrip("\ufeff").splitlines():
+            words = line.split("#", 1)[0].split()
+            if words:
+                return words[1] if words[0] == "tok" and len(words) > 1 else None
+    return None
+
+
 def roundtrip(text):
     d1, diags = parse(text)
     x1 = semantic_xml(d1)
@@ -88,7 +98,8 @@ class RoundTrip(unittest.TestCase):
         self.assertEqual(x1, x2, "%s: semantic XML differs after tok -> XML -> tok" % name)
 
     def test_examples(self):
-        files = sorted(glob.glob(os.path.join(EXAMPLES, "*.tok")))
+        # the examples of languages 0.1 and 0.3, which this implementation reads
+        files = [p for p in sorted(glob.glob(os.path.join(EXAMPLES, "*.tok"))) if language_version(p) in ("0.1", "0.3", None)]
         self.assertTrue(files)
         for path in files:
             with open(path, encoding="utf-8") as f:

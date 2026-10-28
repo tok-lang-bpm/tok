@@ -1,15 +1,16 @@
-# tok 0.7 — cheat sheet
+# tok 1.0 — cheat sheet
 
 One statement per line. Blocks by indentation (spaces). `#` starts a comment.
 Every statement starts with a keyword. Identifiers: `[A-Za-z_][A-Za-z0-9_-]*`, unique. Labels: "quoted text".
-Attributes: `key=value` (value: word, number or "text") and bare flags.
+Attributes: `key=value` (value: word, number or "text") and bare flags. A key or flag is written once per line, the triggers of
+multiple events aside (in 1.0 a repeated one is the deprecation warning `R090`).
 
 ```
-tok 0.7 "Title" [executable]                       # header, first line (0.1–0.6 documents stay valid)
+tok 1.0 "Title" [executable]                       # header, first line (0.1–0.7 documents stay valid)
     [process-name="Name"] (process of a document without pools)   doc="Text" on any statement: documentation
 
 start ID "Label" [message="M" | timer=P3D | signal="S" | condition="feel"] [form=F]
-end ID "Label" [message="M" | error="E" | escalation="X" | signal="S" | terminate]
+end ID "Label" [message="M" | error="E" | escalation="X" | signal="S" | terminate]   # error/escalation: [code="E1"]
 catch ID "Label" message="M" | timer=PT2H | signal="S" | condition="feel" | link="L"
 throw ID "Label" [message="M" | escalation="X" | signal="S" | link="L" | compensate]
 boundary ID "Label" on=ACTIVITY timer=P7D [noninterrupting]   # also message/error/escalation/signal
@@ -69,7 +70,7 @@ decision ID "Label" hit=first               # unique | first | any | priority | 
   | "e-book"    | -           || "manager"   || licences   |
   | -           | <= 150      || "auto"      ||            |
 
-# decision requirements graphs and boxed expressions (language 0.7, header tok 0.7)
+# decision requirements graphs and boxed expressions (language 0.7, header tok 0.7 or tok 1.0)
 inputdata ID "Label" [name="FEEL name"] type=number            # also date, "date and time", list, an item …
 source ID "Label" [requires="D I S"] [kind="regulation"] [uri="https://…"]
 bkm ID "Label" params="a: number, b: string" [type=T] [requires="BKM S"] expr="a * b"
@@ -90,7 +91,7 @@ item T "Label" [type=number] [allowed="[0..10]"] [collection]      # DMN type (0
   item field type=string                    # components
 ```
 
-FEEL of 0.7 documents is full FEEL (level 3): `for x in l return e`, `some/every x in l satisfies c`, `l[item > 1]`,
+FEEL of 0.7 and 1.0 documents is full FEEL (level 3): `for x in l return e`, `some/every x in l satisfies c`, `l[item > 1]`,
 `{a: 1}.a`, `@"2027-01-15"`, `date and time(…)`, durations, ranges, names with spaces resolved against the document.
 
 ```
@@ -116,9 +117,10 @@ Executable layer (only with `executable`; values computed at run time start with
 
 ```
 user t … assignee="kierownik" candidate-groups="a, b" due="=now() + duration(\"P3D\")" priority=70
+user t … candidate-users="ola, jan" follow-up="2027-01-20T09:00:00Z"
 user t … parallel collection="items" item=x output=results output-item="x.result" until="numberOfCompletedInstances >= 2"
 adhoc a … active="chosen" until="done = true" wait
-call c … process=child binding=deployment|latest|version-tag version="v2" child-vars=none parent-vars=none
+call c … process=child binding=deployment|latest|version-tag version="v2" child-vars=none parent-vars=none business-id="=numer"
 service s … type="job" retries=5 headers="key: value; …" inputs="target = expr; …" outputs="target = expr; …"
 service r … connector=rest method=GET url="https://…" result=response [body= query= headers-in=]
 end e … message="M" type="job"          catch|boundary … condition="x > 1" events="create, update"

@@ -265,6 +265,10 @@ impl Time {
 
     /// `hh:mm:ss[.fff][Z|±hh:mm|@zone]`.
     pub fn parse(s: &str) -> Option<Time> {
+        // the text before a zone identifier is ASCII (it is read by byte positions)
+        if !s.split_once('@').map_or(s, |(b, _)| b).is_ascii() {
+            return None;
+        }
         let (body, zone) = if let Some((b, z)) = s.split_once('@') {
             if !zone_id(z) {
                 return None;

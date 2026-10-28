@@ -25,6 +25,8 @@ Every diagnostic has a stable code, a severity and a line number. `tok check --l
 | P009 | error | malformed decision table row: {detail} | niepoprawny wiersz tabeli decyzyjnej: {detail} |
 | P010 | error | a second header | drugi nagłówek dokumentu |
 
+The implementation reads blocks nested at most 64 levels deep (a document of modelling tools nests a few); a deeper block is `P008` with the detail `its block is nested more than 64 levels deep`, and its content is skipped.
+
 ## References and structure (R)
 
 | Code | Severity | Message (English) | Message (Polish) |
@@ -85,6 +87,14 @@ Language 0.7 (spec §9). `R077`, `R078` and `R081` carry a detail text; the tabl
 | R080 | error | the name '{name}' is used twice ('{a}' and '{b}'); the names of a decision requirements graph, of the entries of one context and of the parameters of one function are unique | nazwa „{name}” występuje dwa razy („{a}” i „{b}”); nazwy w diagramie wymagań decyzyjnych, wpisów jednego kontekstu i parametrów jednej funkcji muszą być różne |
 | R081 | error | unknown type '{type}' (a FEEL type or an item of the document) · item '{id}' is both a BPMN item (structure=, kind=) and a DMN type (type=, allowed=, components) | nieznany typ „{type}” (typ FEEL albo item dokumentu) · item „{id}” jest jednocześnie typem BPMN (structure=, kind=) i typem DMN (type=, allowed=, składowe) |
 
+Language 1.0 (spec §4.2). Deprecation warnings: forms that language 1.0 keeps, with the meaning they always had, but that a later major version may refuse. They are reported only in documents with the header `tok 1.0`, so documents of earlier versions keep every diagnostic they had.
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| R090 | warning | '{key}' is given more than once on this line; only the last value counts (deprecated in language 1.0) | „{key}” występuje w tym wierszu więcej niż raz; liczy się tylko ostatnia wartość (przestarzałe w języku 1.0) |
+
+`R090` is reported for an attribute key or a flag written twice or more on one line (`doc="a" doc="b"`, `loop loop`): the language keeps the last value of a key and one copy of a flag, and `tok fmt` prints only those, so formatting the document removes the warning. The keys that may repeat are not reported: the trigger keys `message=`, `timer=`, `signal=`, `error=`, `escalation=`, `condition=` and `link=` on flow nodes, and `error=` on an `operation` (spec §3, §5.1.1). On an event and an operation every value of such a key counts; on another flow node the repetition is `R062`, as in language 0.5.
+
 ## Decision tables and relations (D)
 
 `D006`–`D009` are reported in documents of language 0.7, where `D003` also accepts the hit policies `rule-order` and `output-order` and header cells are checked as `D009` instead of `D004`. `D007` carries a detail text; the table gives its forms.
@@ -118,6 +128,8 @@ Language 0.7 (spec §9). `R077`, `R078` and `R081` carry a detail text; the tabl
 
 In documents of language 0.7 every expression is full FEEL (`feel.md` §9): `F002` reports syntax errors, and `F001` only externally defined functions, which tok does not evaluate.
 
+An expression nested more than 160 levels deep (parentheses, lists, contexts, calls and the other nested parts, and each operator of a chain such as `a + b + c`, count one level) is `F002` with the detail `the expression is nested too deeply` (Polish: `wyrażenie jest zbyt głęboko zagnieżdżone`).
+
 ## Simulation (S)
 
 | Code | Severity | Message (English) | Message (Polish) |
@@ -138,9 +150,14 @@ Checked when the header or a pool has the flag `executable`. The codes are the s
 | C040 | error | script task without `expr=` |
 | C052 | error | message catch event, message boundary event or receive task without `correlation=` |
 | C070 | error | flow leaving an `xor`/`or` gateway with several outgoing flows has neither `when=` nor `default` |
-| C022 | error | message throw or end event without `type=` (Camunda executes it as a job) |
-| C090 | error | static `due=`/`follow-up=` that is not an ISO 8601 date-time with a zone |
-| C091 | error | static `priority=` outside the integers 0–100 |
+
+The executable layer (spec §10.3) adds:
+
+| Code | Severity | Message (English) | Message (Polish) |
+|---|---|---|---|
+| C022 | error | message {kind} event '{id}' needs type="…" (Camunda executes it as a job) | zdarzenie {kind_pl} wiadomości „{id}” wymaga type="…" (Camunda wykonuje je jako zadanie dla workera) |
+| C090 | error | {key}="{value}" must be an ISO 8601 date-time with a zone (e.g. 2027-01-15T12:00:00+01:00) or an expression starting with = | {key}="{value}" musi być datą i godziną ISO 8601 ze strefą (np. 2027-01-15T12:00:00+01:00) albo wyrażeniem zaczynającym się od = |
+| C091 | error | priority must be an integer from 0 to 100 or an expression starting with =, not '{value}' | priority musi być liczbą całkowitą od 0 do 100 albo wyrażeniem zaczynającym się od =, a nie „{value}” |
 
 Elements of language 0.5 that Camunda 8.10 does not execute (spec §10.4); reported only with `target=camunda` (the default).
 
@@ -177,4 +194,44 @@ Decisions of language 0.7 in executable documents for Camunda (spec §10.4); rep
 
 ## BPMN 2.0 rules (E, W, L)
 
-After the tok-level checks pass, the document is exported to BPMN 2.0 and checked by the BPMN validator shared with the course tool `bpmn.py`: errors `E…` (the model breaks a rule of the BPMN specification, e.g. `E008` message flow inside one pool), warnings `W…` (probably a modelling mistake, e.g. `W051` a split joined by a gateway of another type) and style notes `L…` (e.g. `L020` a splitting gateway whose name is not a question). Their messages are in Polish; the list with fixes is in the `bpmn-modelowanie` skill reference (section C). `bpmn-rules.md` lists every BPMN 2.0.2 rule the checker enforces with its clause of the specification and its code.
+After the tok-level checks pass, the document is exported to BPMN 2.0 and checked by the BPMN validator shared with the course tool `bpmn.py`: errors `E…` (the model breaks a rule of the BPMN specification, e.g. `E008` message flow inside one pool), warnings `W…` (probably a modelling mistake, e.g. `W051` a split joined by a gateway of another type) and style notes `L…` (e.g. `L020` a splitting gateway whose name is not a question). The validator writes its messages in Polish, with the identifiers of the elements (`--lang pl`); in English `tok check` gives the text below followed by the identifier. `bpmn-rules.md` gives the clause of BPMN 2.0.2 behind every code.
+
+| Code | Severity | Message (English) |
+|---|---|---|
+| E001 | error | the file is not well-formed XML |
+| E002 | error | the root element is not bpmn:definitions |
+| E003 | error | an id is used more than once |
+| E004 | error | reference to a non-existent id |
+| E005 | error | sequence flow without both ends or connecting data, a pool or an annotation |
+| E006 | error | sequence flow between pools or into a sub-process |
+| E007 | error | message flow from an element outside the pools |
+| E008 | error | message flow inside one pool (use a sequence flow between lanes) |
+| E009 | error | message flow to a gateway, data or a non-message event |
+| E010 | error | trigger not allowed for this event position |
+| E011 | error | incoming flow to a start event or outgoing flow from an end event |
+| E012 | error | invalid boundary event (on a gateway, with incoming flow, non-interrupting error, …) |
+| E013 | error | event sub-process with sequence flows or without a triggered start event |
+| E014 | error | compensation activity with sequence flows |
+| E015 | error | default flow that does not leave the element or has a condition |
+| E016 | error | event-based gateway followed by something other than catch events or receive tasks |
+| E017 | error | condition or default flow on a parallel gateway |
+| E018 | error | reference to a declaration of the wrong type |
+| E030 | error | element in two lanes |
+| W010 | warning | timer event without a time |
+| W016 | warning | event after an event-based gateway has other incoming flows |
+| W020 | warning | gateway with one incoming and one outgoing flow is unnecessary |
+| W021 | warning | branch of an XOR/OR split without label, condition or default status |
+| W030 | warning | lane refers to an element inside a sub-process |
+| W031 | warning | element outside every lane |
+| W040 | warning | process without a start or end event |
+| W041 | warning | element not reachable from a start event |
+| W042 | warning | path without an end event (element without outgoing flow) |
+| W050 | warning | OR split without a default flow |
+| W051 | warning | join of a different type than the split (e.g. AND split joined by XOR) |
+| W052 | warning | boundary escalation/error on a sub-process that nothing inside throws |
+| W053 | warning | escalation thrown but never caught |
+| W054 | warning | message task or event without a message flow in a model with several pools |
+| L010 | note | message event without messageRef |
+| L020 | note | name of a splitting gateway is not a question |
+| L021 | note | gateway both joins and splits |
+| L030 | note | task without a name |

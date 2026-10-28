@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use super::num::Num;
-use crate::feel::FeelError;
+use crate::feel::{FeelError, MAX_DEPTH, TOO_DEEP};
 use crate::pyutil::repr_char;
 
 type R<T> = Result<T, FeelError>;
@@ -212,6 +212,11 @@ impl Names {
 
     fn known(&self, n: &str) -> bool {
         self.exact.contains(n)
+    }
+
+    /// Whether `name` (its words separated by any white space) is one of the names.
+    pub fn contains(&self, name: &str) -> bool {
+        self.known(&normalize(name))
     }
 
     fn prefix(&self, n: &str) -> bool {
@@ -472,6 +477,8 @@ struct P<'a> {
     range_high: bool,
     /// The names read, with their positions: (start, end, name, a key of a context).
     spans: Vec<(usize, usize, String, bool)>,
+    /// Nesting of the expression parsed: a bound on the height of its tree.
+    depth: usize,
 }
 
 fn show(t: &Tok) -> String {
@@ -519,6 +526,27 @@ impl P<'_> {
         }
         syntax(format!("expected '{w}', found {}", show(self.peek(0))))
     }
+    /// Parse a nested part of the expression; the nesting is bounded, so that the
+    /// parser and everything that walks the tree (evaluation, the names of an
+    /// expression) stays within the stack.
+    fn nested<T>(&mut self, part: fn(&mut Self) -> R<T>) -> R<T> {
+        let saved = self.depth;
+        self.deeper()?;
+        let r = part(self);
+        self.depth = saved;
+        r
+    }
+
+    /// One more level of the tree: a nested part, or an operator applied to what was
+    /// parsed so far.
+    fn deeper(&mut self) -> R<()> {
+        if self.depth >= MAX_DEPTH {
+            return syntax(TOO_DEEP);
+        }
+        self.depth += 1;
+        Ok(())
+    }
+
     fn at_end(&self) -> bool {
         self.peek(0).k == K::End
     }
@@ -598,6 +626,10 @@ impl P<'_> {
     }
 
     fn expression(&mut self) -> R<Expr> {
+        self.nested(Self::expression_body)
+    }
+
+    fn expression_body(&mut self) -> R<Expr> {
         if self.word("if") {
             self.next();
             let c = self.expression()?;
@@ -660,24 +692,31 @@ impl P<'_> {
     }
 
     fn disjunction(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.conjunction()?;
         while self.word("or") {
+            self.deeper()?;
             self.next();
             left = Expr::Or(Box::new(left), Box::new(self.conjunction()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn conjunction(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.comparison()?;
         while self.word("and") {
+            self.deeper()?;
             self.next();
             left = Expr::And(Box::new(left), Box::new(self.comparison()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn comparison(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.additive()?;
         loop {
             let t = self.peek(0).clone();
@@ -685,11 +724,13 @@ impl P<'_> {
                 && let Some(op) = cmp_op(&t.text)
             {
                 self.next();
+                self.deeper()?;
                 left = Expr::Cmp(op, Box::new(left), Box::new(self.additive()?));
                 continue;
             }
             if self.word("between") {
                 self.next();
+                self.deeper()?;
                 let lo = self.additive()?;
                 self.expect_word("and")?;
                 let hi = self.additive()?;
@@ -698,6 +739,7 @@ impl P<'_> {
             }
             if self.word("in") {
                 self.next();
+                self.deeper()?;
                 let tests = self.in_target()?;
                 left = Expr::In(Box::new(left), tests);
                 continue;
@@ -705,17 +747,19 @@ impl P<'_> {
             if self.word("instance") && self.word_at(1, "of") {
                 self.next();
                 self.next();
+                self.deeper()?;
                 let ty = self.type_expr()?;
                 left = Expr::InstanceOf(Box::new(left), ty);
                 continue;
             }
+            self.depth = base;
             return Ok(left);
         }
     }
 
     fn in_target(&mut self) -> R<Vec<Expr>> {
         if self.op("(") {
-            let save = self.i;
+            let (save, depth) = (self.i, self.depth);
             self.next();
             let attempt = (|| -> R<Vec<Expr>> {
                 let mut tests = vec![self.positive_test()?];
@@ -729,7 +773,7 @@ impl P<'_> {
             if let Ok(tests) = attempt {
                 return Ok(tests);
             }
-            self.i = save;
+            (self.i, self.depth) = (save, depth);
             return Ok(vec![self.positive_test()?]);
         }
         Ok(vec![self.positive_test()?])
@@ -748,33 +792,46 @@ impl P<'_> {
     }
 
     fn additive(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.multiplicative()?;
         while self.op("+") || self.op("-") {
+            self.deeper()?;
             let op = self.next().text.chars().next().unwrap_or('+');
             left = Expr::Arith(op, Box::new(left), Box::new(self.multiplicative()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn multiplicative(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.power()?;
         while self.op("*") || self.op("/") {
+            self.deeper()?;
             let op = self.next().text.chars().next().unwrap_or('*');
             left = Expr::Arith(op, Box::new(left), Box::new(self.power()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn power(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut left = self.unary()?;
         while self.op("**") {
+            self.deeper()?;
             self.next();
             left = Expr::Pow(Box::new(left), Box::new(self.unary()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn unary(&mut self) -> R<Expr> {
+        self.nested(Self::unary_body)
+    }
+
+    fn unary_body(&mut self) -> R<Expr> {
         if self.op("-") {
             self.next();
             return Ok(Expr::Neg(Box::new(self.unary()?)));
@@ -787,10 +844,12 @@ impl P<'_> {
     }
 
     fn postfix(&mut self) -> R<Expr> {
+        let base = self.depth;
         let mut e = self.primary()?;
         loop {
             if self.op(".") {
                 self.next();
+                self.deeper()?;
                 let name = if self.peek(0).k == K::Str {
                     self.next().text
                 } else {
@@ -799,6 +858,7 @@ impl P<'_> {
                 e = Expr::Path(Box::new(e), name);
             } else if self.op("[") && !(self.range_high && self.closes_range()) {
                 self.next();
+                self.deeper()?;
                 let outer = self.range_high;
                 self.range_high = false;
                 let f = self.expression();
@@ -808,9 +868,11 @@ impl P<'_> {
                 e = Expr::Filter(Box::new(e), Box::new(f));
             } else if self.op("(") {
                 self.next();
+                self.deeper()?;
                 let args = self.arguments()?;
                 e = Expr::Call(Box::new(e), args);
             } else {
+                self.depth = base;
                 return Ok(e);
             }
         }
@@ -1019,7 +1081,10 @@ impl P<'_> {
                     self.next();
                     Ok(Expr::Null)
                 }
-                "if" | "for" | "some" | "every" => self.expression(),
+                "if" => self.expression(),
+                // an iteration or a quantifier: `expression` reads it when a name
+                // follows; otherwise the keyword is out of place (below)
+                "for" | "some" | "every" if self.peek(1).k == K::Name => self.expression(),
                 "function" if self.peek(1).k == K::Op && self.peek(1).text == "(" => {
                     self.next();
                     self.next();
@@ -1062,6 +1127,10 @@ impl P<'_> {
     }
 
     fn type_expr(&mut self) -> R<Type> {
+        self.nested(Self::type_expr_body)
+    }
+
+    fn type_expr_body(&mut self) -> R<Type> {
         let t = self.peek(0).clone();
         if t.k != K::Name {
             return syntax(format!("expected a type, found {}", show(&t)));
@@ -1147,7 +1216,7 @@ impl P<'_> {
             return Ok(Tests::Any);
         }
         if self.word("not") && self.peek(1).k == K::Op && self.peek(1).text == "(" {
-            let save = self.i;
+            let (save, depth) = (self.i, self.depth);
             self.next();
             self.next();
             let attempt = (|| -> R<Vec<Expr>> {
@@ -1164,7 +1233,7 @@ impl P<'_> {
             {
                 return Ok(Tests::Not(tests));
             }
-            self.i = save;
+            (self.i, self.depth) = (save, depth);
         }
         let mut tests = vec![self.positive_test()?];
         while self.op(",") {
@@ -1195,6 +1264,7 @@ fn parser<'a>(text: &str, names: &'a Names) -> R<P<'a>> {
         local: Vec::new(),
         range_high: false,
         spans: Vec::new(),
+        depth: 0,
     })
 }
 

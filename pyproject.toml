@@ -1,10 +1,16 @@
+# The Python package tok-lang: the package python/src/tok with the extension module tok._engine
+# (crate rust/tok-py), built by maturin. `pip install tok-lang` installs an abi3 wheel (Python
+# 3.8 or newer) where one exists; otherwise pip builds the engine from the source archive,
+# which needs Rust (rust/rust-toolchain.toml). The pure-Python implementation of language 0.3
+# is part of the package: with TOK_ENGINE=python the command line and tok.api use it instead
+# of the engine (the reference of the parity tests, docs/python.md).
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
 
 [project]
 name = "tok-lang"
-version = "0.9.0"
+dynamic = ["version"]
 description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,20 +18,42 @@ license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Marek Deja" }]
 keywords = ["BPMN", "DMN", "process modelling", "simulation", "Camunda"]
 classifiers = [
-  "Programming Language :: Python :: 3",
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Rust",
   "Topic :: Scientific/Engineering :: Information Analysis",
+  "Topic :: Software Development :: Code Generators",
 ]
 dependencies = []
 
 [project.urls]
 Homepage = "https://codeberg.org/MarekDeja/tok"
+Documentation = "https://codeberg.org/MarekDeja/tok/src/branch/main/docs/python.md"
+Source = "https://codeberg.org/MarekDeja/tok"
+Issues = "https://codeberg.org/MarekDeja/tok/issues"
+Changelog = "https://codeberg.org/MarekDeja/tok/src/branch/main/docs/changelog.md"
 
 [project.scripts]
 tok = "tok.cli:main"
 
-[tool.setuptools.packages.find]
-where = ["python/src"]
-
-[tool.setuptools.package-data]
-tok = ["cheatsheet.md"]
+[tool.maturin]
+manifest-path = "rust/tok-py/Cargo.toml"
+python-source = "python/src"
+module-name = "tok._engine"
+features = ["pyo3/extension-module"]
+# the license with the source archive and the wheels
+include = [{ path = "LICENSE", format = "sdist" }]
+# the source archive needs the sources of the engine, not its tests and examples
+exclude = [
+  "python/src/tok/__pycache__/**",
+  "python/src/tok/_engine*",
+  { path = "rust/*/tests/**", format = "sdist" },
+  { path = "rust/*/examples/**", format = "sdist" },
+]

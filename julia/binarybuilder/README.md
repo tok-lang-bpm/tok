@@ -30,11 +30,11 @@ The recipe builds with the newest Rust toolchain of BinaryBuilder (1.94 at this 
 
 For every release from 0.8.0 on:
 
-1. Tag the release on Codeberg and note the commit of the tag (`git rev-parse v0.8.0^{commit}`).
+1. Tag the release on Codeberg and note the commit of the tag (`git rev-parse v1.0.0^{commit}`).
 2. Fork [JuliaPackaging/Yggdrasil](https://github.com/JuliaPackaging/Yggdrasil) and create `T/tok/build_tarballs.jl` (later releases: edit it) from this recipe, with the source written out as Yggdrasil requires:
 
    ```julia
-   version = v"0.8.0"
+   version = v"1.0.0"
    sources = [GitSource("https://codeberg.org/MarekDeja/tok.git", "<commit of the tag>")]
    ```
 
@@ -44,4 +44,4 @@ For every release from 0.8.0 on:
 
 Yggdrasil allows the recipe to download crates during the build (`cargo build --locked` uses `rust/Cargo.lock`), as other Rust packages there do.
 
-Tok.jl itself is registered in the General registry from 1.0 (roadmap); until then users install it from the repository and `tok_jll` from the registry.
+The recipe in this folder carries the version of the release (`version = v"1.0.0"`). Tok.jl itself is registered in the General registry from 1.0, after `tok_jll`; until both are registered, users install Tok.jl from the repository and build the engine library with `cargo build --release -p tok-capi`.

@@ -173,6 +173,9 @@ struct Exporter<'a> {
     /// Data inputs and outputs of activities made for `reads` and `writes` (language 0.5):
     /// activity -> (input or output, identifier, name).
     implicit_io: IndexMap<String, Vec<MadeIo>>,
+    /// The `category` of the groups, a root element placed with the declarations at the
+    /// end, so that the paths of the processes and the collaboration stay valid.
+    category: Option<XElem>,
 }
 
 const DECL_KINDS: [&str; 4] = ["message", "signal", "error", "escalation"];
@@ -240,6 +243,7 @@ impl<'a> Exporter<'a> {
             root: XElem::new(BPMN_NS, "definitions"),
             collab: None,
             implicit_io: IndexMap::new(),
+            category: None,
         }
     }
 
@@ -514,6 +518,9 @@ impl<'a> Exporter<'a> {
             decl.push(e);
         }
         decl.extend(roots_05.1);
+        if let Some(cat) = self.category.take() {
+            self.root.insert(decl_slot, cat);
+        }
         for (k, e) in decl.into_iter().enumerate() {
             self.root.insert(decl_slot + k, e);
         }
@@ -1529,7 +1536,7 @@ impl<'a> Exporter<'a> {
                 documentation(&mut ge, g.attr(DOC_KEY));
                 self.at(&path).push(ge);
             }
-            self.root.insert(0, cat);
+            self.category = Some(cat);
         }
     }
 }

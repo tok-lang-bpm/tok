@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use tok in your work, please cite it as below."
+type: software
+title: "tok: a plain-text language for information-process models"
+abstract: >-
+  tok is a plain-text language for information-process models. One text file describes a
+  BPMN 2.0 process with the DMN decisions it uses, the forms people fill in and the
+  parameters needed to simulate it. The tok tools check the model and export BPMN 2.0 XML
+  with an automatic diagram layout, SVG, DMN 1.5 and Camunda 8 form files, import BPMN and
+  DMN files, evaluate decisions and simulate the process. The engine is written in Rust and
+  used from the command line, Python, R, Julia, a language server, an MCP server and a
+  browser playground.
+authors:
+  - family-names: Deja
+    given-names: Marek
+    affiliation: Jagiellonian University
+version: 1.0.0
+date-released: 2026-10-28
+license: GPL-3.0-or-later
+repository-code: "https://codeberg.org/MarekDeja/tok"
+url: "https://codeberg.org/MarekDeja/tok"
+keywords:
+  - BPMN
+  - DMN
+  - FEEL
+  - process modelling
+  - business process simulation
+  - Camunda
+  - domain-specific language

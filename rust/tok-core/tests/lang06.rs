@@ -112,3 +112,27 @@ fn documents_of_older_languages_ignore_multiplicity() {
     assert!(diags.iter().any(|x| x.code == "R010"));
     assert!(!tok_core::export::semantic_xml(&d, None).contains("participantMultiplicity"));
 }
+
+#[test]
+fn groups_keep_conversations_and_process_data_in_their_elements() {
+    // the category of a group is a root element before the collaboration; it once moved
+    // the conversations into itself and the data of the process into the participant
+    let text = "tok 0.6 \"Grupy\"\npool a \"A\"\n  start s\n  user u \"Zadanie\" compensate=h\n  \
+                service h \"Cofnięcie\" compensation\n  end e\n  property p \"Licznik\"\n\
+                pool b \"B\"\nflow s -> u -> e\nmessage u -> b \"M\" id=m\n\
+                conversation k \"Rozmowa\" pools=\"a b\" messages=\"m\"\n\
+                group g \"Grupa\" members=\"s u\"\n";
+    let xml = tok_core::export::semantic_xml(&doc(text), None);
+    let x = roxmltree::Document::parse(&xml).expect("well formed");
+    let parent = |name: &str| {
+        x.descendants()
+            .find(|n| n.tag_name().name() == name)
+            .and_then(|n| n.parent_element())
+            .map(|p| p.tag_name().name().to_string())
+    };
+    assert_eq!(parent("conversation").as_deref(), Some("collaboration"));
+    assert_eq!(parent("conversationLink").as_deref(), Some("collaboration"));
+    assert_eq!(parent("property").as_deref(), Some("process"));
+    assert_eq!(parent("categoryValue").as_deref(), Some("category"));
+    assert_eq!(parent("category").as_deref(), Some("definitions"));
+}

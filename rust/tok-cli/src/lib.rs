@@ -13,7 +13,7 @@ const EXIT_OK: u8 = 0;
 const EXIT_ERRORS: u8 = 1;
 const EXIT_USAGE: u8 = 2;
 
-const CHEATSHEET: &str = include_str!("../../../python/src/tok/cheatsheet.md");
+use reference::CHEATSHEET;
 
 const HELP: &str =
     "usage: tok [-h] [--version] {check,fmt,bpmn,svg,export,import,sim,eval,cheatsheet} ...
@@ -68,6 +68,7 @@ macro_rules! errln {
 
 pub mod api;
 mod argparse;
+pub mod reference;
 
 use argparse::{Conv, Opt};
 

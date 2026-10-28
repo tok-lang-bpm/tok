@@ -1,0 +1,9 @@
+tok 0.1 "Tabele"
+
+decision bez-wejsc hit=first
+  || o: number |
+  || 1         |
+
+decision bez-wynikow
+  | a: number ||
+  | 1         ||

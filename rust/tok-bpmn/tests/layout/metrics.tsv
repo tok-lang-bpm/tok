@@ -1,5 +1,6 @@
 model	cross	hits	shapes	labels	lbl_edge	bends	msg	flow_ovl	bnd	area
 examples/kwerenda-symulacja	0	0	0	0	0	3	0	0	0	308
+examples/limit-wypozyczen	0	0	0	0	0	1	0	0	0	216
 examples/propozycja-zakupu	0	0	0	0	0	5	0	0	0	736
 examples/wypozyczenie	0	0	0	0	0	2	0	0	0	416
 cases/01-header	0	0	0	0	0	0	0	0	0	0
@@ -58,6 +59,10 @@ cases/56-feel3	0	0	0	0	0	1	0	0	0	112
 cases/57-executable-07	0	0	0	0	0	0	0	0	0	22
 cases/58-err-07	0	0	0	0	0	0	0	0	0	0
 cases/61-executable-decisions	0	0	0	0	0	0	0	0	0	0
+cases/62-lang-10	0	2	0	0	0	8	0	0	0	2834
+cases/63-executable-10	0	0	0	0	0	3	0	0	0	54
+cases/65-err-10-version	0	0	0	0	0	0	0	0	0	4
+cases/67-deprecated-10	0	0	0	0	0	0	0	0	0	46
 import/01-wypozyczenie-pierwszy-model	0	0	0	0	0	2	0	0	0	328
 import/02-wypozyczenie-wymagania-norm	0	0	0	0	0	3	0	0	0	1017
 import/03-rejestracja-pisma-z-bledem	0	0	0	0	0	4	0	0	0	621

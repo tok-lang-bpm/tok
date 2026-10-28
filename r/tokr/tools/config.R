@@ -33,9 +33,10 @@ message("Using rustc ", rustc)
 offline <- file.exists("src/rust/vendor.tar.xz")
 debug <- nzchar(Sys.getenv("DEBUG"))
 
+# the archive is unpacked by R itself (its own tar and xz), so the xz program is not needed
 offline_setup <- if (offline) {
   paste(
-    "tar xf rust/vendor.tar.xz &&",
+    "\"$(R_HOME)/bin$(R_ARCH_BIN)/Rscript\" -e 'untar(\"rust/vendor.tar.xz\", tar = \"internal\")' &&",
     "mkdir -p $(CARGOTMP) &&",
     "cp rust/vendor-config.toml $(CARGOTMP)/config.toml"
   )

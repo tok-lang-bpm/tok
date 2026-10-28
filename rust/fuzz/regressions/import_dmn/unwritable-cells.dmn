@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" id="d" name="d" namespace="x">
+  <decision id="a" name="a">
+    <decisionTable>
+      <input><inputExpression typeRef="boolean"><text>x = 1</text></inputExpression></input>
+      <output name="r=s" typeRef="number"/>
+      <rule><inputEntry><text>-</text></inputEntry><outputEntry><text>1</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+  <decision id="b" name="b">
+    <relation>
+      <column name="c" typeRef="string"/>
+      <row><literalExpression><text>"a" # b</text></literalExpression></row>
+    </relation>
+  </decision>
+  <decision id="c" name="c">
+    <decisionTable>
+      <input><inputExpression typeRef="string"><text>y</text></inputExpression></input>
+      <output name="o" typeRef="ns:t"/>
+      <rule><inputEntry><text>"p|q"</text></inputEntry><outputEntry><text>1 | 2</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+</definitions>

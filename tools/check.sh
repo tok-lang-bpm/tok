@@ -3,12 +3,14 @@
 #
 #   tools/check.sh            formatting, lints and tests of Rust, Python, R and Julia; wheel of
 #                             tok-lang with the Rust engine and its parity with the pure-Python
-#                             implementation; native tok program; C library of the engine;
-#                             language server and MCP server; VS Code extension; playground
+#                             implementation; source archive of tok-lang and the packages
+#                             of the published crates (dry run); native tok program; C library
+#                             of the engine; language server and MCP server; VS Code
+#                             extension; playground
 #   tools/check.sh --cross    additionally cross-compiles wheels for the other platforms
 #                             with zig (Linux host: Linux aarch64 and macOS universal2; not tested)
 #
-# Built wheels, the tok, tok-lsp and tok-mcp programs, the C library of the engine (with
+# Built wheels and the source archive of tok-lang, the tok, tok-lsp and tok-mcp programs, the C library of the engine (with
 # tok.h) and the .vsix of the VS Code extension are written to dist/; the playground to
 # rust/target/playground. R and Julia are skipped when they are not installed, the VS Code
 # extension without npm, the playground without the Rust target wasm32-unknown-unknown and
@@ -76,6 +78,15 @@ fi
 # the installed package (with tok._engine) is tested; the reference runs from python/src
 "$VENV/$BIN/python" -m unittest python/tests/test_engine_parity.py
 cp "$WHEELS"/*.whl dist/
+
+step "Packages of the registries: source archive of tok-lang, metadata of the Python packages, crates"
+# the source archive builds the engine with Rust when pip installs it; twine checks the
+# metadata PyPI shows; cargo packages the published crates in dependency order and builds
+# each from its package (nothing is uploaded)
+"$VENV/$BIN/python" -m pip install --quiet --disable-pip-version-check --upgrade twine
+maturin sdist -o dist
+"$VENV/$BIN/python" -m twine check --strict dist/tok_lang-*
+(cd rust && cargo publish --dry-run --allow-dirty --quiet -p tok-core -p tok-bpmn -p tok-sim -p tok-cli -p tok-lsp -p tok-mcp)
 
 if [ "$CROSS" = 1 ] && [ "$PLATFORM" = linux ]; then
   step "Cross-compiled wheels (not tested on their platforms)"

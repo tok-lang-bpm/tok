@@ -366,7 +366,7 @@ async function main() {
     const text = await (await fetch(`examples/${first}`)).text();
     setText(text.replace(/\r\n/g, "\n"));
   } else {
-    setText('tok 0.7 "Nowy proces"\n\nstart s "Początek"\ntask a "Zadanie"\nend e "Koniec"\n\nflow s -> a -> e\n');
+    setText('tok 1.0 "Nowy proces"\n\nstart s "Początek"\ntask a "Zadanie"\nend e "Koniec"\n\nflow s -> a -> e\n');
   }
 }
 

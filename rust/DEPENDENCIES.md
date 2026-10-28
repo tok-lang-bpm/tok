@@ -12,6 +12,12 @@ The dependency tree is kept small so that the R package can vendor it for offlin
 | wasm-bindgen (`=0.2.129`) | tok-wasm only | the JavaScript bindings of the WebAssembly module of the playground; the version is exact because the `wasm-bindgen` command that writes the glue code (`tools/playground.sh`) must be the same version as the crate |
 | wasm-bindgen-test (`=0.3.79`) | tok-wasm (tests only) | runs the tests of `tok-wasm/tests/web.rs` inside the WebAssembly module under Node.js; the release of wasm-bindgen 0.2.129 |
 
+## Fuzzing and benchmarks
+
+The fuzz targets in `rust/fuzz` form a cargo workspace of their own, outside the workspace of the engine, so none of their dependencies reaches the engine, its packages or the vendored crates of the R package. They need `libfuzzer-sys` (the libFuzzer runtime and the `fuzz_target!` macro of cargo-fuzz; it compiles libFuzzer's C++ sources) and are built with a nightly toolchain (`docs/fuzzing.md`).
+
+The benchmarks (`rust/tok-bench`) need no crate beyond the engine: a plain timing loop (`harness = false`) with `std::time::Instant` and `std::hint::black_box` gives the medians that `docs/performance.md` reports, so `criterion` and its dependencies are not used.
+
 ## Protocols without dependencies
 
 The language server (`tok-lsp`) and the MCP server (`tok-mcp`) need no crate beyond `serde_json`. Both protocols are JSON-RPC 2.0 over standard input and output: LSP frames each message with a `Content-Length` header, MCP writes one message per line, and each server answers a small, fixed set of methods. The messages are handled as `serde_json::Value`s with a few dozen lines of framing, which keeps the dependency tree as small as the rest of the engine. The alternatives were weighed: `lsp-server` with `lsp-types` would add `crossbeam-channel`, `log`, `serde` with its derive macros (and through them `syn`, `quote`, `proc-macro2`), `serde_repr`, `bitflags` and a URI crate, and the URI type of `lsp-types` has changed incompatibly between releases; `tower-lsp` would add an asynchronous runtime (`tokio`) that a server answering one editor at a time does not need; the MCP SDK for Rust (`rmcp`) is likewise built on `tokio` and the derive macros of `serde`. The tests of both crates drive the servers with the JSON messages of the protocols, so a typed layer would not add checks the tests do not already make.

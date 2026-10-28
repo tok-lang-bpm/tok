@@ -1,16 +1,24 @@
-# tok (Rust command line)
+# tok-cli: the tok command
 
-A native build of the `tok` command. For language 0.3 it prints the same results as
-the pure-Python implementation (`TOK_ENGINE=python python -m tok`): the same
-diagnostics in English and Polish, the same canonical text from `fmt`, the same
-semantic BPMN, DMN and form files, `eval` results and simulation reports. From 0.4
-the diagram layout of BPMN and SVG output is the improved layout of `tok-bpmn`
-(fewer crossings, no label collisions), so drawings differ from the Python ones.
+The `tok` command of the tok process language: one plain-text file describes a BPMN 2.0
+process with its DMN decisions, Camunda forms and simulation parameters, and `tok` checks it
+(diagnostics in English and Polish), prints its canonical form, exports BPMN 2.0 XML with an
+automatic diagram layout, SVG, DMN 1.5 and Camunda form files, imports BPMN and DMN files,
+simulates the process and evaluates decisions. It reads every version of the language,
+0.1 to 1.0 (the specification: `docs/spec.md` of the repository).
 
 ```
-cargo build --release -p tok-cli
-target/release/tok check examples/wypozyczenie.tok --lang pl
+cargo install tok-cli          # installs the program `tok`
+tok check model.tok --lang pl
+tok export model.tok -o out/
 ```
+
+In the repository: `cargo build --release -p tok-cli` (in `rust/`), then
+`target/release/tok`. For language 0.3 the command prints the same results as the frozen
+pure-Python implementation (`TOK_ENGINE=python python -m tok`): the same diagnostics, the
+same canonical text from `fmt`, the same semantic BPMN, DMN and form files, `eval` results
+and simulation reports. The diagram layout of BPMN and SVG output is the layout of
+`tok-bpmn` (fewer crossings, no label collisions), so drawings differ from the Python ones.
 
 ## Commands
 

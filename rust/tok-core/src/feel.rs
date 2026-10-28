@@ -1,6 +1,8 @@
 //! FEEL subset: tokenizer and recursive-descent parser used for checking (F001, F002)
 //! and for overlap analysis of decision tables. Mirrors `feel.py` (evaluation comes later).
 
+use std::collections::HashMap;
+
 use crate::pyutil::{repr_char, strip};
 
 /// A FEEL error: `F002` (syntax) or `F001` (valid FEEL outside the subset).
@@ -25,6 +27,13 @@ impl FeelError {
 }
 
 type R<T> = Result<T, FeelError>;
+
+/// The deepest nesting of an expression: parentheses, lists, calls and the other nested
+/// parts, and the operators of a chain such as `a + b + c`, each count one level.
+pub const MAX_DEPTH: usize = 160;
+
+/// The detail of the syntax error (`F002`) of an expression nested deeper.
+pub const TOO_DEEP: &str = "the expression is nested too deeply";
 
 fn syntax<T>(msg: impl Into<String>) -> R<T> {
     Err(FeelError::Syntax(msg.into()))
@@ -222,6 +231,12 @@ struct P {
     toks: Vec<T>,
     i: usize,
     in_interval: bool,
+    /// Nesting of the expression parsed: a bound on the height of its tree.
+    depth: usize,
+    /// The targets of `in` parsed so far, by position: a target is parsed once more after
+    /// its first expression to see whether it is an interval, so without them a nested
+    /// `in [ … ]` would be parsed a number of times exponential in its depth.
+    targets: HashMap<(usize, bool), (R<Ast>, usize)>,
 }
 
 impl P {
@@ -261,7 +276,31 @@ impl P {
         Ok(())
     }
 
+    /// Parse a nested part of the expression; the nesting is bounded, so that the
+    /// parser and the evaluation stay within the stack.
+    fn nested(&mut self, part: fn(&mut Self) -> R<Ast>) -> R<Ast> {
+        let saved = self.depth;
+        self.deeper()?;
+        let r = part(self);
+        self.depth = saved;
+        r
+    }
+
+    /// One more level of the tree: a nested part, or an operator applied to what was
+    /// parsed so far.
+    fn deeper(&mut self) -> R<()> {
+        if self.depth >= MAX_DEPTH {
+            return syntax(TOO_DEEP);
+        }
+        self.depth += 1;
+        Ok(())
+    }
+
     fn expr(&mut self) -> R<Ast> {
+        self.nested(Self::expr_body)
+    }
+
+    fn expr_body(&mut self) -> R<Ast> {
         if self.at_word("if") {
             self.next();
             let c = self.expr()?;
@@ -280,20 +319,26 @@ impl P {
     }
 
     fn disjunction(&mut self) -> R<Ast> {
+        let base = self.depth;
         let mut left = self.conjunction()?;
         while self.at_word("or") {
+            self.deeper()?;
             self.next();
             left = Ast::Or(Box::new(left), Box::new(self.conjunction()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn conjunction(&mut self) -> R<Ast> {
+        let base = self.depth;
         let mut left = self.comparison()?;
         while self.at_word("and") {
+            self.deeper()?;
             self.next();
             left = Ast::And(Box::new(left), Box::new(self.comparison()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
@@ -329,18 +374,29 @@ impl P {
     }
 
     fn in_target(&mut self) -> R<Ast> {
+        let key = (self.i, self.in_interval);
+        if let Some((r, end)) = self.targets.get(&key) {
+            self.i = *end;
+            return r.clone();
+        }
+        let r = self.in_target_parsed();
+        self.targets.insert(key, (r.clone(), self.i));
+        r
+    }
+
+    fn in_target_parsed(&mut self) -> R<Ast> {
         if self.at_op("(") || self.at_op("]") {
             return self.interval();
         }
         if self.at_op("[") {
-            let save = self.i;
+            let (save, depth) = (self.i, self.depth);
             self.next();
             self.expr()?;
             if self.at_op("..") {
-                self.i = save;
+                (self.i, self.depth) = (save, depth);
                 return self.interval();
             }
-            self.i = save;
+            (self.i, self.depth) = (save, depth);
         }
         self.additive()
     }
@@ -373,24 +429,34 @@ impl P {
     }
 
     fn additive(&mut self) -> R<Ast> {
+        let base = self.depth;
         let mut left = self.multiplicative()?;
         while self.at_op("+") || self.at_op("-") {
+            self.deeper()?;
             let op = self.next().value().unwrap_or_default().to_string();
             left = Ast::Bin(op, Box::new(left), Box::new(self.multiplicative()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn multiplicative(&mut self) -> R<Ast> {
+        let base = self.depth;
         let mut left = self.unary()?;
         while self.at_op("*") || self.at_op("/") {
+            self.deeper()?;
             let op = self.next().value().unwrap_or_default().to_string();
             left = Ast::Bin(op, Box::new(left), Box::new(self.unary()?));
         }
+        self.depth = base;
         Ok(left)
     }
 
     fn unary(&mut self) -> R<Ast> {
+        self.nested(Self::unary_body)
+    }
+
+    fn unary_body(&mut self) -> R<Ast> {
         if self.at_op("-") {
             self.next();
             return Ok(Ast::Neg(Box::new(self.unary()?)));
@@ -399,9 +465,11 @@ impl P {
     }
 
     fn postfix(&mut self) -> R<Ast> {
+        let base = self.depth;
         let mut node = self.primary()?;
         while self.at_op(".") {
             self.next();
+            self.deeper()?;
             let t = self.next();
             let T::Name(name) = t else {
                 return syntax("expected a name after '.'");
@@ -411,6 +479,7 @@ impl P {
         if self.at_op("[") && !self.in_interval {
             return unsupported("filter expressions");
         }
+        self.depth = base;
         Ok(node)
     }
 
@@ -535,7 +604,7 @@ impl P {
             return Ok(Unary::Any);
         }
         if self.at_word("not") && matches!(self.peek(1), T::Op(o) if o == "(") {
-            let save = self.i;
+            let (save, depth) = (self.i, self.depth);
             self.next();
             self.next();
             let tests = self.positive_list()?;
@@ -543,7 +612,7 @@ impl P {
                 self.next();
                 return Ok(Unary::NotTests(tests));
             }
-            self.i = save;
+            (self.i, self.depth) = (save, depth);
         }
         Ok(Unary::Tests(self.positive_list()?))
     }
@@ -565,11 +634,11 @@ impl P {
                 return Ok(Positive::Cmp(o.clone(), self.additive()?));
             }
             if o == "(" || o == "]" || o == "[" {
-                let save = self.i;
+                let (save, depth) = (self.i, self.depth);
                 match self.interval() {
                     Ok(Ast::Range(a, lo, hi, b)) => return Ok(Positive::Range(a, *lo, *hi, b)),
                     Ok(_) => {}
-                    Err(FeelError::Syntax(_)) => self.i = save,
+                    Err(FeelError::Syntax(_)) => (self.i, self.depth) = (save, depth),
                     Err(e) => return Err(e),
                 }
                 self.in_interval = false;
@@ -584,6 +653,8 @@ fn parser(text: &str) -> R<P> {
         toks: tokenize(text)?,
         i: 0,
         in_interval: false,
+        depth: 0,
+        targets: HashMap::new(),
     })
 }
 
@@ -658,6 +729,7 @@ pub fn detail_pl(text: &str) -> String {
             "pusta komórka; dla dowolnej wartości wpisz „-”",
         ),
         ("an interval is not a value", "przedział nie jest wartością"),
+        (TOO_DEEP, "wyrażenie jest zbyt głęboko zagnieżdżone"),
     ];
     if let Some((_, pl)) = fixed.iter().find(|f| f.0 == text) {
         return pl.to_string();

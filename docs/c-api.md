@@ -59,7 +59,7 @@ char *tok_check(const char *text, const char *options);
 
 | Function | Options | Result (`ok`) |
 |---|---|---|
-| `const char *tok_version(void)` | — | the version of the engine, for example `0.7.0` (a static string: not freed) |
+| `const char *tok_version(void)` | — | the version of the engine, for example `1.0.0` (a static string: not freed) |
 | `uint32_t tok_abi_version(void)` | — | the version of the C interface, `TOK_ABI_VERSION` in the header |
 | `void tok_free(char *s)` | — | frees a result; `NULL` is ignored |
 | `tok_check(text, options)` | `lang` (`en`, `pl`), `level` (`basic`, `analytic`, `full`), `bpmn` (boolean, BPMN rules, default `true`), `class` (`descriptive`, `analytic`, `common-executable`, `full`) | `{"errors": N, "bpmn_class": CLASS, "diagnostics": [{"code", "severity", "line", "id", "message"}, …]}`, as `tok check --json` |
@@ -77,7 +77,7 @@ char *tok_check(const char *text, const char *options);
 
 `tok_check` reports the diagnostics of a document with errors as a successful result (`errors` > 0); the other functions that read a document return an error of kind `document` for it. `tok_fmt` needs only a document without syntax errors; `tok_eval` checks the document without the BPMN rules, as `tok eval` does; the others check it completely, as `tok bpmn` does.
 
-`tok_eval` takes the input values as JSON: numbers, text, booleans, `null`, lists and objects (contexts). In a document of language 0.7 the decision is evaluated with everything it requires and the result is its DMN value (numbers as JSON numbers, dates, times and durations as their FEEL text); in documents of earlier languages the decision table alone gives an object of outputs, a list of them for hit policy `collect`, or `null`.
+`tok_eval` takes the input values as JSON: numbers, text, booleans, `null`, lists and objects (contexts). In a document of language 0.7 or 1.0 the decision is evaluated with everything it requires and the result is its DMN value (numbers as JSON numbers, dates, times and durations as their FEEL text); in documents of earlier languages the decision table alone gives an object of outputs, a list of them for hit policy `collect`, or `null`.
 
 ## Simulation
 

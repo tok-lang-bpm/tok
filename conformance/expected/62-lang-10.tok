@@ -1,0 +1,115 @@
+tok 1.0 "Wypożyczenia i zakupy biblioteki" doc="Dokument języka 1.0 z elementami każdej warstwy języka."
+
+# language 1.0: the processes, collaboration, decisions, forms and simulation of language 0.7
+# in one document
+item zamowienie-typ "Zamówienie książki" structure="Zamowienie"
+item konto-t "Rodzaj konta" type=string allowed="\"student\", \"pracownik\", \"gość\""
+global sprawdzenie "Sprawdzenie tożsamości" kind=user
+
+interface katalog "Katalog biblioteczny"
+  operation szukaj "Wyszukanie rekordu" in="Zapytanie" out="Rekord" error="Brak rekordu"
+
+pool czytelnik "Czytelnik"
+
+pool biblioteka "Biblioteka uczelniana" process=obsluga
+  lane dyzur "Dyżurny bibliotekarz"
+    start zgloszenie "Zgłoszenie e-mailem lub formularzem" message="E-mail" message="Formularz"
+    call tozsamosc "Sprawdzenie tożsamości" task=sprawdzenie by=bibliotekarz duration="5m"
+    service wyszukaj "Wyszukanie w katalogu" loop test-before operation=szukaj while="proby < 3" loop-max=3
+    xor dostepna "Czy książka jest dostępna?"
+    rule limit-czytelnika "Ustalenie limitu wypożyczeń" decision=limit result=limit
+    transaction rezerwacja "Rezerwacja egzemplarza"
+      start ts
+      service odlozenie "Odłożenie egzemplarza" compensate=cofniecie
+      service cofniecie "Cofnięcie odłożenia" compensation
+      xor odlozono "Czy odłożono egzemplarz?"
+      end zarezerwowano "Zarezerwowano"
+      end anuluj "Anulowanie" cancel
+    boundary anulowano "Rezerwacja anulowana" cancel on=rezerwacja
+    user informacja "Informacja dla czytelnika" form=f-informacja by=bibliotekarz duration="10m"
+    boundary przypomnienie "Minęły 3 dni" noninterrupting on=informacja timer=P3D
+    task przypomnij "Przypomnienie czytelnikowi"
+    end przypomniano "Przypomniano"
+    end odwolano "Wypożyczenie odwołane"
+  lane wypozyczalnia "Wypożyczalnia"
+    and razem "Wydanie i archiwizacja"
+    manual wydanie "Wydanie książki" by=bibliotekarz duration="tri(2m, 5m, 15m)"
+    task archiwizacja "Archiwizacja zgłoszenia"
+    complex scalenie "Czy wydano książkę?" activation="_activationCount >= 1"
+    end wydano "Książka wydana"
+    send zamowienie "Zamówienie w hurtowni" message="Zamówienie"
+    end zamowiono "Zamówienie złożone" signal="Zamówienie złożone"
+  input wniosek "Zamówienie czytelnika" type=zamowienie-typ
+  property proby "Liczba prób wyszukania" on=wyszukaj
+  data karta "Karta czytelnika" state="ważna"
+  store akta "Akta wypożyczeń"
+
+pool hurtownia "Hurtownia" min=1 max=3
+
+choreography dostawa "Dostawa z hurtowni"
+  start ds
+  choreo potwierdzenie "Potwierdzenie zamówienia" from=hurtownia to=biblioteka message="Potwierdzenie" reply="Płatność"
+  end de
+  flow ds -> potwierdzenie -> de
+
+flow ts -> odlozenie -> odlozono
+flow odlozono -> zarezerwowano "tak" when="odlozono"
+flow odlozono -> anuluj "nie" default
+flow zgloszenie -> tozsamosc -> wyszukaj -> dostepna
+flow dostepna -> limit-czytelnika "tak" when="dostepna" p=0.7
+flow dostepna -> zamowienie "nie" default p=0.3
+flow limit-czytelnika -> rezerwacja -> razem
+flow razem -> wydanie
+flow razem -> archiwizacja
+flow wydanie -> scalenie
+flow archiwizacja -> scalenie -> wydano
+flow anulowano -> informacja -> odwolano
+flow przypomnienie -> przypomnij -> przypomniano
+flow zamowienie -> zamowiono
+
+message czytelnik -> zgloszenie "E-mail" id=m-email
+message zamowienie -> hurtownia "Zamówienie" id=m-zamowienie
+
+conversation wypozyczenie "Wypożyczenie" pools="czytelnik biblioteka" messages="m-email"
+conversation zakup "Zakup książek" pools="biblioteka hurtownia" messages="m-zamowienie"
+
+key numer "Numer zamówienia"
+  prop numer message="Zamówienie" path="zamowienie.numer"
+
+reads tozsamosc wniosek
+reads tozsamosc karta
+writes wydanie akta
+
+note uwaga "Zgłoszenia przyjmuje dyżurny bibliotekarz." on=zgloszenie
+group obsluga-zgloszenia "Obsługa zgłoszenia" members="tozsamosc wyszukaj"
+
+inputdata wiek "Wiek czytelnika" type=number
+inputdata konto "Rodzaj konta" type=konto-t
+source regulamin "Regulamin wypożyczalni" kind=regulamin uri="https://biblioteka.example/regulamin"
+
+bkm kara "Kara za zwłokę" params="dni: number" type=number requires="regulamin" expr="dni * 0.5"
+
+decision limit "Limit wypożyczeń" type=number requires="wiek konto regulamin" hit=first
+  | wiek: number | konto: konto-t || limit: number |
+  | < 18         | -              || 5             |
+  | -            | "pracownik"    || 30            |
+  | -            | -              || 10            |
+
+decision podsumowanie "Podsumowanie konta" requires="limit kara"
+  entry "kara za tydzień" type=number expr="kara(7)"
+  entry progi
+    | od: number | do: number |
+    | 0          | 5          |
+    | 5          | 30         |
+  result expr="{limit: limit, kara: kara za tydzień, progi: count(progi)}"
+
+form f-informacja "Informacja dla czytelnika"
+  text "## Rezerwacja odwołana"
+  field powod "Powód" type=textarea
+  field kontakt "Kontakt z czytelnikiem" required type=select options="email:e-mail, telefon:telefon"
+
+simulate cases=20 seed=1 arrival="exp(1h)"
+resource bibliotekarz "Bibliotekarz" count=2
+variable dostepna "bern(0.7)"
+variable odlozono "bern(0.9)"
+variable wiek "unif(15, 70)"

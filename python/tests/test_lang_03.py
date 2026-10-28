@@ -39,6 +39,14 @@ class Header(unittest.TestCase):
         self.assertNotIn("P006", codes('tok 0.3\nstart s\n'))
         self.assertIn("P006", codes('tok 0.2\nstart s\n'))
 
+    def test_newer_versions_are_unknown_to_the_frozen_implementation(self):
+        # frozen at language 0.3: the headers of 0.5, 0.6, 0.7 and 1.0 are unknown versions
+        # (a warning), and the document is read as language 0.3
+        for version in ("0.5", "0.6", "0.7", "1.0"):
+            doc, diags = parse('tok %s "T"\nstart s\nend e\nflow s -> e\n' % version)
+            self.assertEqual([(d.code, d.severity) for d in diags], [("P006", "warning")], version)
+            self.assertEqual(doc.version, version)
+
     def test_language_01_documents_unchanged(self):
         text = 'tok 0.1 "T"\nstart s\ntask a "A"\nend e\nflow s -> a -> e\n'
         self.assertIn('exporterVersion="0.1"', xml(text))

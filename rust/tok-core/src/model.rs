@@ -213,7 +213,7 @@ pub const EXPR_KEYS: &[&str] = &[
     "activation",
 ];
 /// Language versions accepted in the header.
-pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5", "0.6", "0.7"];
+pub const LANGUAGE_VERSIONS: &[&str] = &["0.1", "0.3", "0.5", "0.6", "0.7", "1.0"];
 
 pub const HEADER_KEYS: &[&str] = &[
     "id",
@@ -632,6 +632,11 @@ pub struct Decision {
     pub annotation_title: Option<String>,
     pub header_line: Option<usize>,
     pub header_done: bool,
+    /// The header row has no input cells, or no output cells (`|| out |`, `| in ||`): the
+    /// canonical form leaves that side out, where a header whose cells were all malformed
+    /// keeps an empty cell.
+    pub no_inputs: bool,
+    pub no_outputs: bool,
     /// Language 0.7: input values of the input columns and output values of the output
     /// columns (`name: type = tests`), parallel to `inputs` and `outputs`.
     pub input_values: Vec<Option<String>>,
@@ -765,6 +770,9 @@ pub struct Document {
     pub components: IndexMap<String, Vec<Component>>,
     pub end_comments: Vec<String>,
     pub ids: IndexMap<String, IdEntry>,
+    /// Attribute keys and flags given more than once on one line, as (line, key), in
+    /// written order; the earlier values of a key are dropped (deprecated in 1.0, `R090`).
+    pub repeated: Vec<(usize, String)>,
 }
 
 impl Document {
@@ -784,6 +792,12 @@ impl Document {
             self.version.as_deref(),
             Some("0.1" | "0.3" | "0.5" | "0.6") | None
         )
+    }
+    /// The header declares language 1.0: the language of 0.7 with its limits as rules and
+    /// the deprecation warnings of 1.0 (`R090`). Unlike the predicates above, an unknown
+    /// version (`P006`) does not count, so its diagnostics stay as they were.
+    pub fn lang_10(&self) -> bool {
+        matches!(self.version.as_deref(), Some("1.0"))
     }
     /// Attribute keys of pools in this document.
     pub fn pool_keys(&self) -> &'static [&'static str] {

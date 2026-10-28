@@ -1,5 +1,5 @@
 # SYNTAX TEST "source.tok" "decisions, tables, forms, simulation"
-tok 0.7 "Decyzje"
+tok 1.0 "Decyzje"
 
 inputdata wiek "Wiek czytelnika" type=number
 # <--------- storage.type.tok

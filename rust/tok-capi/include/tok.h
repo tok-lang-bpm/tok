@@ -43,7 +43,7 @@ extern "C" {
    version of the loaded library; it is incremented only by incompatible changes. */
 #define TOK_ABI_VERSION 1
 
-/* Version of the engine, for example "0.7.0". The string is static: do not free it. */
+/* Version of the engine, for example "1.0.0". The string is static: do not free it. */
 const char *tok_version(void);
 
 /* Version of the C interface of the loaded library (TOK_ABI_VERSION). */

@@ -95,7 +95,7 @@ unsafe fn call(
     hand_out(text)
 }
 
-/// Version of the engine, for example `0.7.0`. The string is static: do not free it.
+/// Version of the engine, for example `1.0.0`. The string is static: do not free it.
 #[unsafe(no_mangle)]
 pub extern "C" fn tok_version() -> *const c_char {
     VERSION.as_ptr()

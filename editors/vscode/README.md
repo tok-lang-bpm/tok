@@ -38,17 +38,17 @@ From the repository, with Rust 1.99 or newer and Node.js 22 or newer:
 ```
 cd editors/vscode
 npm ci
-npm test               # compiles the extension, runs the grammar tests
+npm test               # checks the types, bundles the extension, runs the grammar tests
 npm run package        # builds tok-lsp if needed and writes tok-PLATFORM-VERSION.vsix
 ```
 
-`npm run package` copies `rust/target/release/tok-lsp` (built with `cargo build --release -p tok-lsp` when it is missing) into the package, so the `.vsix` is for the platform it is built on (`win32-x64`, `linux-x64`, `darwin-arm64`, …). Install it with *Extensions: Install from VSIX…* or `code --install-extension tok-win32-x64-0.9.0.vsix`. `tools/check.sh` of the repository builds, tests and packages the extension when npm is available and copies the `.vsix` to `dist/`.
+`npm run build` checks the TypeScript sources with the compiler and bundles them with the language client into one file, `out/extension.js` (esbuild), so the package holds no `node_modules`. `npm run package` copies `rust/target/release/tok-lsp` (built with `cargo build --release -p tok-lsp` when it is missing) into the package, so the `.vsix` is for the platform it is built on (`win32-x64`, `linux-x64`, `darwin-arm64`, …). Install it with *Extensions: Install from VSIX…* or `code --install-extension tok-win32-x64-1.0.0.vsix`. `tools/check.sh` of the repository builds, tests and packages the extension when npm is available and copies the `.vsix` to `dist/`.
 
 ## Tests
 
 - `npm run test:grammar`: the grammar tests in `test/grammar/*.tok` (vscode-tmgrammar-test), which assert the scope of every construct.
 - `npm run test:examples`: the grammar over every example and conformance document of the repository; statement keywords, comments and table rows must get their scopes, and no string may run over its line.
-- `npm run smoke` (after `npm run package`): unpacks the `.vsix`, checks its manifest, code, grammar and server, drives the bundled `tok-lsp` through the protocol (diagnostics in Polish, a fix, the diagram request, shutdown), and when the `code` command is available installs the package into an empty extensions folder of VS Code and checks that VS Code lists it. It needs no display.
+- `npm run smoke` (after `npm run package`): unpacks the `.vsix`, checks its manifest, the one bundled code file (and that no `node_modules` are packaged), grammar and server, drives the bundled `tok-lsp` through the protocol (diagnostics in Polish, a fix, the diagram request, shutdown), and when the `code` command is available installs the package into an empty extensions folder of VS Code and checks that VS Code lists it. It needs no display.
 - `npm run test:vscode`: runs `test/vscode/index.js` inside VS Code (a window opens, so it needs a desktop): the extension starts the server, the diagnostics appear and disappear after a fix, the document is formatted, the outline and go to definition work, *tok: Show diagram* opens its panel and *tok: Export BPMN* writes the file. The `code` command is found on the `PATH` or in the variable `VSCODE_CLI`.
 
 ## Publishing
@@ -59,14 +59,14 @@ The extension is not published yet. Publishing needs accounts of the maintainer:
 
    ```
    npx vsce login MarekDeja
-   npx vsce publish --packagePath tok-win32-x64-0.9.0.vsix tok-linux-x64-0.9.0.vsix tok-darwin-arm64-0.9.0.vsix
+   npx vsce publish --packagePath tok-win32-x64-1.0.0.vsix tok-linux-x64-1.0.0.vsix tok-darwin-arm64-1.0.0.vsix
    ```
 
 2. **Open VSX** (VSCodium, Eclipse Theia and other editors). Sign in at https://open-vsx.org with an Eclipse account, sign the publisher agreement, create an access token, create the namespace once and publish the same files:
 
    ```
    npx ovsx create-namespace MarekDeja -p TOKEN
-   npx ovsx publish tok-win32-x64-0.9.0.vsix -p TOKEN
+   npx ovsx publish tok-win32-x64-1.0.0.vsix -p TOKEN
    ```
 
 A universal package without a server (`npx vsce package` with an empty `server/` folder) works on every platform that has `tok-lsp` on the `PATH`; the platform packages, which carry the server, are the ones to publish.

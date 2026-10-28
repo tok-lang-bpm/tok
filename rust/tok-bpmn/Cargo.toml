@@ -6,6 +6,13 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/tok-bpmn"
+readme = "README.md"
+# the tests and examples read the conformance corpus and the fixtures of the repository
+exclude = ["tests/", "examples/"]
+keywords = ["bpmn", "layout", "svg", "diagram", "tok"]
+categories = ["visualization", "science"]
 description = "BPMN 2.0 rules, automatic layout and SVG rendering used by tok"
 
 [dependencies]

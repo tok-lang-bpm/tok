@@ -38,6 +38,67 @@ fn kid_text(e: X, name: &str) -> Option<String> {
     }
 }
 
+/// Whether text stands in one cell of a row: no `|` and no `#` outside strings, and its
+/// strings closed.
+fn cell_text(text: &str) -> bool {
+    let mut in_str = false;
+    let mut esc = false;
+    for c in text.chars() {
+        if esc {
+            esc = false;
+        } else if in_str {
+            match c {
+                '\\' => esc = true,
+                '"' => in_str = false,
+                _ => {}
+            }
+        } else {
+            match c {
+                '"' => in_str = true,
+                '|' | '#' => return false,
+                _ => {}
+            }
+        }
+    }
+    !in_str && !text.trim().is_empty()
+}
+
+/// The first header or row cell of an imported table or relation that tok cannot write
+/// so that it reads back the same: such a table is not kept.
+fn unwritable(d: &Decision) -> Option<String> {
+    let header = d
+        .inputs
+        .iter()
+        .zip(d.input_values.iter().chain(std::iter::repeat(&None)))
+        .chain(
+            d.outputs
+                .iter()
+                .zip(d.output_values.iter().chain(std::iter::repeat(&None))),
+        );
+    for ((name, typ), values) in header {
+        let cell = match values {
+            Some(v) => format!("{name}: {typ} = {v}"),
+            None => format!("{name}: {typ}"),
+        };
+        let back = crate::parser::split_header_cell_07(&cell);
+        let same = back.as_ref().is_some_and(|(n, t, v)| {
+            n == name.trim() && t == typ.trim() && v.as_deref() == values.as_deref().map(str::trim)
+        });
+        if !same || !cell_text(&cell) {
+            return Some(cell);
+        }
+    }
+    let rows = d
+        .rules
+        .iter()
+        .flat_map(|r| r.inputs.iter().chain(r.outputs.iter()));
+    let notes = d.rules.iter().filter_map(|r| r.annotation.as_ref());
+    rows.chain(notes)
+        .chain(d.annotation_title.iter())
+        .find(|c| !cell_text(c))
+        .cloned()
+}
+
 /// FEEL text on one line (for table cells): line breaks outside strings become spaces,
 /// inside strings the escape `\n`.
 fn one_line(text: &str) -> String {
@@ -246,43 +307,24 @@ impl Importer {
                     );
                 }
             }
-            "decisionTable" => self.table(e, d, owner, default_name),
-            "relation" => {
-                d.relation = true;
-                d.header_done = true;
-                for c in kids(e).filter(|c| local(*c) == "column") {
-                    let name = c
-                        .attribute("name")
-                        .map(super::normalize)
-                        .unwrap_or_default();
-                    d.inputs
-                        .push((name, type_attr(c).unwrap_or_else(|| "any".into())));
-                    d.input_values.push(None);
+            "decisionTable" | "relation" => {
+                let saved = d.clone();
+                if kind == "decisionTable" {
+                    self.table(e, d, owner, default_name);
+                } else {
+                    self.relation(e, d, owner);
                 }
-                for r in kids(e).filter(|c| local(*c) == "row") {
-                    let mut cells = Vec::new();
-                    for x in kids(r) {
-                        if local(x) == "literalExpression" {
-                            let t = kid(x, "text").map(text_of).unwrap_or_default();
-                            cells.push(if t.trim().is_empty() {
-                                "null".to_string()
-                            } else {
-                                one_line(&t)
-                            });
-                        } else {
-                            self.warn(
-                                owner,
-                                "a relation cell that is not a literal expression is not kept",
-                            );
-                            cells.push("null".into());
-                        }
-                    }
-                    let line = self.next_line();
-                    d.rules.push(Rule {
-                        inputs: cells,
-                        line,
-                        ..Default::default()
-                    });
+                if let Some(cell) = unwritable(d) {
+                    *d = saved;
+                    let what = if kind == "relation" {
+                        "relation"
+                    } else {
+                        "decision table"
+                    };
+                    let msg = format!(
+                        "the {what} is not kept: tok cannot write the cell '{cell}' in a row"
+                    );
+                    self.warn(owner, &msg);
                 }
             }
             "context" => {
@@ -447,6 +489,45 @@ impl Importer {
         }
     }
 
+    fn relation(&mut self, e: X, d: &mut Decision, owner: &str) {
+        d.relation = true;
+        d.header_done = true;
+        for c in kids(e).filter(|c| local(*c) == "column") {
+            let name = c
+                .attribute("name")
+                .map(super::normalize)
+                .unwrap_or_default();
+            d.inputs
+                .push((name, type_attr(c).unwrap_or_else(|| "any".into())));
+            d.input_values.push(None);
+        }
+        for r in kids(e).filter(|c| local(*c) == "row") {
+            let mut cells = Vec::new();
+            for x in kids(r) {
+                if local(x) == "literalExpression" {
+                    let t = kid(x, "text").map(text_of).unwrap_or_default();
+                    cells.push(if t.trim().is_empty() {
+                        "null".to_string()
+                    } else {
+                        one_line(&t)
+                    });
+                } else {
+                    self.warn(
+                        owner,
+                        "a relation cell that is not a literal expression is not kept",
+                    );
+                    cells.push("null".into());
+                }
+            }
+            let line = self.next_line();
+            d.rules.push(Rule {
+                inputs: cells,
+                line,
+                ..Default::default()
+            });
+        }
+    }
+
     fn table(&mut self, e: X, d: &mut Decision, owner: &str, default_name: &str) {
         d.header_done = true;
         if let Some(h) = e.attribute("hitPolicy") {
@@ -481,6 +562,8 @@ impl Importer {
         }
         let outputs: Vec<X> = kids(e).filter(|c| local(*c) == "output").collect();
         let single = outputs.len() == 1;
+        d.no_inputs = d.inputs.is_empty();
+        d.no_outputs = outputs.is_empty();
         let mut defaults: Vec<String> = Vec::new();
         for o in &outputs {
             let name = o
@@ -634,6 +717,9 @@ pub fn is_dmn(xml: &str) -> bool {
 pub fn import_dmn(xml: &str) -> Result<(Document, Vec<String>), ImportError> {
     let tree =
         roxmltree::Document::parse(xml).map_err(|e| ImportError(format!("not a DMN file: {e}")))?;
+    if let Some(e) = crate::xml::too_deep(&tree) {
+        return Err(ImportError(e));
+    }
     let root = tree.root_element();
     if local(root) != "definitions" {
         return Err(ImportError(

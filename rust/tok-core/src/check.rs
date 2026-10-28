@@ -210,6 +210,9 @@ pub fn check(doc: &mut Document, level: &str, bpmn: Option<&dyn BpmnRules>) -> V
     if c.doc.lang_07() {
         c.layer_07(camunda);
     }
+    if c.doc.lang_10() {
+        c.layer_10();
+    }
     c.decisions_and_forms();
     c.feel();
     c.simulation();
@@ -227,6 +230,17 @@ fn s(v: &str) -> String {
 }
 
 impl Checker<'_> {
+    /// Deprecations of language 1.0 (`R090`): a key or flag given more than once on one
+    /// line, whose earlier values the language drops. The keys that may repeat (the
+    /// triggers of events and `error` of operations, language 0.5) are not repeated here.
+    fn layer_10(&mut self) {
+        let repeated = std::mem::take(&mut self.doc.repeated);
+        for (line, key) in &repeated {
+            self.add("R090", *line, None, &[("key", key.clone())]);
+        }
+        self.doc.repeated = repeated;
+    }
+
     fn add(&mut self, code: &str, line: usize, id: Option<&str>, args: &[(&str, String)]) {
         self.diags.push(Diag::new(code, line, id, args));
     }

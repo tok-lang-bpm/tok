@@ -194,6 +194,103 @@ impl Label {
 
 // ------------------------------------------------------------------ geometry
 
+/// Side of a cell of [`Buckets`].
+const CELL: f64 = 100.0;
+/// A box spanning more cells than this is kept in a list that every query returns.
+const MAX_CELLS: i64 = 4096;
+
+/// A uniform grid over the drawing: for a rectangle, the items whose boxes may overlap it.
+/// It makes the measures that look for shapes, flows or labels near a route or a label
+/// independent of the size of the diagram; every measure counts what it finds, so it gives
+/// the same result as a scan of all items.
+#[derive(Default)]
+struct Buckets {
+    cells: HashMap<(i64, i64), Vec<usize>>,
+    /// the cells of each item: `(x0, y0, x1, y1)`, or `None` for an item everywhere
+    spans: Vec<Option<(i64, i64, i64, i64)>>,
+    everywhere: Vec<usize>,
+}
+
+/// The cells a box covers, widened by a margin that absorbs rounding at cell borders.
+fn cell_span(r: R) -> Option<(i64, i64, i64, i64)> {
+    let c = |v: f64| (v / CELL).floor();
+    let (x0, y0) = (c(r[0] - 2.0), c(r[1] - 2.0));
+    let (x1, y1) = (c(r[0] + r[2].max(0.0) + 2.0), c(r[1] + r[3].max(0.0) + 2.0));
+    if ![x0, y0, x1, y1]
+        .iter()
+        .all(|v| v.is_finite() && v.abs() < 1e12)
+    {
+        return None;
+    }
+    #[allow(clippy::cast_possible_truncation)]
+    let span = (x0 as i64, y0 as i64, x1 as i64, y1 as i64);
+    ((span.2 - span.0 + 1).saturating_mul(span.3 - span.1 + 1) <= MAX_CELLS).then_some(span)
+}
+
+impl Buckets {
+    fn new(boxes: impl IntoIterator<Item = R>) -> Buckets {
+        let mut g = Buckets::default();
+        for r in boxes {
+            g.spans.push(None);
+            g.put(g.spans.len() - 1, r);
+        }
+        g
+    }
+
+    fn put(&mut self, i: usize, r: R) {
+        let span = cell_span(r);
+        self.spans[i] = span;
+        match span {
+            None => self.everywhere.push(i),
+            Some((x0, y0, x1, y1)) => {
+                for x in x0..=x1 {
+                    for y in y0..=y1 {
+                        self.cells.entry((x, y)).or_default().push(i);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Item `i` now has box `r`.
+    fn update(&mut self, i: usize, r: R) {
+        match self.spans[i] {
+            None => self.everywhere.retain(|&k| k != i),
+            Some((x0, y0, x1, y1)) => {
+                for x in x0..=x1 {
+                    for y in y0..=y1 {
+                        if let Some(v) = self.cells.get_mut(&(x, y)) {
+                            v.retain(|&k| k != i);
+                        }
+                    }
+                }
+            }
+        }
+        self.put(i, r);
+    }
+
+    /// The items whose boxes may overlap `r` (a superset of those that do), in
+    /// increasing order.
+    fn near(&self, r: R) -> Vec<usize> {
+        let mut out = self.everywhere.clone();
+        match cell_span(r) {
+            None => out.extend(0..self.spans.len()),
+            Some((x0, y0, x1, y1)) => {
+                for x in x0..=x1 {
+                    for y in y0..=y1 {
+                        if let Some(v) = self.cells.get(&(x, y)) {
+                            out.extend_from_slice(v);
+                        }
+                    }
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+}
+
 fn shrink(r: R, d: f64) -> R {
     [r[0] + d, r[1] + d, r[2] - 2.0 * d, r[3] - 2.0 * d]
 }
@@ -231,6 +328,18 @@ fn seg_in_rect(a: Pt, b: Pt, r: R) -> bool {
 
 fn poly_in_rect(pts: &[Pt], r: R) -> bool {
     pts.windows(2).any(|w| seg_in_rect(w[0], w[1], r))
+}
+
+fn grow(r: R, d: f64) -> R {
+    shrink(r, -d)
+}
+
+/// Boxes more than one unit apart: routes in them neither cross nor overlap.
+fn apart(a: R, b: R) -> bool {
+    a[0] > b[0] + b[2] + 1.0
+        || b[0] > a[0] + a[2] + 1.0
+        || a[1] > b[1] + b[3] + 1.0
+        || b[1] > a[1] + a[3] + 1.0
 }
 
 fn rects_overlap(a: R, b: R) -> bool {
@@ -403,6 +512,10 @@ pub(crate) struct Scene {
     drawing: R,
     total: Vector,
     budget: Vector,
+    /// the boxes of the nodes, of the routes of the edges and of the text of the labels
+    node_grid: Buckets,
+    edge_grid: Buckets,
+    label_grid: Buckets,
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -695,8 +808,14 @@ impl Scene {
             drawing,
             total: [0; N],
             budget: [0; N],
+            node_grid: Buckets::default(),
+            edge_grid: Buckets::default(),
+            label_grid: Buckets::default(),
         };
         sc.make_labels(md, inp);
+        sc.node_grid = Buckets::new(sc.nodes.iter().map(|n| n.r));
+        sc.edge_grid = Buckets::new(sc.edges.iter().map(|e| bbox_of(&e.pts)));
+        sc.label_grid = Buckets::new((0..sc.labels.len()).map(|l| sc.label_box(l)));
         sc.total = sc.totals();
         sc.budget = sc.total;
         sc
@@ -752,8 +871,8 @@ impl Scene {
 
     fn edge_terms(&self, e: usize, pts: &[Pt], v: &mut Vector) {
         let ed = &self.edges[e];
-        for (k, n) in self.nodes.iter().enumerate() {
-            if !ed.exempt.contains(&k) && poly_in_rect(pts, shrink(n.r, 3.0)) {
+        for k in self.node_grid.near(bbox_of(pts)) {
+            if !ed.exempt.contains(&k) && poly_in_rect(pts, shrink(self.nodes[k].r, 3.0)) {
                 v[HITS] += 1;
             }
         }
@@ -805,7 +924,8 @@ impl Scene {
     fn label_fixed_terms(&self, tb: R) -> i64 {
         let ra = shrink(tb, 1.0);
         let mut n = 0;
-        for nd in &self.nodes {
+        for k in self.node_grid.near(ra) {
+            let nd = &self.nodes[k];
             if !nd.big_sub && rects_overlap(ra, nd.r) {
                 n += 1;
             }
@@ -826,22 +946,27 @@ impl Scene {
     fn totals(&self) -> Vector {
         let mut v = [0; N];
         for e in 0..self.edges.len() {
-            self.edge_terms(e, &self.edges[e].pts, &mut v);
-            for f in e + 1..self.edges.len() {
-                self.pair_terms(e, &self.edges[e].pts, f, &self.edges[f].pts, &mut v);
+            let pts = &self.edges[e].pts;
+            self.edge_terms(e, pts, &mut v);
+            // two routes whose boxes are apart neither cross nor overlap
+            let eb = bbox_of(pts);
+            for f in self.edge_grid.near(grow(eb, 1.0)) {
+                if f > e && !apart(eb, bbox_of(&self.edges[f].pts)) {
+                    self.pair_terms(e, pts, f, &self.edges[f].pts, &mut v);
+                }
             }
         }
         let boxes: Vec<R> = (0..self.labels.len()).map(|l| self.label_box(l)).collect();
         for (a, ba) in boxes.iter().enumerate() {
             let ra = shrink(*ba, 1.0);
-            for bb in &boxes[a + 1..] {
-                if rects_overlap(ra, shrink(*bb, 1.0)) {
+            for b in self.label_grid.near(ra) {
+                if b > a && rects_overlap(ra, shrink(boxes[b], 1.0)) {
                     v[LBL] += 1;
                 }
             }
             v[LBL] += self.label_fixed_terms(*ba);
-            for ed in &self.edges {
-                if poly_in_rect(&ed.pts, ra) {
+            for f in self.edge_grid.near(ra) {
+                if poly_in_rect(&self.edges[f].pts, ra) {
                     v[LBL_EDGE] += 1;
                 }
             }
@@ -854,23 +979,18 @@ impl Scene {
         let mut v = [0; N];
         self.edge_terms(e, pts, &mut v);
         let eb = bbox_of(pts);
-        for f in 0..self.edges.len() {
+        for f in self.edge_grid.near(grow(eb, 1.0)) {
             if f == e {
                 continue;
             }
             let q = &self.edges[f].pts;
-            let fb = bbox_of(q);
-            if eb[0] > fb[0] + fb[2] + 1.0
-                || fb[0] > eb[0] + eb[2] + 1.0
-                || eb[1] > fb[1] + fb[3] + 1.0
-                || fb[1] > eb[1] + eb[3] + 1.0
-            {
+            if apart(eb, bbox_of(q)) {
                 continue;
             }
             self.pair_terms(e, pts, f, q, &mut v);
         }
         let own = self.edges[e].label;
-        for l in 0..self.labels.len() {
+        for l in self.label_grid.near(eb) {
             if Some(l) == own {
                 continue;
             }
@@ -888,20 +1008,25 @@ impl Scene {
     /// Terms of label `l` placed at text box `tb`; `edge` replaces the route of one edge.
     fn label_terms(&self, l: usize, tb: R, edge: Option<(usize, &[Pt])>, v: &mut Vector) {
         let ra = shrink(tb, 1.0);
-        for m in 0..self.labels.len() {
+        for m in self.label_grid.near(ra) {
             if m != l && rects_overlap(ra, shrink(self.label_box(m), 1.0)) {
                 v[LBL] += 1;
             }
         }
         v[LBL] += self.label_fixed_terms(tb);
-        for (f, ed) in self.edges.iter().enumerate() {
-            let pts: &[Pt] = match edge {
-                Some((e, p)) if e == f => p,
-                _ => &ed.pts,
-            };
-            if poly_in_rect(pts, ra) {
+        for f in self.edge_grid.near(ra) {
+            if edge.is_some_and(|(e, _)| e == f) {
+                continue;
+            }
+            if poly_in_rect(&self.edges[f].pts, ra) {
                 v[LBL_EDGE] += 1;
             }
+        }
+        // the edge with another route: wherever that route runs
+        if let Some((_, p)) = edge
+            && poly_in_rect(p, ra)
+        {
+            v[LBL_EDGE] += 1;
         }
     }
 
@@ -909,10 +1034,11 @@ impl Scene {
     fn soft(&self, e: usize, pts: &[Pt]) -> f64 {
         let mut c = S_LEN * length(pts);
         let ed = &self.edges[e];
-        for (k, n) in self.nodes.iter().enumerate() {
+        for k in self.node_grid.near(grow(bbox_of(pts), CLEARANCE)) {
             if ed.exempt.contains(&k) {
                 continue;
             }
+            let n = &self.nodes[k];
             if poly_in_rect(pts, shrink(n.r, -CLEARANCE)) && !poly_in_rect(pts, shrink(n.r, 3.0)) {
                 c += S_NEAR;
             }
@@ -1004,8 +1130,8 @@ impl Scene {
                 pts.extend(self.edges[e].pts.iter().copied());
                 let b = bbox_of(&pts);
                 let zone = [b[0] - 60.0, b[1] - 60.0, b[2] + 120.0, b[3] + 120.0];
-                for (f, fe) in self.edges.iter().enumerate() {
-                    if f != e && rects_overlap(zone, bbox_of(&fe.pts)) {
+                for f in self.edge_grid.near(zone) {
+                    if f != e && rects_overlap(zone, bbox_of(&self.edges[f].pts)) {
                         dirty[f] = true;
                     }
                 }
@@ -1070,9 +1196,11 @@ impl Scene {
         for k in 0..N {
             self.total[k] += v[k] - cur[k];
         }
+        self.edge_grid.update(e, bbox_of(&pts));
         self.edges[e].pts = pts;
         if let (Some(l), Some(di)) = (self.edges[e].label, ldi) {
             self.labels[l].di = di;
+            self.label_grid.update(l, self.label_box(l));
         }
         true
     }
@@ -1298,18 +1426,6 @@ impl Scene {
         if starts.is_empty() || (ends.is_empty() && line_end.is_none()) {
             return Vec::new();
         }
-        let mut obstacles: Vec<R> = Vec::new();
-        for (k, n) in self.nodes.iter().enumerate() {
-            if ed.containers.contains(&k) {
-                continue;
-            }
-            // the ends of the flow are left from their border; other shapes keep a clearance
-            if Some(k) == ed.s_node || Some(k) == ed.t_node {
-                obstacles.push(shrink(n.r, 3.0));
-            } else {
-                obstacles.push(shrink(n.r, -CLEARANCE));
-            }
-        }
         let mut out = Vec::new();
         let span = {
             let mut pts: Vec<Pt> = starts.iter().map(|p| p.p).collect();
@@ -1332,7 +1448,7 @@ impl Scene {
             } else {
                 ed.area
             };
-            let grid = Grid::new(self, e, &starts, &ends, line_end, win, &obstacles);
+            let grid = Grid::new(self, e, &starts, &ends, line_end, win);
             let std_s: Vec<Port> = starts.iter().filter(|p| p.cost == 0).copied().collect();
             let std_e: Vec<Port> = ends.iter().filter(|p| p.cost == 0).copied().collect();
             let vert = |v: &[Port]| -> Vec<Port> {
@@ -1456,6 +1572,7 @@ impl Scene {
         lb.lines = lines;
         lb.chars = chars;
         lb.wrap_w = wrap_w;
+        self.label_grid.update(l, self.label_box(l));
         true
     }
 
@@ -1486,18 +1603,19 @@ impl Scene {
             tb[3] + 2.0 * LABEL_NEAR,
         ];
         let ends = [ed.s_node, ed.t_node];
-        for (k, n) in self.nodes.iter().enumerate() {
+        for k in self.node_grid.near(near) {
+            let n = &self.nodes[k];
             if !n.big_sub && !ends.contains(&Some(k)) && rects_overlap(near, n.r) {
                 c += 2.0;
             }
         }
-        for (f, other) in self.edges.iter().enumerate() {
-            if f != e && poly_in_rect(&other.pts, near) {
+        for f in self.edge_grid.near(near) {
+            if f != e && poly_in_rect(&self.edges[f].pts, near) {
                 c += 2.0;
             }
         }
-        for (m, lb) in self.labels.iter().enumerate() {
-            let own = lb.node.is_some_and(|k| ends.contains(&Some(k)));
+        for m in self.label_grid.near(near) {
+            let own = self.labels[m].node.is_some_and(|k| ends.contains(&Some(k)));
             if m != l && !own && rects_overlap(near, self.label_box(m)) {
                 c += 2.0;
             }
@@ -1511,7 +1629,8 @@ impl Scene {
             *y > tb[1] + 1.0 && *y < tb[1] + tb[3] - 1.0 && tb[0] < *x1 && tb[0] + tb[2] > *x0
         });
         // the border of an expanded sub-process
-        let sub = self.nodes.iter().any(|n| {
+        let sub = self.node_grid.near(tb).into_iter().any(|k| {
+            let n = &self.nodes[k];
             n.big_sub
                 && rects_overlap(shrink(tb, 1.0), n.r)
                 && !contains(n.r, tb)
@@ -1743,7 +1862,6 @@ impl Grid {
         ends: &[Port],
         line_end: Option<(f64, f64, f64, u8)>,
         win: R,
-        obstacles: &[R],
     ) -> Grid {
         let ed = &sc.edges[e];
         let (wx0, wy0, wx1, wy1) = (win[0], win[1], win[0] + win[2], win[1] + win[3]);
@@ -1753,10 +1871,23 @@ impl Grid {
             xs.push(p.p.0);
             ys.push(p.p.1);
         }
-        let near: Vec<R> = obstacles
-            .iter()
-            .copied()
-            .filter(|o| rects_overlap(*o, [wx0 - 20.0, wy0 - 20.0, win[2] + 40.0, win[3] + 40.0]))
+        // the shapes near the window: the ends of the flow are left from their border, other
+        // shapes keep a clearance; the containers of the ends are no obstacles
+        let zone = [wx0 - 20.0, wy0 - 20.0, win[2] + 40.0, win[3] + 40.0];
+        let near: Vec<R> = sc
+            .node_grid
+            .near(grow(zone, CLEARANCE))
+            .into_iter()
+            .filter(|k| !ed.containers.contains(k))
+            .map(|k| {
+                let r = sc.nodes[k].r;
+                if Some(k) == ed.s_node || Some(k) == ed.t_node {
+                    shrink(r, 3.0)
+                } else {
+                    shrink(r, -CLEARANCE)
+                }
+            })
+            .filter(|o| rects_overlap(*o, zone))
             .collect();
         let mut ox = vec![wx0, wx1];
         let mut oy = vec![wy0, wy1];
@@ -1814,11 +1945,14 @@ impl Grid {
                 }
             }
         }
-        // other edges, split by orientation
+        // other edges, split by orientation: only those near the window, since a move on
+        // the grid meets nothing farther than 6 units from its line
+        let reach = grow(win, 10.0);
         let mut oh: Vec<(f64, f64, f64, bool)> = Vec::new();
         let mut ov: Vec<(f64, f64, f64, bool)> = Vec::new();
         let mut odiag: Vec<(Pt, Pt)> = Vec::new();
-        for (f, fe) in sc.edges.iter().enumerate() {
+        for f in sc.edge_grid.near(reach) {
+            let fe = &sc.edges[f];
             if f == e {
                 continue;
             }
@@ -1834,7 +1968,10 @@ impl Grid {
                 }
             }
         }
-        let labels: Vec<R> = (0..sc.labels.len())
+        let labels: Vec<R> = sc
+            .label_grid
+            .near(reach)
+            .into_iter()
             .filter(|l| Some(*l) != ed.label)
             .map(|l| shrink(sc.label_box(l), 1.0))
             .collect();

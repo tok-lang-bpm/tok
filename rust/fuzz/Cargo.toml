@@ -1,0 +1,82 @@
+# Fuzz targets of the tok engine: a cargo workspace of its own, outside the workspace of
+# the engine (rust/Cargo.toml excludes it), so that the release gates and the vendored
+# crates of the R package never see libFuzzer. Run with cargo-fuzz on a nightly
+# toolchain; see docs/fuzzing.md.
+[package]
+name = "tok-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tok-core = { path = "../tok-core" }
+tok-bpmn = { path = "../tok-bpmn" }
+tok-sim = { path = "../tok-sim" }
+tok-cli = { path = "../tok-cli" }
+
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "check"
+path = "fuzz_targets/check.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "roundtrip"
+path = "fuzz_targets/roundtrip.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "feel"
+path = "fuzz_targets/feel.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "import_bpmn"
+path = "fuzz_targets/import_bpmn.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "import_dmn"
+path = "fuzz_targets/import_dmn.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sidecar"
+path = "fuzz_targets/sidecar.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render"
+path = "fuzz_targets/render.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sim"
+path = "fuzz_targets/sim.rs"
+test = false
+doc = false
+bench = false

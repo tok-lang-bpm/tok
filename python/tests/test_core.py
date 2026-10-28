@@ -9,7 +9,22 @@ from tok.parser import parse
 from tok.printer import fmt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXAMPLES = sorted(glob.glob(os.path.join(HERE, "..", "..", "examples", "*.tok")))
+
+
+def language_version(path):
+    """The language version in the header of a tok document (None without a header)."""
+    with open(path, encoding="utf-8") as f:
+        for line in f.read().lstrip("\ufeff").splitlines():
+            words = line.split("#", 1)[0].split()
+            if words:
+                return words[1] if words[0] == "tok" and len(words) > 1 else None
+    return None
+
+
+# the examples of languages 0.1 and 0.3, which this implementation reads (frozen at 0.3);
+# the examples of newer languages are tested by the engine
+EXAMPLES = [p for p in sorted(glob.glob(os.path.join(HERE, "..", "..", "examples", "*.tok")))
+            if language_version(p) in ("0.1", "0.3", None)]
 
 
 def codes(text, **kw):

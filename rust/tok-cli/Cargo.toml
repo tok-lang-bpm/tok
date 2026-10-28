@@ -6,7 +6,14 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Command line interface of the tok process language"
+homepage.workspace = true
+documentation = "https://docs.rs/tok-cli"
+readme = "README.md"
+# the tests and examples read the conformance corpus and the fixtures of the repository
+exclude = ["tests/", "examples/"]
+keywords = ["bpmn", "dmn", "camunda", "process-modelling", "tok"]
+categories = ["command-line-utilities", "science"]
+description = "The tok command: check, format, export, import, simulate and evaluate process models written in the tok language (BPMN 2.0, DMN 1.5, Camunda forms)"
 
 [lib]
 name = "tok_cli"
@@ -17,9 +24,9 @@ name = "tok"
 path = "src/main.rs"
 
 [dependencies]
-tok-core = { path = "../tok-core" }
-tok-bpmn = { path = "../tok-bpmn" }
-tok-sim = { path = "../tok-sim" }
+tok-core = { path = "../tok-core", version = "1.0.0" }
+tok-bpmn = { path = "../tok-bpmn", version = "1.0.0" }
+tok-sim = { path = "../tok-sim", version = "1.0.0" }
 serde_json = "1.0.154"
 
 [lints]

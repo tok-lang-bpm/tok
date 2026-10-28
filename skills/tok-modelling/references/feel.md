@@ -1,6 +1,6 @@
 # FEEL in tok
 
-tok writes conditions (`when=`), script expressions (`expr=`), event conditions (`condition=`), correlation keys (`correlation=`) and decision logic in **FEEL**, the expression language of DMN (DMN 1.5, chapter 10). Documents of languages 0.1–0.6 use a subset of FEEL (§1–§8). It is large enough for the processes of an information institution, and small enough to implement the same way in Python, Julia and R. Documents of language 0.7 use FEEL at DMN conformance level 3 (§9).
+tok writes conditions (`when=`), script expressions (`expr=`), event conditions (`condition=`), correlation keys (`correlation=`) and decision logic in **FEEL**, the expression language of DMN (DMN 1.5, chapter 10). Documents of languages 0.1–0.6 use a subset of FEEL (§1–§8). It is large enough for the processes of an information institution, and small enough to implement the same way in Python, Julia and R. Documents of languages 0.7 and 1.0 use FEEL at DMN conformance level 3 (§9).
 
 An expression outside the subset is still exported unchanged to BPMN and DMN XML, so a process engine with full FEEL (for example Camunda 8) can run it. `tok check` reports it as `F001` (a warning), and the simulator cannot evaluate it. A malformed expression is `F002` (an error).
 
@@ -114,9 +114,9 @@ The subset leaves out:
 
 Decision tables with hit policy `priority` have no output value lists in tok 0.1; the evaluator treats `priority` as `first`. Overlaps under `unique` are detected (`D010`) for cells built from string, boolean and number literals, comparisons and intervals. Cells with variables or `not(…)` are not analysed.
 
-## 9. FEEL of language 0.7
+## 9. FEEL of languages 0.7 and 1.0
 
-In a document with the header `tok 0.7` every FEEL text is full FEEL of DMN 1.5 at conformance level 3, evaluated by the Rust engine. Its conformance is measured with the DMN Technology Compatibility Kit (`dmn-tck.md`).
+In a document with the header `tok 0.7` or `tok 1.0` every FEEL text is full FEEL of DMN 1.5 at conformance level 3, evaluated by the Rust engine. Its conformance is measured with the DMN Technology Compatibility Kit (`dmn-tck.md`).
 
 ### 9.1 Values and literals
 

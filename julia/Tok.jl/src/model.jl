@@ -41,7 +41,7 @@ const TRANSACTION_METHODS = Dict("compensate" => "##Compensate", "store" => "##S
 const GLOBAL_KINDS = Dict("task" => "globalTask", "user" => "globalUserTask", "manual" => "globalManualTask",
                           "script" => "globalScriptTask", "rule" => "globalBusinessRuleTask")
 
-const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5", "0.6", "0.7")
+const LANGUAGE_VERSIONS = ("0.1", "0.3", "0.5", "0.6", "0.7", "1.0")
 
 # language 0.6: conversation nodes of a collaboration and choreography activities
 const CONVERSATION_KINDS = ("conversation", "subconversation", "callconversation")

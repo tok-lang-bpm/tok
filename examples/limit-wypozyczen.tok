@@ -1,0 +1,43 @@
+tok 1.0 "Wypożyczenie z limitem"
+
+# a process of language 1.0 with the decision model it uses: the business rule task asks
+# the decision `limit`, which requires the age and the account of the reader, the rules of
+# the library and the business knowledge model of the fee
+pool biblioteka "Biblioteka uczelniana"
+  lane wypozyczalnia "Wypożyczalnia"
+    start prosba "Czytelnik prosi o książkę"
+    user konto-czytelnika "Sprawdzenie konta czytelnika" by=bibliotekarz duration="tri(1m, 2m, 5m)"
+    rule ustalenie "Ustalenie limitu" decision=limit result=limit
+    xor w-limicie "Czy czytelnik mieści się w limicie?"
+    manual wydanie "Wydanie książki" by=bibliotekarz duration="tri(2m, 4m, 10m)"
+    user odmowa "Wyjaśnienie odmowy" by=bibliotekarz duration="5m"
+    end wydana "Książka wydana"
+    end odmowiono "Wypożyczenie odmówione"
+
+flow prosba -> konto-czytelnika -> ustalenie -> w-limicie
+flow w-limicie -> wydanie "tak" when="wypozyczone < limit"
+flow w-limicie -> odmowa "nie" default
+flow wydanie -> wydana
+flow odmowa -> odmowiono
+
+inputdata wiek "Wiek czytelnika" type=number
+inputdata konto "Rodzaj konta" type=string
+inputdata dni-zwloki "Dni zwłoki" type=number
+source regulamin "Regulamin wypożyczalni" kind=regulamin
+
+bkm kara "Kara za zwłokę" params="dni: number" type=number requires="regulamin" expr="dni * 0.5"
+
+decision limit "Limit wypożyczeń" type=number requires="wiek konto regulamin" hit=first
+  | wiek: number | konto: string          || limit: number |
+  | < 18         | -                      || 5             |
+  | -            | "student", "doktorant" || 15            |
+  | -            | "pracownik"            || 30            |
+  | -            | -                      || 10            |
+
+decision naleznosc "Należność za zwłokę" type=number requires="kara dni-zwloki" expr="kara(dni-zwloki)"
+
+simulate cases=200 seed=1 arrival="exp(6m)"
+resource bibliotekarz "Bibliotekarz" count=2
+variable wiek "unif(16, 70)"
+variable konto "cat(student=0.6, doktorant=0.1, pracownik=0.2, gość=0.1)"
+variable wypozyczone "unif(0, 20)"

@@ -121,7 +121,7 @@ impl<'a, 'i> Importer<'a, 'i> {
     pub(super) fn choreographies(&mut self) {
         let chors: Vec<X> = findall(self.root, "choreography").collect();
         for c in chors {
-            let cid = self.tid_s(c.attribute("id"));
+            let cid = self.tid_of(c);
             let mut flows: IndexMap<String, ChoreoFlow> = IndexMap::new();
             for mf in findall(c, "messageFlow") {
                 let pool = |r: Option<&str>| {
@@ -234,7 +234,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             "subChoreography" => "subchoreo",
             _ => "callchoreo",
         };
-        let nid = self.tid_s(e.attribute("id"));
+        let nid = self.tid_of(e);
         let mut attrs = Attrs::new();
         let mut flags = Vec::new();
         let parts: Vec<String> = ref_texts(e, "participantRef")
@@ -405,7 +405,7 @@ impl<'a, 'i> Importer<'a, 'i> {
             _ => "conversation",
         };
         let xid = e.attribute("id").unwrap_or("");
-        let nid = self.tid_s(e.attribute("id"));
+        let nid = self.tid_of(e);
         let mut pools: Vec<String> = ref_texts(e, "participantRef")
             .iter()
             .map(|r| self.tid_s(Some(r)))

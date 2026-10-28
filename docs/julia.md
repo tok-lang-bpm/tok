@@ -76,7 +76,7 @@ print(Tok.semantic_xml(doc))   # semantic BPMN XML of the conformance corpus
 Tok.format_diag(diags[1], "pl")
 ```
 
-The core reads every language version (0.1 to 0.7) and reports the core diagnostics (codes `T`, `P` and the structural `R` codes of the corpus). The command line `julia --project=julia/Tok.jl julia/Tok.jl/bin/tok.jl fmt|xml|check FILE` runs it.
+The core reads every language version (0.1 to 1.0) and reports the core diagnostics (codes `T`, `P` and the structural `R` codes of the corpus). The command line `julia --project=julia/Tok.jl julia/Tok.jl/bin/tok.jl fmt|xml|check FILE` runs it.
 
 ## Native simulation
 

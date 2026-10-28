@@ -558,7 +558,12 @@ impl Eval<'_> {
 
     fn for_loop(&self, ctx: &[(String, Expr, Option<Expr>)], body: &Expr, env: &Rc<Env>) -> Value {
         let mut out: Vec<Value> = Vec::new();
-        if self.for_level(ctx, 0, env, body, &mut out) {
+        // `partial` (the results so far) is a copy of them in every iteration; it is made
+        // only for a body that reads it, so that other iterations take linear time
+        let mut names = Vec::new();
+        collect_names(body, &mut names);
+        let partial = names.iter().any(|n| n == "partial");
+        if self.for_level(ctx, 0, env, body, partial, &mut out) {
             Value::list(out)
         } else {
             Value::Null
@@ -571,13 +576,18 @@ impl Eval<'_> {
         k: usize,
         env: &Rc<Env>,
         body: &Expr,
+        partial: bool,
         out: &mut Vec<Value>,
     ) -> bool {
         if k == ctx.len() {
-            let mut v = Map::new();
-            v.insert("partial".into(), Value::list(out.clone()));
-            let scope = Env::child(env, v);
-            out.push(self.eval(body, &scope));
+            if partial {
+                let mut v = Map::new();
+                v.insert("partial".into(), Value::list(out.clone()));
+                let scope = Env::child(env, v);
+                out.push(self.eval(body, &scope));
+            } else {
+                out.push(self.eval(body, env));
+            }
             return true;
         }
         let (name, from, to) = &ctx[k];
@@ -588,7 +598,7 @@ impl Eval<'_> {
             let mut vars = Map::new();
             vars.insert(name.clone(), item.clone());
             let scope = Env::child(env, vars);
-            if !self.for_level(ctx, k + 1, &scope, body, out) {
+            if !self.for_level(ctx, k + 1, &scope, body, partial, out) {
                 return false;
             }
         }

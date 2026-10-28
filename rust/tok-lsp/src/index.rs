@@ -10,9 +10,13 @@
 //! of the decision requirements graph by their FEEL name, which is the identifier unless
 //! `name=` gives another one; those names are found outside FEEL string literals, and only
 //! the elements a decision or business knowledge model requires are visible in it (spec
-//! §9.1), so a parameter with the name of an element is not a reference.
+//! §9.1), so a parameter with the name of an element is not a reference. FEEL resolves the
+//! longest name of the document, so the first word of a longer name (`kara` in the entry
+//! `kara za tydzień`) is not a reference either, nor is the key of a context (`{kara: …}`).
+//! The types of the columns of a table name DMN types (`| konto: konto-t || … |`).
 
 use tok_core::Document;
+use tok_core::feel3::Names;
 use tok_core::lexer::{Kind, Line};
 
 use crate::text::Text;
@@ -70,12 +74,19 @@ fn id_start(c: char) -> bool {
     c.is_ascii_alphabetic() || c == '_'
 }
 
+/// A character of a word of a FEEL name with spaces (`kara za tydzień`).
+fn name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '-' || c == '\''
+}
+
 struct Finder<'a> {
     doc: &'a Document,
     text: &'a Text,
     out: Vec<Occurrence>,
     /// The elements the current decision or business knowledge model requires.
     visible: Vec<String>,
+    /// The FEEL names of the document (language 0.7 and 1.0), for names of several words.
+    feel_names: Option<Names>,
 }
 
 impl Finder<'_> {
@@ -98,6 +109,34 @@ impl Finder<'_> {
             _ => None,
         };
         base.is_some_and(|b| b.attr("name").is_none())
+    }
+
+    /// The end of the longest FEEL name of two or more words that starts at column `j`
+    /// (`kara za tydzień`, an entry or a parameter): FEEL resolves the longest name of the
+    /// document, so the words inside it do not refer to elements.
+    fn long_name(&self, chars: &[char], j: usize, end: usize) -> Option<usize> {
+        let names = self.feel_names.as_ref()?;
+        let mut ends = Vec::new();
+        let mut p = j;
+        while ends.len() < 8 {
+            let mut q = p;
+            while q < end && name_char(chars[q]) {
+                q += 1;
+            }
+            if q == p {
+                break;
+            }
+            ends.push(q);
+            if q + 1 < end && chars[q] == ' ' && name_char(chars[q + 1]) {
+                p = q + 1;
+            } else {
+                break;
+            }
+        }
+        ends.iter().skip(1).rev().copied().find(|&e| {
+            let name: String = chars[j..e].iter().collect();
+            names.contains(&name)
+        })
     }
 
     fn push(&mut self, id: &str, line: usize, start: usize, end: usize, def: bool) {
@@ -180,12 +219,30 @@ impl Finder<'_> {
                 .rev()
                 .find(|c| !c.is_whitespace())
                 .is_some_and(|&c| c == '.');
+            if !lhs
+                && !path
+                && name_char(c)
+                && (j == start || !name_char(chars[j - 1]))
+                && let Some(k) = self.long_name(chars, j, end)
+            {
+                j = k;
+                continue;
+            }
             if !lhs && id_start(c) && (j == start || !id_char(chars[j - 1])) && !path {
                 let mut k = j;
                 while k < end && id_char(chars[k]) {
                     k += 1;
                 }
                 let word: String = chars[j..k].iter().collect();
+                // a key of a context (`{limit: …}`) or a parameter (`function(x: number)`)
+                let key = chars[k..end]
+                    .iter()
+                    .find(|c| !c.is_whitespace())
+                    .is_some_and(|&c| c == ':');
+                if key {
+                    j = k;
+                    continue;
+                }
                 if self.feel_named(&word) {
                     self.push(&word, line, j, k, false);
                 } else if word.contains('-') {
@@ -243,14 +300,19 @@ impl Finder<'_> {
         let second_double = bars.get(1).copied();
         for (n, &(a, b)) in cells.iter().enumerate() {
             if header {
-                let Some(outputs) = first_double else {
-                    return;
-                };
-                if n >= outputs {
+                if second_double.is_some_and(|s| n >= s) {
                     break;
                 }
                 let colon = (a..b).find(|&k| chars[k] == ':').unwrap_or(b);
-                self.feel(line, a, colon, false, false);
+                if first_double.is_some_and(|outputs| n < outputs) {
+                    self.feel(line, a, colon, false, false);
+                }
+                // the type of a column may be a DMN type of the document (`konto: konto-t`),
+                // before the values of the column (`= "a", "b"`)
+                if colon < b {
+                    let eq = (colon..b).find(|&k| chars[k] == '=').unwrap_or(b);
+                    self.names(line, colon + 1, eq, Some("item"));
+                }
             } else {
                 if second_double.is_some_and(|s| n >= s) {
                     break;
@@ -362,6 +424,7 @@ pub fn occurrences(doc: &Document, lines: &[Line], text: &Text) -> Vec<Occurrenc
         text,
         out: Vec::new(),
         visible: Vec::new(),
+        feel_names: doc.lang_07().then(|| tok_core::drg::names(doc)),
     };
     let lang07 = doc.lang_07();
     let mut prev_row = false;

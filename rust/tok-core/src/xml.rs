@@ -13,6 +13,31 @@ pub const DMN_DI_NS: &str = "http://www.omg.org/spec/DMN/20180521/DI/";
 /// XML Schema, the namespace of `xsd:` type names in `structureRef` (language 0.5).
 pub const XSD_NS: &str = "http://www.w3.org/2001/XMLSchema";
 
+/// The deepest nesting of elements the importers read. They walk the element tree
+/// recursively, so the nesting is bounded to keep them within the stack. A file within
+/// it gives a document whose blocks are within the nesting the parser reads
+/// (`parser::MAX_BLOCK_DEPTH`): every block of tok stands for at least one element.
+pub const MAX_DEPTH: usize = 64;
+
+/// The error of a file whose elements are nested deeper than [`MAX_DEPTH`], or `None`.
+pub fn too_deep(tree: &roxmltree::Document<'_>) -> Option<String> {
+    (depth(tree) > MAX_DEPTH)
+        .then(|| format!("the XML elements are nested more than {MAX_DEPTH} levels deep"))
+}
+
+/// The nesting of the elements of a tree, without recursion: nodes come in document
+/// order, so a parent comes before its children.
+pub fn depth(tree: &roxmltree::Document<'_>) -> usize {
+    let mut depths = vec![0usize; tree.descendants().count() + 1];
+    let mut deepest = 0;
+    for n in tree.descendants() {
+        let d = n.parent().map_or(0, |p| depths[p.id().get_usize()]) + usize::from(n.is_element());
+        depths[n.id().get_usize()] = d;
+        deepest = deepest.max(d);
+    }
+    deepest
+}
+
 /// Registered namespace prefixes (empty prefix = default namespace).
 pub fn prefix(ns: &str) -> &'static str {
     match ns {

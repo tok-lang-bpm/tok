@@ -1,0 +1,16 @@
+tok 0.7 "Tabele"
+
+decision bez-wejsc hit=first
+  || o: number |
+  || 1         |
+
+decision bez-wynikow
+  | a: number ||
+  | 1         ||
+
+decision pusta
+  ||
+
+decision z-adnotacja hit=first
+  || o: number || uwaga |
+  || 2         || x     |

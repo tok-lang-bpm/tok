@@ -110,6 +110,10 @@ A file that uses any of these constructs is printed with the header `tok 0.3`; a
 
 XML identifiers are kept when they are valid tok identifiers (ASCII letters, digits, `_` and `-`, starting with a letter or `_`). Others are converted: Polish letters lose their diacritics, other characters become `_`, and a leading digit gets a `_` prefix (`1end` → `_1end`). All references are rewritten consistently, and each conversion is reported.
 
+An element the import declares that has no identifier, or whose identifier an element before it already has, gets an identifier of its own, named after its element (`startEvent`, `task-2`); references to a repeated identifier lead to the first element that has it. Both are reported. A message flow without both ends is dropped and reported, like a sequence flow to an element that is not imported.
+
+Files whose elements are nested more than 64 levels deep are refused (the BPMN and DMN files of modelling tools nest about a dozen levels); the deepest blocks of a tok document are 64 levels deep as well (`P008`).
+
 Sequence and message flows keep their XML identifier through `id=` only when it differs from the identifier tok derives (`f-SOURCE-TARGET`, see spec §6.1). Models drawn in other tools usually have identifiers like `Flow_0x1y2z3`, so every flow gets its own `flow` line with `id=`. `tok import --no-flow-ids` (Python: `keep_ids=False`) drops these identifiers and gives compact chains; message flows that a conversation names keep theirs. The gateways' default flows are kept either way, because tok records them with the `default` flag rather than by identifier.
 
 ## Limits
@@ -159,7 +163,7 @@ The Rust test `rust/tok-bpmn/tests/sidecar.rs` imports every file of `conformanc
 
 ## Importing DMN
 
-`tok import model.dmn [-o model.tok]` reads a DMN 1.1, 1.2, 1.3, 1.4 or 1.5 file (any file whose root element is a DMN `definitions` is recognised) and prints a document of language 0.7 (spec §9). The decision model keeps its elements, identifiers, names, requirements, decision logic and types; everything tok does not express is reported on standard error, as for BPMN.
+`tok import model.dmn [-o model.tok]` reads a DMN 1.1, 1.2, 1.3, 1.4 or 1.5 file (any file whose root element is a DMN `definitions` is recognised) and prints a document of language 0.7 (spec §9), which is also a valid document of every release 1.x (spec §4.1). The decision model keeps its elements, identifiers, names, requirements, decision logic and types; everything tok does not express is reported on standard error, as for BPMN.
 
 | DMN | tok |
 |---|---|
@@ -183,6 +187,6 @@ The Rust test `rust/tok-bpmn/tests/sidecar.rs` imports every file of `conformanc
 
 FEEL text is kept as it is written; in table cells, line breaks outside strings become spaces and inside strings the escape `\n`, because a row is one line. DMN identifiers that are not tok identifiers are converted as for BPMN (`Identifiers`).
 
-Not kept, and reported: decision services, imports of other models and requirements of elements of other models, text annotations, associations and groups, organisation units and the owners of knowledge sources, performance indicators, objectives, decision makers and owners, using processes and tasks, function items of item definitions, function definitions of kind Java or PMML, bindings and relation cells that are not literal expressions, and the diagram (DMNDI): tok lays out the decision requirements diagram again on export. The DMN files tok exports import back to the same document, apart from comments and the order of `requires=` (grouped by the kind of requirement).
+Not kept, and reported: decision services, imports of other models and requirements of elements of other models, text annotations, associations and groups, organisation units and the owners of knowledge sources, performance indicators, objectives, decision makers and owners, using processes and tasks, function items of item definitions, function definitions of kind Java or PMML, bindings and relation cells that are not literal expressions, decision tables and relations with a header or row cell tok cannot write in a row (an input expression or output name with `=` outside a string, a cell with `|` or `#` outside a string, a type with a prefix other than `feel:`), and the diagram (DMNDI): tok lays out the decision requirements diagram again on export. The DMN files tok exports import back to the same document, apart from comments and the order of `requires=` (grouped by the kind of requirement).
 
 The test cases of the DMN Technology Compatibility Kit (`dmn-tck.md`) are imported, printed, parsed again and evaluated; the import must keep everything their evaluation needs.

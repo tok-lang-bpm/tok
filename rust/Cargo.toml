@@ -1,14 +1,16 @@
 [workspace]
 resolver = "3"
-members = ["tok-core", "tok-bpmn", "tok-cli", "tok-py", "tok-sim", "tok-capi", "tok-lsp", "tok-mcp", "tok-wasm"]
+members = ["tok-core", "tok-bpmn", "tok-cli", "tok-py", "tok-sim", "tok-capi", "tok-lsp", "tok-mcp", "tok-wasm", "tok-bench"]
+exclude = ["fuzz"]
 
 [workspace.package]
-version = "0.9.0"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.99"
 license = "GPL-3.0-or-later"
 authors = ["Marek Deja"]
 repository = "https://codeberg.org/MarekDeja/tok"
+homepage = "https://codeberg.org/MarekDeja/tok"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

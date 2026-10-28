@@ -3,8 +3,9 @@
 //! the expected files byte for byte.
 //!
 //! The expected files of cases written for language 0.1 and 0.3 (01–32) are produced by
-//! the Python reference implementation (`conformance/generate.py`). Those of cases whose
-//! header declares a newer language (33 and following) are produced by this engine:
+//! the Python reference implementation (`conformance/generate.py`). Those of every other
+//! case (33 and following: a newer language, or a header the Python generator skips) are
+//! produced by this engine:
 //!
 //! ```text
 //! TOK_BLESS=1 cargo test -p tok-core --test conformance
@@ -52,6 +53,24 @@ fn corpus() -> PathBuf {
 
 fn write(path: &Path, text: &str) {
     fs::write(path, text).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
+}
+
+/// Whether `conformance/generate.py` (the pure-Python implementation) writes the expected
+/// files of a case: the second word of its first statement line is `0.1` or `0.3`, or it
+/// has no header. Every other case, also one whose header is malformed (`tok v1.0`),
+/// belongs to this engine.
+fn python_generates(text: &str) -> bool {
+    let first = text
+        .trim_start_matches('\u{feff}')
+        .lines()
+        .map(|l| l.split('#').next().unwrap_or(""))
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or("");
+    let words: Vec<&str> = first.split_whitespace().collect();
+    match words.as_slice() {
+        ["tok", version, ..] => matches!(*version, "0.1" | "0.3"),
+        _ => true,
+    }
 }
 
 /// Expected outputs of a case of language 0.5 or newer, as `generate.py` writes them for
@@ -127,7 +146,7 @@ fn conformance_corpus() {
             .collect();
         codes.sort();
         let diag_text: String = codes.iter().map(|c| format!("{c}\n")).collect();
-        if std::env::var_os("TOK_BLESS").is_some() && doc.lang_05() {
+        if std::env::var_os("TOK_BLESS").is_some() && !python_generates(&text) {
             bless(&expected, stem, &text, &diag_text);
         }
         let exp_diag = fs::read_to_string(expected.join(format!("{stem}.diag"))).expect("diag");

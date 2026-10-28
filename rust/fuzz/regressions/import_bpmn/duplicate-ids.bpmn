@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d" targetNamespace="x">
+  <bpmn:process id="p">
+    <bpmn:startEvent id="s" />
+    <bpmn:subProcess id="a">
+      <bpmn:startEvent id="s" />
+      <bpmn:task id="a" />
+      <bpmn:sequenceFlow id="f" sourceRef="s" targetRef="a" />
+    </bpmn:subProcess>
+    <bpmn:task id="a" />
+    <bpmn:sequenceFlow id="f" sourceRef="s" targetRef="a" />
+  </bpmn:process>
+</bpmn:definitions>

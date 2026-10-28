@@ -10,11 +10,17 @@ jobs, set variables) and checks that the instance completed at the expected end 
 that the expected variables hold the expected values. Only the Python standard library and
 the tok package are used.
 
-Decision cases (language 0.7, `DMN_CASES`) take a conformance case of `conformance/cases`,
-export its DMN 1.5 files with the native `tok` program (the environment variable `TOK`, else
-`tok` on the PATH, else the program built in `dist/` or `rust/target/release/`), deploy them,
-and compare the evaluation of each listed decision by Camunda with `tok eval` and with the
-expected value.
+Engine cases (language 1.0, `ENGINE_CASES`) are process cases of `conformance/cases` that the
+pure-Python implementation cannot read: they are exported with the native `tok` program (the
+environment variable `TOK`, else `tok` on the PATH, else the program built in `dist/` or
+`rust/target/release/`) and driven like the other process cases.
+
+Decision cases (languages 0.7 and 1.0, `DMN_CASES`) take a conformance case of
+`conformance/cases`, export its DMN 1.5 files with the native `tok` program, deploy them, and
+compare the evaluation of each listed decision by Camunda with `tok eval` and with the expected
+value.
+
+The process cases run first and the decision cases last.
 """
 
 import glob
@@ -59,9 +65,17 @@ CASES = {
     "connector": ("lacznik", {}, [], "e", {"stan": "<any>"}),
     "version-tag": ("wersja", {}, [], "e", {}),
 }
-EXTRA_CHECKS = {"version-tag": ("versionTag", "v1")}
+# process cases of language 1.0 in conformance/cases, exported with the native tok program
+ENGINE_CASES = {
+    "63-executable-10": ("wypozyczenie-10", {"dni": [2, 4], "czytelnik": "Jan"},
+                         [("check-job", "naliczenie", {"naleznosc": 3}, {"waluta": "PLN"}, {}),
+                          ("check-user", {"assignee": "bibliotekarz", "priority": 60}),
+                          ("user", 1, {"wydano": True})],
+                         "wydano", {"naleznosc": 3, "wydano": True}),
+}
+EXTRA_CHECKS = {"version-tag": ("versionTag", "v1"), "63-executable-10": ("versionTag", "1.0")}
 
-# decision cases of language 0.7: case of conformance/cases -> [(decision id, variables, expected value)]
+# decision cases of languages 0.7 and 1.0: case of conformance/cases -> [(decision id, variables, expected value)]
 DMN_CASES = {
     "61-executable-decisions": [
         ("limit", {"wiek": 16}, 5),
@@ -76,6 +90,11 @@ DMN_CASES = {
         ("podsumowanie", {"wiek": 30, "Zaległe opłaty": 80, "dni-zwloki": 0, "opłata dzienna": 1},
          {"kwota": 0, "stan konta": "blokada", "po zwłoce": False}),
         ("kanaly", {}, ["e-mail", "SMS"]),
+    ],
+    "63-executable-10": [
+        ("limit-10", {"wiek": 16}, 5),
+        ("limit-10", {"wiek": 40}, 10),
+        ("oplata-zwloka", {"dni zwłoki": 4}, 2),
     ],
 }
 REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
@@ -169,11 +188,22 @@ def export(name, folder):
     return files
 
 
+def export_engine(name, folder):
+    """The files `tok export` writes for a conformance case (BPMN, DMN, forms; not the pictures)."""
+    case = os.path.join(REPO, "conformance", "cases", name + ".tok")
+    res = subprocess.run([tok_program(), "export", case, "-o", folder], capture_output=True, text=True,
+                         encoding="utf-8")
+    if res.returncode != 0:
+        raise RuntimeError("tok export: " + (res.stderr or res.stdout).strip()[:400])
+    return sorted(p for ext in ("bpmn", "dmn", "form") for p in glob.glob(os.path.join(folder, "*." + ext)))
+
+
 def run_case(name):
-    pid, start_vars, actions, end_id, expected = CASES[name]
+    engine = name in ENGINE_CASES
+    pid, start_vars, actions, end_id, expected = (ENGINE_CASES if engine else CASES)[name]
     folder = tempfile.mkdtemp(prefix="tok-camunda-")
     try:
-        files = export(name, folder)
+        files = export_engine(name, folder) if engine else export(name, folder)
         call("POST", "/deployments", files=files)
         inst = call("POST", "/process-instances", {"processDefinitionId": pid, "variables": start_vars})
         pik = inst["processInstanceKey"]
@@ -193,6 +223,8 @@ def run_case(name):
                         raise RuntimeError("job header %s = %r, expected %r" % (k, jh.get(k), v))
                 if job.get("retries") is not None and name == "mappings" and job["retries"] != 5:
                     raise RuntimeError("job retries %r, expected 5" % job["retries"])
+                if job.get("retries") is not None and engine and job["retries"] != 3:
+                    raise RuntimeError("job retries %r, expected 3" % job["retries"])
                 call("POST", "/jobs/%s/completion" % job["jobKey"], {"variables": act[4]})
             elif kind == "error":
                 job = activate(act[1])[0]
@@ -210,7 +242,7 @@ def run_case(name):
                 for k, v in act[1].items():
                     if task.get(k) != v:
                         raise RuntimeError("user task %s = %r, expected %r" % (k, task.get(k), v))
-                for k in ("dueDate", "followUpDate", "candidateGroups"):
+                for k in ("dueDate", "followUpDate", "candidateGroups") if not engine else ():
                     if not task.get(k):
                         raise RuntimeError("user task has no %s" % k)
             elif kind == "set":
@@ -298,13 +330,20 @@ def run_dmn_case(name):
 
 
 def main(argv):
-    names = argv or list(CASES) + list(DMN_CASES)
+    names = list(dict.fromkeys(argv or list(CASES) + list(ENGINE_CASES) + list(DMN_CASES)))
+    # every process case before every decision case; a case of both kinds runs in both parts
+    runs = [(n, run_case, "") for n in names if n in CASES or n in ENGINE_CASES]
+    runs += [(n, run_dmn_case, " (decisions)" if n in ENGINE_CASES else "") for n in DMN_CASES if n in names]
+    unknown = [n for n in names if n not in CASES and n not in ENGINE_CASES and n not in DMN_CASES]
+    if unknown:
+        print("unknown cases: " + ", ".join(unknown))
+        return 2
     failed = 0
-    for name in names:
-        err = run_dmn_case(name) if name in DMN_CASES else run_case(name)
-        print("%-24s %s" % (name, "OK" if err is None else "FAIL: " + err))
+    for name, run, label in runs:
+        err = run(name)
+        print("%-30s %s" % (name + label, "OK" if err is None else "FAIL: " + err))
         failed += err is not None
-    print("%d of %d cases passed" % (len(names) - failed, len(names)))
+    print("%d of %d cases passed" % (len(runs) - failed, len(runs)))
     return 1 if failed else 0
 
 

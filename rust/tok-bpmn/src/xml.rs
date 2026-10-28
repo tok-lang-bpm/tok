@@ -23,6 +23,10 @@ pub const DI_NS: &str = NS[3].1;
 pub const XSI_NS: &str = NS[4].1;
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
+/// The deepest nesting of elements read. The BPMN files tok writes for documents whose
+/// blocks are nested as deep as the parser reads stay well within it.
+pub const MAX_DEPTH: usize = 256;
+
 /// Qualified name in ElementTree notation: `{uri}local` or `local`.
 pub fn qn(uri: &str, local: &str) -> String {
     format!("{{{uri}}}{local}")
@@ -153,6 +157,19 @@ impl Doc {
         };
         let rx = roxmltree::Document::parse_with_options(text, opt)
             .map_err(|e| Error::Xml(e.to_string()))?;
+        // `build` and everything that walks the tree recurse into elements; nodes come
+        // in document order, so a parent comes before its children
+        let mut depths = vec![0usize; rx.descendants().count() + 1];
+        for n in rx.descendants() {
+            let d =
+                n.parent().map_or(0, |p| depths[p.id().get_usize()]) + usize::from(n.is_element());
+            if d > MAX_DEPTH {
+                return Err(Error::Xml(format!(
+                    "the elements are nested more than {MAX_DEPTH} levels deep"
+                )));
+            }
+            depths[n.id().get_usize()] = d;
+        }
         let mut doc = Doc {
             elems: Vec::new(),
             root: 0,

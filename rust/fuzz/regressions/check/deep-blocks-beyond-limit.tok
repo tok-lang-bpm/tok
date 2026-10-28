@@ -1,0 +1,285 @@
+tok 0.7 "Zagnieżdżone podprocesy"
+start a
+end e
+flow a -> s0 -> e
+sub s0
+  start a0
+  end e0
+  sub s1
+    start a1
+    end e1
+    sub s2
+      start a2
+      end e2
+      sub s3
+        start a3
+        end e3
+        sub s4
+          start a4
+          end e4
+          sub s5
+            start a5
+            end e5
+            sub s6
+              start a6
+              end e6
+              sub s7
+                start a7
+                end e7
+                sub s8
+                  start a8
+                  end e8
+                  sub s9
+                    start a9
+                    end e9
+                    sub s10
+                      start a10
+                      end e10
+                      sub s11
+                        start a11
+                        end e11
+                        sub s12
+                          start a12
+                          end e12
+                          sub s13
+                            start a13
+                            end e13
+                            sub s14
+                              start a14
+                              end e14
+                              sub s15
+                                start a15
+                                end e15
+                                sub s16
+                                  start a16
+                                  end e16
+                                  sub s17
+                                    start a17
+                                    end e17
+                                    sub s18
+                                      start a18
+                                      end e18
+                                      sub s19
+                                        start a19
+                                        end e19
+                                        sub s20
+                                          start a20
+                                          end e20
+                                          sub s21
+                                            start a21
+                                            end e21
+                                            sub s22
+                                              start a22
+                                              end e22
+                                              sub s23
+                                                start a23
+                                                end e23
+                                                sub s24
+                                                  start a24
+                                                  end e24
+                                                  sub s25
+                                                    start a25
+                                                    end e25
+                                                    sub s26
+                                                      start a26
+                                                      end e26
+                                                      sub s27
+                                                        start a27
+                                                        end e27
+                                                        sub s28
+                                                          start a28
+                                                          end e28
+                                                          sub s29
+                                                            start a29
+                                                            end e29
+                                                            sub s30
+                                                              start a30
+                                                              end e30
+                                                              sub s31
+                                                                start a31
+                                                                end e31
+                                                                sub s32
+                                                                  start a32
+                                                                  end e32
+                                                                  sub s33
+                                                                    start a33
+                                                                    end e33
+                                                                    sub s34
+                                                                      start a34
+                                                                      end e34
+                                                                      sub s35
+                                                                        start a35
+                                                                        end e35
+                                                                        sub s36
+                                                                          start a36
+                                                                          end e36
+                                                                          sub s37
+                                                                            start a37
+                                                                            end e37
+                                                                            sub s38
+                                                                              start a38
+                                                                              end e38
+                                                                              sub s39
+                                                                                start a39
+                                                                                end e39
+                                                                                sub s40
+                                                                                  start a40
+                                                                                  end e40
+                                                                                  sub s41
+                                                                                    start a41
+                                                                                    end e41
+                                                                                    sub s42
+                                                                                      start a42
+                                                                                      end e42
+                                                                                      sub s43
+                                                                                        start a43
+                                                                                        end e43
+                                                                                        sub s44
+                                                                                          start a44
+                                                                                          end e44
+                                                                                          sub s45
+                                                                                            start a45
+                                                                                            end e45
+                                                                                            sub s46
+                                                                                              start a46
+                                                                                              end e46
+                                                                                              sub s47
+                                                                                                start a47
+                                                                                                end e47
+                                                                                                sub s48
+                                                                                                  start a48
+                                                                                                  end e48
+                                                                                                  sub s49
+                                                                                                    start a49
+                                                                                                    end e49
+                                                                                                    sub s50
+                                                                                                      start a50
+                                                                                                      end e50
+                                                                                                      sub s51
+                                                                                                        start a51
+                                                                                                        end e51
+                                                                                                        sub s52
+                                                                                                          start a52
+                                                                                                          end e52
+                                                                                                          sub s53
+                                                                                                            start a53
+                                                                                                            end e53
+                                                                                                            sub s54
+                                                                                                              start a54
+                                                                                                              end e54
+                                                                                                              sub s55
+                                                                                                                start a55
+                                                                                                                end e55
+                                                                                                                sub s56
+                                                                                                                  start a56
+                                                                                                                  end e56
+                                                                                                                  sub s57
+                                                                                                                    start a57
+                                                                                                                    end e57
+                                                                                                                    sub s58
+                                                                                                                      start a58
+                                                                                                                      end e58
+                                                                                                                      sub s59
+                                                                                                                        start a59
+                                                                                                                        end e59
+                                                                                                                        sub s60
+                                                                                                                          start a60
+                                                                                                                          end e60
+                                                                                                                          sub s61
+                                                                                                                            start a61
+                                                                                                                            end e61
+                                                                                                                            sub s62
+                                                                                                                              start a62
+                                                                                                                              end e62
+                                                                                                                              sub s63
+                                                                                                                                start a63
+                                                                                                                                end e63
+                                                                                                                                sub s64
+                                                                                                                                  start a64
+                                                                                                                                  end e64
+                                                                                                                                  sub s65
+                                                                                                                                    start a65
+                                                                                                                                    end e65
+                                                                                                                                    sub s66
+                                                                                                                                      start a66
+                                                                                                                                      end e66
+                                                                                                                                      sub s67
+                                                                                                                                        start a67
+                                                                                                                                        end e67
+                                                                                                                                        sub s68
+                                                                                                                                          start a68
+                                                                                                                                          end e68
+                                                                                                                                          sub s69
+                                                                                                                                            start a69
+                                                                                                                                            end e69
+                                                                                                                                            sub s70
+                                                                                                                                            flow a69 -> s70 -> e69
+                                                                                                                                          flow a68 -> s69 -> e68
+                                                                                                                                        flow a67 -> s68 -> e67
+                                                                                                                                      flow a66 -> s67 -> e66
+                                                                                                                                    flow a65 -> s66 -> e65
+                                                                                                                                  flow a64 -> s65 -> e64
+                                                                                                                                flow a63 -> s64 -> e63
+                                                                                                                              flow a62 -> s63 -> e62
+                                                                                                                            flow a61 -> s62 -> e61
+                                                                                                                          flow a60 -> s61 -> e60
+                                                                                                                        flow a59 -> s60 -> e59
+                                                                                                                      flow a58 -> s59 -> e58
+                                                                                                                    flow a57 -> s58 -> e57
+                                                                                                                  flow a56 -> s57 -> e56
+                                                                                                                flow a55 -> s56 -> e55
+                                                                                                              flow a54 -> s55 -> e54
+                                                                                                            flow a53 -> s54 -> e53
+                                                                                                          flow a52 -> s53 -> e52
+                                                                                                        flow a51 -> s52 -> e51
+                                                                                                      flow a50 -> s51 -> e50
+                                                                                                    flow a49 -> s50 -> e49
+                                                                                                  flow a48 -> s49 -> e48
+                                                                                                flow a47 -> s48 -> e47
+                                                                                              flow a46 -> s47 -> e46
+                                                                                            flow a45 -> s46 -> e45
+                                                                                          flow a44 -> s45 -> e44
+                                                                                        flow a43 -> s44 -> e43
+                                                                                      flow a42 -> s43 -> e42
+                                                                                    flow a41 -> s42 -> e41
+                                                                                  flow a40 -> s41 -> e40
+                                                                                flow a39 -> s40 -> e39
+                                                                              flow a38 -> s39 -> e38
+                                                                            flow a37 -> s38 -> e37
+                                                                          flow a36 -> s37 -> e36
+                                                                        flow a35 -> s36 -> e35
+                                                                      flow a34 -> s35 -> e34
+                                                                    flow a33 -> s34 -> e33
+                                                                  flow a32 -> s33 -> e32
+                                                                flow a31 -> s32 -> e31
+                                                              flow a30 -> s31 -> e30
+                                                            flow a29 -> s30 -> e29
+                                                          flow a28 -> s29 -> e28
+                                                        flow a27 -> s28 -> e27
+                                                      flow a26 -> s27 -> e26
+                                                    flow a25 -> s26 -> e25
+                                                  flow a24 -> s25 -> e24
+                                                flow a23 -> s24 -> e23
+                                              flow a22 -> s23 -> e22
+                                            flow a21 -> s22 -> e21
+                                          flow a20 -> s21 -> e20
+                                        flow a19 -> s20 -> e19
+                                      flow a18 -> s19 -> e18
+                                    flow a17 -> s18 -> e17
+                                  flow a16 -> s17 -> e16
+                                flow a15 -> s16 -> e15
+                              flow a14 -> s15 -> e14
+                            flow a13 -> s14 -> e13
+                          flow a12 -> s13 -> e12
+                        flow a11 -> s12 -> e11
+                      flow a10 -> s11 -> e10
+                    flow a9 -> s10 -> e9
+                  flow a8 -> s9 -> e8
+                flow a7 -> s8 -> e7
+              flow a6 -> s7 -> e6
+            flow a5 -> s6 -> e5
+          flow a4 -> s5 -> e4
+        flow a3 -> s4 -> e3
+      flow a2 -> s3 -> e2
+    flow a1 -> s2 -> e1
+  flow a0 -> s1 -> e0

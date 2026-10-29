@@ -11,7 +11,7 @@
 //   node test/smoke.mjs [FILE.vsix]
 
 import { execFileSync, execSync, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -136,6 +136,9 @@ function lsp(command) {
   return { send, next, exited };
 }
 
+// the extension makes the bundled server executable when it is activated (a .vsix keeps no
+// file modes); the unpacked copy here gets the same
+if (process.platform !== "win32") chmodSync(join(ext, "server", exe), 0o755);
 const server = lsp(join(ext, "server", exe));
 const uri = "file:///smoke/zamowienie.tok";
 server.send({ id: 1, method: "initialize", params: { processId: null, capabilities: {}, locale: "pl" } });

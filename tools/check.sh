@@ -62,7 +62,9 @@ PYTHONPATH=python/src "$PY" -m unittest discover -s python/tests
 
 step "Wheel of tok-lang with the Rust engine ($PLATFORM); parity with the pure-Python implementation"
 VENV=rust/target/check-venv
-[ -x "$VENV/$BIN/python" ] || "$PY" -m venv "$VENV"
+# reused between runs; made again when its pip does not work (a copy restored by a build
+# cache, or a Python that has changed)
+"$VENV/$BIN/python" -m pip --version > /dev/null 2>&1 || { rm -rf "$VENV"; "$PY" -m venv "$VENV"; }
 "$VENV/$BIN/python" -m pip install --quiet --disable-pip-version-check --upgrade "maturin>=1.7,<2" ziglang
 # maturin finds zig through the Python of the virtual environment
 export PATH="$ROOT/$VENV/$BIN:$PATH"

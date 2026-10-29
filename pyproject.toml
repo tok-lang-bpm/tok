@@ -11,7 +11,7 @@ build-backend = "maturin"
 [project]
 name = "tok-lang"
 dynamic = ["version"]
-description = "tok: a plain-text language for information-process models (BPMN 2.0, DMN, forms, simulation)"
+description = "tok: a plain-text language for process models (BPMN 2.0, DMN, forms, simulation)"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "GPL-3.0-or-later" }
@@ -34,14 +34,16 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://codeberg.org/MarekDeja/tok"
-Documentation = "https://codeberg.org/MarekDeja/tok/src/branch/main/docs/python.md"
-Source = "https://codeberg.org/MarekDeja/tok"
-Issues = "https://codeberg.org/MarekDeja/tok/issues"
-Changelog = "https://codeberg.org/MarekDeja/tok/src/branch/main/docs/changelog.md"
+Homepage = "https://tok-lang-bpm.github.io/"
+Documentation = "https://tok-lang-bpm.github.io/"
+Source = "https://github.com/tok-lang-bpm/tok"
+Issues = "https://github.com/tok-lang-bpm/tok/issues"
+Changelog = "https://github.com/tok-lang-bpm/tok/blob/main/docs/changelog.md"
 
 [project.scripts]
 tok = "tok.cli:main"
+# the same command under the name of the package, so that `uvx tok-lang …` runs it
+tok-lang = "tok.cli:main"
 
 [tool.maturin]
 manifest-path = "rust/tok-py/Cargo.toml"

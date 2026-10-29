@@ -1,0 +1,17 @@
+name: Idea or missing construct
+description: A BPMN, DMN or Camunda construct tok does not express, a tool you need, or an improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you need
+      description: What you want to model or do, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example
+      description: How it looks in BPMN, DMN or another tool, or how you would like to write it in tok.
+      render: text

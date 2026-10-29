@@ -24,9 +24,9 @@ name = "tok"
 path = "src/main.rs"
 
 [dependencies]
-tok-core = { path = "../tok-core", version = "1.0.0" }
-tok-bpmn = { path = "../tok-bpmn", version = "1.0.0" }
-tok-sim = { path = "../tok-sim", version = "1.0.0" }
+tok-core = { path = "../tok-core", version = "1.0.1" }
+tok-bpmn = { path = "../tok-bpmn", version = "1.0.1" }
+tok-sim = { path = "../tok-sim", version = "1.0.1" }
 serde_json = "1.0.154"
 
 [lints]

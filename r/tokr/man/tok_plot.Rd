@@ -20,3 +20,8 @@ The path of the temporary SVG file, invisibly.
 \description{
 Shows the diagram in the RStudio or Positron viewer, or in the web browser.
 }
+\examples{
+if (interactive()) {
+  tok_plot(system.file("examples", "wypozyczenie.tok", package = "tokr"))
+}
+}

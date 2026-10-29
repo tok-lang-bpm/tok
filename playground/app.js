@@ -26,10 +26,12 @@ async function loadEngine() {
   state.generation += 1;
 }
 
-// Call an engine function; returns {ok} or {error}.
+// Call an engine function; returns {ok} or {error}. The functions whose names are reserved
+// words of JavaScript (export, import, eval) are exported with an underscore: _export, …
 function call(name, input, options = {}) {
+  const fn = state.engine[name] ?? state.engine["_" + name];
   try {
-    return JSON.parse(state.engine[name](input, JSON.stringify(options)));
+    return JSON.parse(fn(input, JSON.stringify(options)));
   } catch (e) {
     loadEngine();
     return { error: { kind: "internal", message: `the engine stopped: ${e.message}; it has been restarted` } };

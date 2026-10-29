@@ -775,11 +775,23 @@ fn cli(py: Python<'_>, argv: Vec<String>) -> u8 {
     py.detach(|| tok_cli::main_with_args(&argv))
 }
 
+/// Serve one MCP client on the standard input and output of the process (`tok mcp`) until
+/// the input ends; returns the exit status.
+#[pyfunction]
+fn mcp(py: Python<'_>) -> i32 {
+    py.detach(|| {
+        let stdin = std::io::stdin();
+        let stdout = std::io::stdout();
+        tok_mcp::run(stdin.lock(), stdout.lock())
+    })
+}
+
 #[pymodule]
 #[pyo3(name = "_engine")]
 fn tok_engine(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     m.add_function(wrap_pyfunction!(cli, m)?)?;
+    m.add_function(wrap_pyfunction!(mcp, m)?)?;
     m.add("FeelError", py.get_type::<FeelError>())?;
     m.add("FeelSyntaxError", py.get_type::<FeelSyntaxError>())?;
     m.add("FeelUnsupported", py.get_type::<FeelUnsupported>())?;

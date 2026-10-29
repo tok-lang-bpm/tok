@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="113 27 346 156" width="346" height="156">
+<defs><marker id="seqEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f2328"/></marker><marker id="msgEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M0.5,0.5 L9.5,5 L0.5,9.5 z" fill="#fff" stroke="#1f2328"/></marker><marker id="msgStart" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9"><circle cx="5" cy="5" r="4" fill="#fff" stroke="#1f2328"/></marker><marker id="assocEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" orient="auto"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#1f2328"/></marker></defs>
+<rect x="116.0" y="30.0" width="340.0" height="150.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/>
+<rect x="119.0" y="33.0" width="334.0" height="144.0" rx="8" fill="none" stroke="#1f2328"/>
+
+<polyline points="182.0,110.0 232.0,110.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="332.0,110.0 382.0,110.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="66.0,105.0 116.0,105.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<polyline points="456.0,105.0 506.0,105.0" fill="none" stroke="#1f2328" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#seqEnd)"/>
+<circle cx="48.0" cy="105.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<circle cx="164.0" cy="110.0" r="18" fill="#fff" stroke="#1f2328" stroke-width="1.6"/>
+<rect x="232.0" y="70.0" width="100.0" height="80.0" rx="10" fill="#fff" stroke="#1f2328" stroke-width="1.5"/>
+<circle cx="400.0" cy="110.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+<circle cx="524.0" cy="105.0" r="17" fill="#fff" stroke="#1f2328" stroke-width="3.5"/>
+</svg>

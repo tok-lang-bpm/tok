@@ -541,5 +541,32 @@ class EngineParity(unittest.TestCase):
             tok_engine.check("tok 0.1\n", lang="de")
 
 
+@unittest.skipIf(tok_engine is None, "the Rust engine (tok._engine) is not installed")
+class McpCommandTest(unittest.TestCase):
+    """``tok mcp`` serves the MCP server of the engine on standard input and output."""
+
+    def test_initialize_and_call_a_tool(self):
+        messages = [
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "test", "version": "1"}}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+                "name": "fmt", "arguments": {"text": "tok 0.1\nstart  s\n"}}},
+        ]
+        text = "".join(json.dumps(m) + "\n" for m in messages)
+        out = subprocess.run([sys.executable, "-m", "tok", "mcp"], input=text.encode("utf-8"),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout
+        replies = [json.loads(line) for line in out.decode("utf-8").splitlines() if line.strip()]
+        self.assertEqual([r["id"] for r in replies], [1, 2])
+        self.assertEqual(replies[0]["result"]["serverInfo"]["name"], "tok-mcp")
+        self.assertEqual(replies[1]["result"]["content"][0]["text"], "tok 0.1\n\nstart s\n")
+
+    def test_version(self):
+        out = subprocess.run([sys.executable, "-m", "tok", "mcp", "--version"],
+                             stdout=subprocess.PIPE, check=True).stdout.decode("utf-8")
+        self.assertEqual(out.strip(), "tok-mcp " + tok_engine.version())
+
+
 if __name__ == "__main__":
     unittest.main()

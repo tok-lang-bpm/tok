@@ -21,3 +21,6 @@ The canonical text (invisibly when the file is rewritten).
 Prints the model as \verb{tok fmt} does: one statement per line, canonical order of
 attributes, comments kept.
 }
+\examples{
+tok_fmt(system.file("examples", "wypozyczenie.tok", package = "tokr"))
+}

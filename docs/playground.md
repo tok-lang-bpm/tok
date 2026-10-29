@@ -35,15 +35,15 @@ python -m http.server -d rust/target/playground 8000
 
 and open `http://localhost:8000/`.
 
-## Publishing
+## Hosting
 
-The folder is a complete static site with relative links, so it works at the root of a domain or in a subfolder. To publish it on Codeberg Pages, copy the contents of the built folder to the branch `pages` of the repository (or to a repository named `pages`) and push it; the site appears at `https://USER.codeberg.page/REPOSITORY/`. Any other static host (GitHub Pages, a web server, object storage with web hosting) takes the same files. The server must send `.wasm` files as `application/wasm`, which all common hosts do; the module is about 3.7 MB and compresses to about a third with the gzip or Brotli compression hosts apply.
+The playground of every release is at https://tok-lang-bpm.github.io/playground/. The built folder is a complete static site with relative links, so it works at the root of a domain or in a subfolder of any static host (GitHub Pages, Codeberg Pages, a web server, object storage with web hosting). The server must send `.wasm` files as `application/wasm`, which all common hosts do; the module is about 3.7 MB and compresses to about a third with the gzip or Brotli compression hosts apply.
 
 ## The engine in a page
 
 `pkg/tok_wasm.js` is an ES module. Its default export loads the WebAssembly module; the named exports are the functions of the engine, which take the text of a document (or of an XML file) and the options as a JSON string and return a JSON string, `{"ok": VALUE}` or `{"error": {"kind", "message"}}`, exactly as the C interface does (`c-api.md` documents every option and result):
 
-The names are `check`, `fmt`, `bpmn`, `svg`, `export`, `import`, `eval`, `sim`, `version` and `cheatsheet`. `export`, `import` and `eval` cannot be the names of variables in JavaScript, so a page renames them when it imports them (`import init, { check, export as exportFiles, import as importFile, eval as evaluate } from "./pkg/tok_wasm.js"`) or uses the module as a namespace:
+The names are `check`, `fmt`, `bpmn`, `svg`, `sim`, `version` and `cheatsheet`, and `_export`, `_import` and `_eval` for the functions `export`, `import` and `eval` of the C interface: those three are reserved words of JavaScript, so wasm-bindgen exports them with an underscore. A page imports them by these names (`import init, { check, _export as exportFiles, _import as importFile, _eval as evaluate } from "./pkg/tok_wasm.js"`) or uses the module as a namespace:
 
 ```js
 import init, * as tok from "./pkg/tok_wasm.js";
@@ -54,7 +54,7 @@ if (r.ok) console.log(r.ok.errors, r.ok.diagnostics);
 const picture = JSON.parse(tok.svg(text, "{}")).ok;
 ```
 
-`app.js` uses the namespace; its function `call` shows how the page parses the results and recovers from an internal error.
+`app.js` uses the namespace; its function `call` shows how the page finds a function by its name (with or without the underscore), parses the results and recovers from an internal error.
 
 ## The bpmn-js viewer
 

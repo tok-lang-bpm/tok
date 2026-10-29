@@ -2,6 +2,28 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version could change the language; from 1.0 the compatibility promise of the specification (`docs/spec.md` §4.3) holds for every release 1.x, and a patch version never changes the language.
 
+## [1.0.1] — 2026-10-29
+
+A release of the tools and the packages; the language stays 1.0 and every output for the conformance cases, the examples, the MIWG models and the DMN TCK stays as it was.
+
+### Added
+
+- `tok mcp`: the Python package runs the MCP server of the engine (`tok mcp`, `tok mcp --version`), so `pip install tok-lang` gives the language, the command line and the server for AI agents in one installation, and `uvx tok-lang mcp` runs the server without one. The package also has the command `tok-lang`, the same as `tok`. `server.json` registers the server in the MCP Registry as `io.github.tok-lang-bpm/tok` (`docs/mcp.md`).
+- The catalogue of BPMN symbols, `docs/symbols.md` and `docs/symbols/`: every symbol the engine draws (events by trigger and position, activities, markers, gateways, data, connections, pools and lanes, conversations, choreographies), with its BPMN element, the tok statement that produces it, its execution on Camunda 8, and short descriptions in English and Polish (`symbols.json`). `tools/symbols.py` draws them from small models with `tok bpmn` and `tok svg`, so they are exactly what the engine draws.
+- The example `examples/interlibrary-loan.tok` (the model of the README).
+- `CONTRIBUTING.md`, `SECURITY.md` and issue forms for the GitHub repository.
+
+### Fixed
+
+- Playground: the tabs *Decisions* and *Files* and the import of BPMN and DMN files failed, because the WebAssembly module exports the functions `export`, `import` and `eval` as `_export`, `_import` and `_eval` (reserved words of JavaScript) and the page called them without the underscore. `docs/playground.md` gives the exported names.
+
+### Changed
+
+- The project home is the GitHub organisation `tok-lang-bpm`: the repository https://github.com/tok-lang-bpm/tok with its issues, the guide and the playground at https://tok-lang-bpm.github.io/. The metadata of every package points there; the VS Code extension is published as `tok-lang-bpm.tok`. Development continues in the Codeberg repository, which is mirrored to GitHub.
+- The README is organised by what the reader wants to do, with an example in English and links that work on PyPI as well.
+- The R package `tokr`: every exported function has examples, the title and description of `DESCRIPTION` follow the conventions of CRAN, and `NEWS.md` lists the changes of the package; it is also built by R-universe (https://tok-lang-bpm.r-universe.dev).
+- The publishing sections of `editors/vscode/README.md`, `julia/binarybuilder/README.md` and `docs/playground.md` describe where users get the extension, `tok_jll` and the playground.
+
 ## [1.0.0] — 2026-10-28
 
 The stable release: language 1.0 (`tok 1.0` in the header) — the content of language 0.7 with its limits as rules, the deprecation `R090` and the compatibility promise of 1.x — the hardening of the engine (fuzzing, performance, the documentation checked against the sources, conformance tables for Camunda 8 and BPMN 2.0.2), and the packages prepared for their registries: PyPI, crates.io, CRAN, the Julia General registry, the VS Code Marketplace and Open VSX, Zenodo. Documents of 0.1, 0.3, 0.5, 0.6 and 0.7 stay valid and mean the same; every output of 0.9.0 for the conformance cases 01–61, the examples, the MIWG models and the DMN TCK stays as it was, and outputs change only where 0.9.0 crashed or wrote a file that is wrong or does not read back (below, Fixed). Reference: `docs/spec.md` §2.1, §4.1–§4.3; design notes and the decisions taken during implementation in `docs/design-1.0.md`; `docs/fuzzing.md`, `docs/performance.md`, `docs/conformance-camunda.md`, `docs/conformance-bpmn.md`, `docs/python.md`.

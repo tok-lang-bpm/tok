@@ -20,3 +20,10 @@ A \code{tok_model}; warnings about elements tok does not keep are in its element
 Reads a BPMN 2.0 file (for example drawn in Camunda Modeler) and returns the model as tok
 text, as \verb{tok import} does.
 }
+\examples{
+bpmn <- tempfile(fileext = ".bpmn")
+tok_bpmn(system.file("examples", "wypozyczenie.tok", package = "tokr"), file = bpmn)
+m <- tok_import(bpmn)
+m
+unlink(bpmn)
+}

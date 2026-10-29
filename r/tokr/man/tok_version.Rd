@@ -12,3 +12,6 @@ The version of the Rust engine compiled into the package.
 \description{
 Version of the tok engine
 }
+\examples{
+tok_version()
+}

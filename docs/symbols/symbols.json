@@ -1,0 +1,1012 @@
+{
+ "symbols": [
+  {
+   "id": "event-start-none",
+   "family": "Start events",
+   "bpmn": "StartEvent",
+   "tok": "start ID",
+   "camunda": "executed",
+   "en": "start event",
+   "pl": "zdarzenie początkowe"
+  },
+  {
+   "id": "event-start-message",
+   "family": "Start events",
+   "bpmn": "StartEvent with message trigger",
+   "tok": "start ID message=\"M\"",
+   "camunda": "executed",
+   "en": "message start event",
+   "pl": "zdarzenie początkowe: wiadomość"
+  },
+  {
+   "id": "event-start-timer",
+   "family": "Start events",
+   "bpmn": "StartEvent with timer trigger",
+   "tok": "start ID timer=P1D",
+   "camunda": "executed",
+   "en": "timer start event",
+   "pl": "zdarzenie początkowe: czas"
+  },
+  {
+   "id": "event-start-conditional",
+   "family": "Start events",
+   "bpmn": "StartEvent with conditional trigger",
+   "tok": "start ID condition=\"x > 1\"",
+   "camunda": "executed in event sub-processes",
+   "en": "conditional start event",
+   "pl": "zdarzenie początkowe: warunek"
+  },
+  {
+   "id": "event-start-signal",
+   "family": "Start events",
+   "bpmn": "StartEvent with signal trigger",
+   "tok": "start ID signal=\"S\"",
+   "camunda": "executed",
+   "en": "signal start event",
+   "pl": "zdarzenie początkowe: sygnał"
+  },
+  {
+   "id": "event-start-multiple",
+   "family": "Start events",
+   "bpmn": "StartEvent with multiple trigger",
+   "tok": "start ID message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "multiple start event",
+   "pl": "zdarzenie początkowe: wielokrotne"
+  },
+  {
+   "id": "event-start-parallel-multiple",
+   "family": "Start events",
+   "bpmn": "StartEvent with parallel multiple trigger",
+   "tok": "start ID message=\"A\" message=\"B\" parallel",
+   "camunda": "not executed (C105)",
+   "en": "parallel multiple start event",
+   "pl": "zdarzenie początkowe: równoległe wielokrotne"
+  },
+  {
+   "id": "event-subprocess-start-message",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with message trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID message=\"M\"",
+   "camunda": "executed",
+   "en": "interrupting message start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: wiadomość"
+  },
+  {
+   "id": "event-subprocess-start-timer",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with timer trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID timer=P1D",
+   "camunda": "executed",
+   "en": "interrupting timer start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: czas"
+  },
+  {
+   "id": "event-subprocess-start-conditional",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with conditional trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID condition=\"x > 1\"",
+   "camunda": "executed",
+   "en": "interrupting conditional start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: warunek"
+  },
+  {
+   "id": "event-subprocess-start-signal",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with signal trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID signal=\"S\"",
+   "camunda": "executed",
+   "en": "interrupting signal start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: sygnał"
+  },
+  {
+   "id": "event-subprocess-start-error",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with error trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID error=\"E\"",
+   "camunda": "executed",
+   "en": "interrupting error start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: błąd"
+  },
+  {
+   "id": "event-subprocess-start-escalation",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with escalation trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID escalation=\"X\"",
+   "camunda": "executed",
+   "en": "interrupting escalation start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: eskalacja"
+  },
+  {
+   "id": "event-subprocess-start-compensation",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with compensation trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID compensate",
+   "camunda": "executed",
+   "en": "interrupting compensation start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: kompensacja"
+  },
+  {
+   "id": "event-subprocess-start-multiple",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with multiple trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "interrupting multiple start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: wielokrotne"
+  },
+  {
+   "id": "event-subprocess-start-parallel-multiple",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with parallel multiple trigger in an event sub-process (interrupting)",
+   "tok": "eventsub … / start ID message=\"A\" message=\"B\" parallel",
+   "camunda": "not executed (C105)",
+   "en": "interrupting parallel multiple start event of an event sub-process",
+   "pl": "przerywające zdarzenie początkowe podprocesu zdarzeniowego: równoległe wielokrotne"
+  },
+  {
+   "id": "event-subprocess-start-message-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with message trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID message=\"M\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting message start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: wiadomość"
+  },
+  {
+   "id": "event-subprocess-start-timer-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with timer trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID timer=P1D noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting timer start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: czas"
+  },
+  {
+   "id": "event-subprocess-start-conditional-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with conditional trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID condition=\"x > 1\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting conditional start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: warunek"
+  },
+  {
+   "id": "event-subprocess-start-signal-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with signal trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID signal=\"S\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting signal start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: sygnał"
+  },
+  {
+   "id": "event-subprocess-start-escalation-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with escalation trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID escalation=\"X\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting escalation start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: eskalacja"
+  },
+  {
+   "id": "event-subprocess-start-multiple-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with multiple trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID message=\"A\" signal=\"B\" noninterrupting",
+   "camunda": "not executed (C104)",
+   "en": "non-interrupting multiple start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: wielokrotne"
+  },
+  {
+   "id": "event-subprocess-start-parallel-multiple-noninterrupting",
+   "family": "Start events of event sub-processes",
+   "bpmn": "StartEvent with parallel multiple trigger in an event sub-process (non-interrupting)",
+   "tok": "eventsub … / start ID message=\"A\" message=\"B\" parallel noninterrupting",
+   "camunda": "not executed (C105)",
+   "en": "non-interrupting parallel multiple start event of an event sub-process",
+   "pl": "nieprzerywające zdarzenie początkowe podprocesu zdarzeniowego: równoległe wielokrotne"
+  },
+  {
+   "id": "event-catch-message",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with message trigger",
+   "tok": "catch ID message=\"M\"",
+   "camunda": "executed",
+   "en": "catching message intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: wiadomość"
+  },
+  {
+   "id": "event-catch-timer",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with timer trigger",
+   "tok": "catch ID timer=P1D",
+   "camunda": "executed",
+   "en": "catching timer intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: czas"
+  },
+  {
+   "id": "event-catch-conditional",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with conditional trigger",
+   "tok": "catch ID condition=\"x > 1\"",
+   "camunda": "executed",
+   "en": "catching conditional intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: warunek"
+  },
+  {
+   "id": "event-catch-signal",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with signal trigger",
+   "tok": "catch ID signal=\"S\"",
+   "camunda": "executed",
+   "en": "catching signal intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: sygnał"
+  },
+  {
+   "id": "event-catch-multiple",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with multiple trigger",
+   "tok": "catch ID message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "catching multiple intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: wielokrotne"
+  },
+  {
+   "id": "event-catch-parallel-multiple",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with parallel multiple trigger",
+   "tok": "catch ID message=\"A\" message=\"B\" parallel",
+   "camunda": "not executed (C105)",
+   "en": "catching parallel multiple intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: równoległe wielokrotne"
+  },
+  {
+   "id": "event-catch-link",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateCatchEvent with link trigger",
+   "tok": "catch ID link=\"L\"",
+   "camunda": "executed",
+   "en": "catching link intermediate event",
+   "pl": "zdarzenie pośrednie przechwytujące: łącznik"
+  },
+  {
+   "id": "event-throw-none",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent",
+   "tok": "throw ID",
+   "camunda": "executed",
+   "en": "intermediate event (none)",
+   "pl": "zdarzenie pośrednie"
+  },
+  {
+   "id": "event-throw-message",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with message trigger",
+   "tok": "throw ID message=\"M\"",
+   "camunda": "executed",
+   "en": "throwing message intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: wiadomość"
+  },
+  {
+   "id": "event-throw-signal",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with signal trigger",
+   "tok": "throw ID signal=\"S\"",
+   "camunda": "executed",
+   "en": "throwing signal intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: sygnał"
+  },
+  {
+   "id": "event-throw-escalation",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with escalation trigger",
+   "tok": "throw ID escalation=\"X\"",
+   "camunda": "executed",
+   "en": "throwing escalation intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: eskalacja"
+  },
+  {
+   "id": "event-throw-compensation",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with compensation trigger",
+   "tok": "throw ID compensate",
+   "camunda": "executed",
+   "en": "throwing compensation intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: kompensacja"
+  },
+  {
+   "id": "event-throw-multiple",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with multiple trigger",
+   "tok": "throw ID message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "throwing multiple intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: wielokrotne"
+  },
+  {
+   "id": "event-throw-link",
+   "family": "Intermediate events",
+   "bpmn": "IntermediateThrowEvent with link trigger",
+   "tok": "throw ID link=\"L\"",
+   "camunda": "executed",
+   "en": "throwing link intermediate event",
+   "pl": "zdarzenie pośrednie rzucające: łącznik"
+  },
+  {
+   "id": "event-boundary-message",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with message trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"M\"",
+   "camunda": "executed",
+   "en": "interrupting message boundary event",
+   "pl": "przerywające zdarzenie graniczne: wiadomość"
+  },
+  {
+   "id": "event-boundary-timer",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with timer trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY timer=P1D",
+   "camunda": "executed",
+   "en": "interrupting timer boundary event",
+   "pl": "przerywające zdarzenie graniczne: czas"
+  },
+  {
+   "id": "event-boundary-conditional",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with conditional trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY condition=\"x > 1\"",
+   "camunda": "executed",
+   "en": "interrupting conditional boundary event",
+   "pl": "przerywające zdarzenie graniczne: warunek"
+  },
+  {
+   "id": "event-boundary-signal",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with signal trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY signal=\"S\"",
+   "camunda": "executed",
+   "en": "interrupting signal boundary event",
+   "pl": "przerywające zdarzenie graniczne: sygnał"
+  },
+  {
+   "id": "event-boundary-error",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with error trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY error=\"E\"",
+   "camunda": "executed",
+   "en": "interrupting error boundary event",
+   "pl": "przerywające zdarzenie graniczne: błąd"
+  },
+  {
+   "id": "event-boundary-escalation",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with escalation trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY escalation=\"X\"",
+   "camunda": "executed",
+   "en": "interrupting escalation boundary event",
+   "pl": "przerywające zdarzenie graniczne: eskalacja"
+  },
+  {
+   "id": "event-boundary-multiple",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with multiple trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "interrupting multiple boundary event",
+   "pl": "przerywające zdarzenie graniczne: wielokrotne"
+  },
+  {
+   "id": "event-boundary-parallel-multiple",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with parallel multiple trigger (interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"A\" message=\"B\" parallel",
+   "camunda": "not executed (C105)",
+   "en": "interrupting parallel multiple boundary event",
+   "pl": "przerywające zdarzenie graniczne: równoległe wielokrotne"
+  },
+  {
+   "id": "event-boundary-cancel",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with cancel trigger",
+   "tok": "boundary ID on=TRANSACTION cancel",
+   "camunda": "not executed (C101)",
+   "en": "cancel boundary event",
+   "pl": "zdarzenie graniczne: anulowanie"
+  },
+  {
+   "id": "event-boundary-compensation",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with compensation trigger",
+   "tok": "service ID compensate=HANDLER",
+   "camunda": "executed",
+   "en": "compensation boundary event",
+   "pl": "zdarzenie graniczne: kompensacja"
+  },
+  {
+   "id": "event-boundary-message-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with message trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"M\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting message boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: wiadomość"
+  },
+  {
+   "id": "event-boundary-timer-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with timer trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY timer=P1D noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting timer boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: czas"
+  },
+  {
+   "id": "event-boundary-conditional-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with conditional trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY condition=\"x > 1\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting conditional boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: warunek"
+  },
+  {
+   "id": "event-boundary-signal-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with signal trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY signal=\"S\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting signal boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: sygnał"
+  },
+  {
+   "id": "event-boundary-escalation-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with escalation trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY escalation=\"X\" noninterrupting",
+   "camunda": "executed",
+   "en": "non-interrupting escalation boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: eskalacja"
+  },
+  {
+   "id": "event-boundary-multiple-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with multiple trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"A\" signal=\"B\" noninterrupting",
+   "camunda": "not executed (C104)",
+   "en": "non-interrupting multiple boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: wielokrotne"
+  },
+  {
+   "id": "event-boundary-parallel-multiple-noninterrupting",
+   "family": "Boundary events",
+   "bpmn": "BoundaryEvent with parallel multiple trigger (non-interrupting)",
+   "tok": "boundary ID on=ACTIVITY message=\"A\" message=\"B\" parallel noninterrupting",
+   "camunda": "not executed (C105)",
+   "en": "non-interrupting parallel multiple boundary event",
+   "pl": "nieprzerywające zdarzenie graniczne: równoległe wielokrotne"
+  },
+  {
+   "id": "event-end-none",
+   "family": "End events",
+   "bpmn": "EndEvent",
+   "tok": "end ID",
+   "camunda": "executed",
+   "en": "end event",
+   "pl": "zdarzenie końcowe"
+  },
+  {
+   "id": "event-end-message",
+   "family": "End events",
+   "bpmn": "EndEvent with message trigger",
+   "tok": "end ID message=\"M\"",
+   "camunda": "executed",
+   "en": "message end event",
+   "pl": "zdarzenie końcowe: wiadomość"
+  },
+  {
+   "id": "event-end-error",
+   "family": "End events",
+   "bpmn": "EndEvent with error trigger",
+   "tok": "end ID error=\"E\"",
+   "camunda": "executed",
+   "en": "error end event",
+   "pl": "zdarzenie końcowe: błąd"
+  },
+  {
+   "id": "event-end-escalation",
+   "family": "End events",
+   "bpmn": "EndEvent with escalation trigger",
+   "tok": "end ID escalation=\"X\"",
+   "camunda": "executed",
+   "en": "escalation end event",
+   "pl": "zdarzenie końcowe: eskalacja"
+  },
+  {
+   "id": "event-end-signal",
+   "family": "End events",
+   "bpmn": "EndEvent with signal trigger",
+   "tok": "end ID signal=\"S\"",
+   "camunda": "executed",
+   "en": "signal end event",
+   "pl": "zdarzenie końcowe: sygnał"
+  },
+  {
+   "id": "event-end-compensation",
+   "family": "End events",
+   "bpmn": "EndEvent with compensation trigger",
+   "tok": "end ID compensate",
+   "camunda": "executed",
+   "en": "compensation end event",
+   "pl": "zdarzenie końcowe: kompensacja"
+  },
+  {
+   "id": "event-end-multiple",
+   "family": "End events",
+   "bpmn": "EndEvent with multiple trigger",
+   "tok": "end ID message=\"A\" signal=\"B\"",
+   "camunda": "not executed (C104)",
+   "en": "multiple end event",
+   "pl": "zdarzenie końcowe: wielokrotne"
+  },
+  {
+   "id": "event-end-cancel",
+   "family": "End events",
+   "bpmn": "EndEvent with cancel trigger",
+   "tok": "end ID cancel",
+   "camunda": "not executed (C101)",
+   "en": "cancel end event",
+   "pl": "zdarzenie końcowe: anulowanie"
+  },
+  {
+   "id": "event-end-terminate",
+   "family": "End events",
+   "bpmn": "EndEvent with terminate trigger",
+   "tok": "end ID terminate",
+   "camunda": "executed",
+   "en": "terminate end event",
+   "pl": "zdarzenie końcowe: zakończenie wszystkiego"
+  },
+  {
+   "id": "task-task",
+   "family": "Activities",
+   "bpmn": "Task",
+   "tok": "task ID",
+   "camunda": "executed",
+   "en": "task",
+   "pl": "zadanie"
+  },
+  {
+   "id": "task-user",
+   "family": "Activities",
+   "bpmn": "UserTask",
+   "tok": "user ID",
+   "camunda": "executed",
+   "en": "user task",
+   "pl": "zadanie użytkownika"
+  },
+  {
+   "id": "task-manual",
+   "family": "Activities",
+   "bpmn": "ManualTask",
+   "tok": "manual ID",
+   "camunda": "executed",
+   "en": "manual task",
+   "pl": "zadanie ręczne"
+  },
+  {
+   "id": "task-service",
+   "family": "Activities",
+   "bpmn": "ServiceTask",
+   "tok": "service ID",
+   "camunda": "executed",
+   "en": "service task",
+   "pl": "zadanie usługowe"
+  },
+  {
+   "id": "task-script",
+   "family": "Activities",
+   "bpmn": "ScriptTask",
+   "tok": "script ID",
+   "camunda": "executed",
+   "en": "script task",
+   "pl": "zadanie skryptowe"
+  },
+  {
+   "id": "task-rule",
+   "family": "Activities",
+   "bpmn": "BusinessRuleTask",
+   "tok": "rule ID",
+   "camunda": "executed",
+   "en": "business rule task",
+   "pl": "zadanie reguły biznesowej"
+  },
+  {
+   "id": "task-send",
+   "family": "Activities",
+   "bpmn": "SendTask",
+   "tok": "send ID",
+   "camunda": "executed",
+   "en": "send task",
+   "pl": "zadanie wysyłania"
+  },
+  {
+   "id": "task-receive",
+   "family": "Activities",
+   "bpmn": "ReceiveTask",
+   "tok": "receive ID",
+   "camunda": "executed",
+   "en": "receive task",
+   "pl": "zadanie odbioru"
+  },
+  {
+   "id": "task-receive-instantiating",
+   "family": "Activities",
+   "bpmn": "ReceiveTask (instantiate)",
+   "tok": "receive ID message=\"M\" instantiate",
+   "camunda": "not executed (C106)",
+   "en": "instantiating receive task",
+   "pl": "zadanie odbioru rozpoczynające proces"
+  },
+  {
+   "id": "subprocess",
+   "family": "Activities",
+   "bpmn": "SubProcess",
+   "tok": "sub ID (block)",
+   "camunda": "executed",
+   "en": "embedded sub-process",
+   "pl": "podproces osadzony"
+  },
+  {
+   "id": "subprocess-event",
+   "family": "Activities",
+   "bpmn": "SubProcess (triggeredByEvent)",
+   "tok": "eventsub ID (block)",
+   "camunda": "executed",
+   "en": "event sub-process",
+   "pl": "podproces zdarzeniowy"
+  },
+  {
+   "id": "subprocess-transaction",
+   "family": "Activities",
+   "bpmn": "Transaction",
+   "tok": "transaction ID (block)",
+   "camunda": "not executed (C100)",
+   "en": "transaction",
+   "pl": "transakcja"
+  },
+  {
+   "id": "subprocess-adhoc",
+   "family": "Activities",
+   "bpmn": "AdHocSubProcess",
+   "tok": "adhoc ID (block)",
+   "camunda": "executed",
+   "en": "ad-hoc sub-process",
+   "pl": "podproces ad hoc"
+  },
+  {
+   "id": "call-activity",
+   "family": "Activities",
+   "bpmn": "CallActivity (process)",
+   "tok": "call ID process=P",
+   "camunda": "executed",
+   "en": "call activity",
+   "pl": "czynność wywołująca"
+  },
+  {
+   "id": "call-activity-global-task",
+   "family": "Activities",
+   "bpmn": "CallActivity (global task)",
+   "tok": "call ID task=GLOBAL",
+   "camunda": "not executed (C108)",
+   "en": "call activity of a global user task",
+   "pl": "czynność wywołująca zadanie globalne"
+  },
+  {
+   "id": "marker-loop",
+   "family": "Activity markers",
+   "bpmn": "standard loop",
+   "tok": "task ID loop",
+   "camunda": "not executed (C103)",
+   "en": "task with the loop marker",
+   "pl": "zadanie ze znacznikiem pętli"
+  },
+  {
+   "id": "marker-multi-instance-parallel",
+   "family": "Activity markers",
+   "bpmn": "parallel multi-instance",
+   "tok": "task ID parallel",
+   "camunda": "executed",
+   "en": "task with the parallel multi-instance marker",
+   "pl": "zadanie wielokrotne równoległe"
+  },
+  {
+   "id": "marker-multi-instance-sequential",
+   "family": "Activity markers",
+   "bpmn": "sequential multi-instance",
+   "tok": "task ID sequential",
+   "camunda": "executed",
+   "en": "task with the sequential multi-instance marker",
+   "pl": "zadanie wielokrotne sekwencyjne"
+  },
+  {
+   "id": "marker-compensation",
+   "family": "Activity markers",
+   "bpmn": "compensation activity",
+   "tok": "service ID compensation",
+   "camunda": "executed",
+   "en": "task with the compensation marker",
+   "pl": "zadanie kompensujące"
+  },
+  {
+   "id": "gateway-exclusive",
+   "family": "Gateways",
+   "bpmn": "ExclusiveGateway",
+   "tok": "xor ID",
+   "camunda": "executed",
+   "en": "exclusive gateway",
+   "pl": "bramka wykluczająca"
+  },
+  {
+   "id": "gateway-inclusive",
+   "family": "Gateways",
+   "bpmn": "InclusiveGateway",
+   "tok": "or ID",
+   "camunda": "executed",
+   "en": "inclusive gateway",
+   "pl": "bramka inkluzywna"
+  },
+  {
+   "id": "gateway-parallel",
+   "family": "Gateways",
+   "bpmn": "ParallelGateway",
+   "tok": "and ID",
+   "camunda": "executed",
+   "en": "parallel gateway",
+   "pl": "bramka równoległa"
+  },
+  {
+   "id": "gateway-complex",
+   "family": "Gateways",
+   "bpmn": "ComplexGateway",
+   "tok": "complex ID",
+   "camunda": "not executed (C102)",
+   "en": "complex gateway",
+   "pl": "bramka złożona"
+  },
+  {
+   "id": "gateway-event-based",
+   "family": "Gateways",
+   "bpmn": "EventBasedGateway",
+   "tok": "eventgw ID",
+   "camunda": "executed",
+   "en": "event-based gateway",
+   "pl": "bramka oparta na zdarzeniach"
+  },
+  {
+   "id": "gateway-event-based-instantiating",
+   "family": "Gateways",
+   "bpmn": "EventBasedGateway (instantiate)",
+   "tok": "eventgw ID instantiate",
+   "camunda": "not executed (C107)",
+   "en": "instantiating exclusive event-based gateway",
+   "pl": "bramka oparta na zdarzeniach rozpoczynająca proces"
+  },
+  {
+   "id": "gateway-event-based-instantiating-parallel",
+   "family": "Gateways",
+   "bpmn": "EventBasedGateway (instantiate, parallel)",
+   "tok": "eventgw ID instantiate parallel",
+   "camunda": "not executed (C107)",
+   "en": "instantiating parallel event-based gateway",
+   "pl": "równoległa bramka oparta na zdarzeniach rozpoczynająca proces"
+  },
+  {
+   "id": "data-object",
+   "family": "Data",
+   "bpmn": "DataObjectReference",
+   "tok": "data ID",
+   "camunda": "modelling only",
+   "en": "data object",
+   "pl": "obiekt danych"
+  },
+  {
+   "id": "data-object-collection",
+   "family": "Data",
+   "bpmn": "DataObjectReference (collection)",
+   "tok": "data ID collection",
+   "camunda": "modelling only",
+   "en": "collection data object",
+   "pl": "kolekcja obiektów danych"
+  },
+  {
+   "id": "data-input",
+   "family": "Data",
+   "bpmn": "DataInput",
+   "tok": "input ID",
+   "camunda": "modelling only",
+   "en": "data input",
+   "pl": "dane wejściowe"
+  },
+  {
+   "id": "data-output",
+   "family": "Data",
+   "bpmn": "DataOutput",
+   "tok": "output ID",
+   "camunda": "modelling only",
+   "en": "data output",
+   "pl": "dane wyjściowe"
+  },
+  {
+   "id": "data-store",
+   "family": "Data",
+   "bpmn": "DataStoreReference",
+   "tok": "store ID",
+   "camunda": "modelling only",
+   "en": "data store",
+   "pl": "składnica danych"
+  },
+  {
+   "id": "flow-sequence",
+   "family": "Connections",
+   "bpmn": "SequenceFlow",
+   "tok": "flow A -> B",
+   "camunda": "executed",
+   "en": "sequence flow",
+   "pl": "przepływ sekwencji"
+  },
+  {
+   "id": "flow-conditional",
+   "family": "Connections",
+   "bpmn": "SequenceFlow with condition from an activity",
+   "tok": "flow A -> B when=\"feel\"",
+   "camunda": "executed",
+   "en": "conditional sequence flow",
+   "pl": "przepływ warunkowy"
+  },
+  {
+   "id": "flow-default",
+   "family": "Connections",
+   "bpmn": "SequenceFlow (default)",
+   "tok": "flow G -> B default",
+   "camunda": "executed",
+   "en": "default sequence flow",
+   "pl": "przepływ domyślny"
+  },
+  {
+   "id": "flow-message",
+   "family": "Connections",
+   "bpmn": "MessageFlow",
+   "tok": "message A -> B",
+   "camunda": "executed",
+   "en": "message flow",
+   "pl": "przepływ wiadomości"
+  },
+  {
+   "id": "association",
+   "family": "Connections",
+   "bpmn": "Association",
+   "tok": "note ID \"Text\" on=ID",
+   "camunda": "modelling only",
+   "en": "association",
+   "pl": "powiązanie"
+  },
+  {
+   "id": "association-data",
+   "family": "Connections",
+   "bpmn": "DataOutputAssociation",
+   "tok": "writes ACTIVITY DATA",
+   "camunda": "modelling only",
+   "en": "data association",
+   "pl": "powiązanie danych"
+  },
+  {
+   "id": "annotation",
+   "family": "Artifacts",
+   "bpmn": "TextAnnotation",
+   "tok": "note ID \"Text\"",
+   "camunda": "modelling only",
+   "en": "text annotation",
+   "pl": "adnotacja tekstowa"
+  },
+  {
+   "id": "pool",
+   "family": "Pools and lanes",
+   "bpmn": "Participant (pool) with a process",
+   "tok": "pool ID \"Label\" (block)",
+   "camunda": "executed",
+   "en": "pool",
+   "pl": "basen"
+  },
+  {
+   "id": "lane",
+   "family": "Pools and lanes",
+   "bpmn": "Lane",
+   "tok": "lane ID \"Label\"",
+   "camunda": "executed",
+   "en": "pool with two lanes",
+   "pl": "basen z dwiema liniami"
+  },
+  {
+   "id": "pool-black-box",
+   "family": "Pools and lanes",
+   "bpmn": "Participant without a process (black-box pool)",
+   "tok": "pool ID \"Label\" (no block)",
+   "camunda": "modelling only",
+   "en": "black-box pool",
+   "pl": "basen zamknięty"
+  },
+  {
+   "id": "pool-multiplicity",
+   "family": "Pools and lanes",
+   "bpmn": "Participant multiplicity",
+   "tok": "pool ID \"Label\" min=2 max=5",
+   "camunda": "not executed (C123)",
+   "en": "pool with participant multiplicity",
+   "pl": "basen z krotnością uczestników"
+  },
+  {
+   "id": "conversation",
+   "family": "Conversations",
+   "bpmn": "Conversation",
+   "tok": "conversation ID \"Label\" pools=\"P Q\"",
+   "camunda": "not executed (C120)",
+   "en": "conversation",
+   "pl": "konwersacja"
+  },
+  {
+   "id": "conversation-sub",
+   "family": "Conversations",
+   "bpmn": "SubConversation",
+   "tok": "subconversation ID \"Label\" pools=\"P Q\" (block)",
+   "camunda": "not executed (C120)",
+   "en": "sub-conversation",
+   "pl": "podkonwersacja"
+  },
+  {
+   "id": "conversation-call",
+   "family": "Conversations",
+   "bpmn": "CallConversation",
+   "tok": "callconversation ID \"Label\" pools=\"P Q\" collaboration=ID",
+   "camunda": "not executed (C121)",
+   "en": "call conversation",
+   "pl": "wywołanie konwersacji"
+  },
+  {
+   "id": "conversation-link",
+   "family": "Conversations",
+   "bpmn": "ConversationLink",
+   "tok": "pools= of a conversation",
+   "camunda": "not executed (C120)",
+   "en": "conversation link",
+   "pl": "łącze konwersacji"
+  },
+  {
+   "id": "choreography-task",
+   "family": "Choreographies",
+   "bpmn": "ChoreographyTask",
+   "tok": "choreo ID \"Label\" from=P to=Q message=\"M\"",
+   "camunda": "not executed (C122)",
+   "en": "choreography task",
+   "pl": "zadanie choreografii"
+  },
+  {
+   "id": "choreography-sub",
+   "family": "Choreographies",
+   "bpmn": "SubChoreography",
+   "tok": "subchoreo ID \"Label\" pools=\"P Q\" from=P (block)",
+   "camunda": "not executed (C122)",
+   "en": "sub-choreography",
+   "pl": "podchoreografia"
+  },
+  {
+   "id": "choreography-call",
+   "family": "Choreographies",
+   "bpmn": "CallChoreography",
+   "tok": "callchoreo ID \"Label\" pools=\"P Q\" from=P choreography=ID",
+   "camunda": "not executed (C122)",
+   "en": "call choreography",
+   "pl": "wywołanie choreografii"
+  }
+ ]
+}

@@ -1,0 +1,35 @@
+name: Problem
+description: A command fails, a model is checked, exported or drawn wrongly, or a result is unexpected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: model
+    attributes:
+      label: Model
+      description: The smallest .tok (or .bpmn, .dmn) text that shows the problem.
+      render: text
+  - type: textarea
+    id: output
+    attributes:
+      label: Command and output
+      description: The command you ran and its full output.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `tok --version`, and how tok was installed (pip, cargo, R, Julia, VS Code, playground).
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Operating system, and the version of Python, R, Julia or VS Code when they are involved.

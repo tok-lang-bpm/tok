@@ -1,4 +1,5 @@
 model	cross	hits	shapes	labels	lbl_edge	bends	msg	flow_ovl	bnd	area
+examples/interlibrary-loan	0	0	0	0	0	2	0	0	0	416
 examples/kwerenda-symulacja	0	0	0	0	0	3	0	0	0	308
 examples/limit-wypozyczen	0	0	0	0	0	1	0	0	0	216
 examples/propozycja-zakupu	0	0	0	0	0	5	0	0	0	736

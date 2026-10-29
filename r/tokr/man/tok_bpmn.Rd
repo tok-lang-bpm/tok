@@ -27,3 +27,10 @@ The XML or SVG text; invisibly when written to \code{file}.
 and bpmn.io; \code{tok_svg()} draws the diagram. Both stop with the list of errors when the
 model has errors (see \code{\link[=tok_check]{tok_check()}}).
 }
+\examples{
+model <- system.file("examples", "wypozyczenie.tok", package = "tokr")
+xml <- tok_bpmn(model)
+substr(xml, 1, 120)
+svg <- tok_svg(model, title = "Interlibrary loan")
+nchar(svg)
+}

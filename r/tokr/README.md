@@ -1,6 +1,6 @@
 # tokr: tok for R
 
-The R package `tokr` reads, checks, formats, exports and simulates process models written in [tok](https://codeberg.org/MarekDeja/tok), and draws them in the viewer and in R Markdown or Quarto documents. The work is done by the Rust engine of tok, the same one the `tok` command and the Python package use, so the results are identical.
+The R package `tokr` reads, checks, formats, exports and simulates process models written in [tok](https://github.com/tok-lang-bpm/tok), and draws them in the viewer and in R Markdown or Quarto documents. The work is done by the Rust engine of tok, the same one the `tok` command and the Python package use, so the results are identical.
 
 ## Install
 
@@ -15,10 +15,16 @@ From CRAN:
 install.packages("tokr")
 ```
 
+From R-universe, which also has binary packages for Windows and macOS:
+
+```r
+install.packages("tokr", repos = c("https://tok-lang-bpm.r-universe.dev", "https://cloud.r-project.org"))
+```
+
 From a release archive `tokr_VERSION.tar.gz` (it contains every Rust crate it needs and installs without network access; `r/build.sh` of the repository builds it):
 
 ```r
-install.packages("tokr_1.0.0.tar.gz", repos = NULL, type = "source")
+install.packages("tokr_1.0.1.tar.gz", repos = NULL, type = "source")
 ```
 
 From a checkout of the repository:

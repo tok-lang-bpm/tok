@@ -23,3 +23,10 @@ The paths of the written files, invisibly.
 Writes what \verb{tok export} writes: \code{NAME.bpmn}, \code{NAME.svg}, one \code{.dmn} file per decision
 table and one \code{.form} file per form, ready to deploy to Camunda 8.
 }
+\examples{
+out <- file.path(tempdir(), "tok-export")
+files <- tok_export(system.file("examples", "propozycja-zakupu.tok", package = "tokr"),
+                    dir = out)
+basename(files)
+unlink(out, recursive = TRUE)
+}

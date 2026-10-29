@@ -106,6 +106,8 @@ print.tok_diagnostics <- function(x, ...) {
 #' @inheritParams tok_check
 #' @param write When `TRUE` and `x` is a file, the file is rewritten.
 #' @return The canonical text (invisibly when the file is rewritten).
+#' @examples
+#' tok_fmt(system.file("examples", "wypozyczenie.tok", package = "tokr"))
 #' @export
 tok_fmt <- function(x, write = FALSE, lang = getOption("tok.lang", "en")) {
   m <- as_model(x)
@@ -134,6 +136,12 @@ print.tok_text <- function(x, ...) {
 #' @param file Optional path to write to.
 #' @param title Title drawn above the diagram (SVG only).
 #' @return The XML or SVG text; invisibly when written to `file`.
+#' @examples
+#' model <- system.file("examples", "wypozyczenie.tok", package = "tokr")
+#' xml <- tok_bpmn(model)
+#' substr(xml, 1, 120)
+#' svg <- tok_svg(model, title = "Interlibrary loan")
+#' nchar(svg)
 #' @export
 tok_bpmn <- function(x, file = NULL, lang = getOption("tok.lang", "en")) {
   out(engine_bpmn(as_model(x)$text, check_lang(lang)), file)
@@ -163,6 +171,10 @@ write_utf8 <- function(text, path) {
 #'
 #' @inheritParams tok_svg
 #' @return The path of the temporary SVG file, invisibly.
+#' @examples
+#' if (interactive()) {
+#'   tok_plot(system.file("examples", "wypozyczenie.tok", package = "tokr"))
+#' }
 #' @export
 tok_plot <- function(x, title = NULL, lang = getOption("tok.lang", "en")) {
   m <- as_model(x)
@@ -190,6 +202,12 @@ tok_plot <- function(x, title = NULL, lang = getOption("tok.lang", "en")) {
 #' @param dir Output directory, created when missing.
 #' @param name Base name of the BPMN and SVG files; by default the name of the `.tok` file.
 #' @return The paths of the written files, invisibly.
+#' @examples
+#' out <- file.path(tempdir(), "tok-export")
+#' files <- tok_export(system.file("examples", "propozycja-zakupu.tok", package = "tokr"),
+#'                     dir = out)
+#' basename(files)
+#' unlink(out, recursive = TRUE)
 #' @export
 tok_export <- function(x, dir = ".", name = NULL, lang = getOption("tok.lang", "en")) {
   m <- as_model(x)
@@ -210,6 +228,12 @@ tok_export <- function(x, dir = ".", name = NULL, lang = getOption("tok.lang", "
 #'   from the labels.
 #' @return A `tok_model`; warnings about elements tok does not keep are in its element
 #'   `warnings` and are also signalled.
+#' @examples
+#' bpmn <- tempfile(fileext = ".bpmn")
+#' tok_bpmn(system.file("examples", "wypozyczenie.tok", package = "tokr"), file = bpmn)
+#' m <- tok_import(bpmn)
+#' m
+#' unlink(bpmn)
 #' @export
 tok_import <- function(file, keep_ids = TRUE) {
   xml <- paste(readLines(file, encoding = "UTF-8", warn = FALSE), collapse = "\n")
@@ -267,5 +291,7 @@ tok_eval <- function(x, decision, inputs = list(), lang = getOption("tok.lang", 
 #' Version of the tok engine
 #'
 #' @return The version of the Rust engine compiled into the package.
+#' @examples
+#' tok_version()
 #' @export
 tok_version <- function() engine_version()

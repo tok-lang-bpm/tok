@@ -12,17 +12,18 @@ The engine is the reference: every feature of the language is written once, in R
 
 ## Installing
 
-Tok.jl needs Julia 1.10 or newer. Until the 1.0 release it is installed from the repository:
+Tok.jl needs Julia 1.10 or newer. It is installed from the General registry, together with the engine library `tok_jll`, or from the repository:
 
 ```julia
 using Pkg
-Pkg.add(url="https://codeberg.org/MarekDeja/tok", subdir="julia/Tok.jl")
+Pkg.add(["Tok", "tok_jll"])
+Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/Tok.jl")   # from the repository
 ```
 
 The engine library is found, in this order:
 
 1. at the path in the environment variable `TOK_LIBTOK` (`tokengine.dll`, `libtokengine.so` or `libtokengine.dylib`);
-2. in the binary package `tok_jll`, when it is installed in the active environment (`Pkg.add("tok_jll")` once it is in the General registry; Tok.jl does not depend on it, so it can be installed without it);
+2. in the binary package `tok_jll`, when it is installed in the active environment (`Pkg.add("tok_jll")`; Tok.jl does not depend on it, so it can be installed without it);
 3. in the build directory of the repository, `rust/target/release`, after `cargo build --release -p tok-capi` in `rust/` (see [c-api.md](c-api.md)).
 
 `Tok.Engine.available()` tells whether the library was found, `Tok.Engine.library()` where. Without it the independent core works as before; the engine, the native simulator and the calibration report that the library is missing.

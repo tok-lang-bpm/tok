@@ -25,7 +25,7 @@ Use the **tok MCP server** when your client has it (tools `check`, `fmt`, `expor
 
 The MCP tools return file contents instead of writing files: write what they return with your file tools. A tool error (`isError`) explains what to fix — a document with errors lists them. `check` reports errors as its normal result (`errors` > 0). Paths are read relative to the working directory of the server; give absolute paths when unsure.
 
-Without the MCP server, install the command if it is missing: `pip install tok-lang` (the engine; on a platform without a wheel pip builds it from source and needs Rust) or `cargo install tok-cli`, or in a checkout of the repository `cargo build --release -p tok-cli` in `rust/`. If you can run neither, write the model by the cheat sheet and say clearly that it has not been checked.
+Without the MCP server, install the command if it is missing: `pip install tok-lang` (the engine; on a platform without a wheel pip builds it from source and needs Rust) or `cargo install tok-cli`, or in a checkout of the repository `cargo build --release -p tok-cli` in `rust/`. The same Python package runs the MCP server, `tok mcp`, which a client can be configured to start (`"command": "tok", "args": ["mcp"]`). If you can run neither, write the model by the cheat sheet and say clearly that it has not been checked.
 
 ## Workflow
 

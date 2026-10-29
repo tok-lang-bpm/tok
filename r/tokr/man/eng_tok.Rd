@@ -29,3 +29,9 @@ The diagram is written as an SVG file and included like a figure (\code{fig.cap}
 other figure options apply), which suits HTML output; for PDF output use
 \code{tok.output = "check"} or include an exported picture.
 }
+\examples{
+# the engine is registered when the package is loaded
+if (requireNamespace("knitr", quietly = TRUE)) {
+  is.function(knitr::knit_engines$get("tok"))
+}
+}

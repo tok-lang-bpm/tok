@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.tok-lang-bpm/tok",
+  "title": "tok",
+  "description": "Model BPMN processes and DMN decisions as text: check, export, import, simulate, evaluate.",
+  "websiteUrl": "https://tok-lang-bpm.github.io/",
+  "repository": {
+    "url": "https://github.com/tok-lang-bpm/tok",
+    "source": "github"
+  },
+  "version": "1.0.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "tok-lang",
+      "version": "1.0.1",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}

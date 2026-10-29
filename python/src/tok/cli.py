@@ -305,12 +305,37 @@ def build_parser():
     return ap
 
 
+MCP_USAGE = """usage: tok mcp [--version]
+
+The MCP server of tok (stdio transport). An MCP client starts it and talks to it over
+standard input and output; see docs/mcp.md.
+"""
+
+
+def _mcp(engine, rest):
+    """``tok mcp``: the MCP server of the engine on standard input and output."""
+    if engine is None or not hasattr(engine, "mcp"):
+        sys.stderr.write("tok: the MCP server needs the tok engine (install tok-lang from PyPI)\n")
+        return EXIT_USAGE
+    if rest:
+        if rest[0] in ("--version", "-V"):
+            sys.stdout.write("tok-mcp %s\n" % engine.version())
+            return EXIT_OK
+        sys.stdout.write(MCP_USAGE)
+        return EXIT_OK if rest[0] in ("--help", "-h") else EXIT_USAGE
+    sys.stdout.flush()
+    return engine.mcp()
+
+
 def main(argv=None):
     engine = _engine()
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] == ["mcp"]:
+        return _mcp(engine, argv[1:])
     if engine is not None:
         sys.stdout.flush()
         sys.stderr.flush()
-        return engine.cli(list(sys.argv[1:] if argv is None else argv))
+        return engine.cli(argv)
     if hasattr(sys.stdout, "reconfigure"):
         try:
             sys.stdout.reconfigure(encoding="utf-8")

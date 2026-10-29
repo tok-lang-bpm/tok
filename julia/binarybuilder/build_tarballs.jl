@@ -12,9 +12,9 @@
 using BinaryBuilder, Pkg
 
 name = "tok"
-version = v"1.0.0"
+version = v"1.0.1"
 
-const REPO = "https://codeberg.org/MarekDeja/tok.git"
+const REPO = "https://github.com/tok-lang-bpm/tok.git"
 
 sources = if haskey(ENV, "TOK_COMMIT")
     [GitSource(REPO, ENV["TOK_COMMIT"])]

@@ -14,11 +14,11 @@ authors:
   - family-names: Deja
     given-names: Marek
     affiliation: Jagiellonian University
-version: 1.0.0
-date-released: 2026-10-28
+version: 1.0.1
+date-released: 2026-10-29
 license: GPL-3.0-or-later
-repository-code: "https://codeberg.org/MarekDeja/tok"
-url: "https://codeberg.org/MarekDeja/tok"
+repository-code: "https://github.com/tok-lang-bpm/tok"
+url: "https://tok-lang-bpm.github.io/"
 keywords:
   - BPMN
   - DMN

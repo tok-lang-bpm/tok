@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: The guide
+    url: https://tok-lang-bpm.github.io/
+    about: The language, the tools and the integrations, with examples.
+  - name: Language on one page
+    url: https://github.com/tok-lang-bpm/tok/blob/main/docs/cheatsheet.md
+    about: The syntax of every statement.
+  - name: Security problem
+    url: https://github.com/tok-lang-bpm/tok/security/advisories/new
+    about: Report security problems privately.

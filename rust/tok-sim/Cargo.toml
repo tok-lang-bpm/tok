@@ -16,7 +16,7 @@ categories = ["simulation", "science"]
 description = "Discrete-event simulator of the tok process language"
 
 [dependencies]
-tok-core = { path = "../tok-core", version = "1.0.0" }
+tok-core = { path = "../tok-core", version = "1.0.1" }
 thiserror = "2.0.21"
 indexmap = "2"
 

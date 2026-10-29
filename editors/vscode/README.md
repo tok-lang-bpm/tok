@@ -1,6 +1,6 @@
 # tok for Visual Studio Code
 
-Support for the [tok](https://codeberg.org/MarekDeja/tok) process language: plain-text models of BPMN 2.0 processes with their DMN decisions, Camunda forms and simulation parameters, in `.tok` files.
+Support for the [tok](https://github.com/tok-lang-bpm/tok) process language: plain-text models of BPMN 2.0 processes with their DMN decisions, Camunda forms and simulation parameters, in `.tok` files.
 
 - **Syntax highlighting** of statements, identifiers, labels, attributes, flags, flows, comments and decision tables.
 - **Diagnostics** as you type: every check of `tok check` — the structure of the document, the BPMN 2.0 rules, the Camunda 8 profile of executable models, decisions, FEEL and simulation parameters — in English or Polish.
@@ -51,25 +51,11 @@ npm run package        # builds tok-lsp if needed and writes tok-PLATFORM-VERSIO
 - `npm run smoke` (after `npm run package`): unpacks the `.vsix`, checks its manifest, the one bundled code file (and that no `node_modules` are packaged), grammar and server, drives the bundled `tok-lsp` through the protocol (diagnostics in Polish, a fix, the diagram request, shutdown), and when the `code` command is available installs the package into an empty extensions folder of VS Code and checks that VS Code lists it. It needs no display.
 - `npm run test:vscode`: runs `test/vscode/index.js` inside VS Code (a window opens, so it needs a desktop): the extension starts the server, the diagnostics appear and disappear after a fix, the document is formatted, the outline and go to definition work, *tok: Show diagram* opens its panel and *tok: Export BPMN* writes the file. The `code` command is found on the `PATH` or in the variable `VSCODE_CLI`.
 
-## Publishing
+## Installing
 
-The extension is not published yet. Publishing needs accounts of the maintainer:
+Install **tok** (identifier `tok-lang-bpm.tok`) from the Extensions view of VS Code, from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=tok-lang-bpm.tok), or, in VSCodium, Eclipse Theia and other editors that use it, from [Open VSX](https://open-vsx.org/extension/tok-lang-bpm/tok). The platform packages (Windows x64, Linux x64, macOS arm64) are also attached to every release of https://github.com/tok-lang-bpm/tok/releases; install one with `code --install-extension tok-win32-x64-1.0.1.vsix`.
 
-1. **Visual Studio Marketplace.** Create a publisher with the identifier of `publisher` in `package.json` (`MarekDeja`) at https://marketplace.visualstudio.com/manage, sign in to Azure DevOps with the same account and create a personal access token with the scope *Marketplace → Manage*. Then, for each platform package built on its platform (or in continuous integration):
-
-   ```
-   npx vsce login MarekDeja
-   npx vsce publish --packagePath tok-win32-x64-1.0.0.vsix tok-linux-x64-1.0.0.vsix tok-darwin-arm64-1.0.0.vsix
-   ```
-
-2. **Open VSX** (VSCodium, Eclipse Theia and other editors). Sign in at https://open-vsx.org with an Eclipse account, sign the publisher agreement, create an access token, create the namespace once and publish the same files:
-
-   ```
-   npx ovsx create-namespace MarekDeja -p TOKEN
-   npx ovsx publish tok-win32-x64-1.0.0.vsix -p TOKEN
-   ```
-
-A universal package without a server (`npx vsce package` with an empty `server/` folder) works on every platform that has `tok-lsp` on the `PATH`; the platform packages, which carry the server, are the ones to publish.
+A universal package without a server (`npx vsce package` with an empty `server/` folder) works on every platform that has `tok-lsp` on the `PATH`.
 
 ## Licence
 

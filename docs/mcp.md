@@ -6,28 +6,40 @@ The skill `skills/tok-modelling` teaches an agent the workflow of modelling in t
 
 ## Installing
 
-Install it from crates.io, or build it from the repository (Rust 1.99 or newer):
+The Python package `tok-lang` runs the server as `tok mcp`; with uv no installation is needed at all (`uvx tok-lang mcp` downloads the package and starts the server):
+
+```
+pip install tok-lang
+tok mcp --version
+```
+
+The server is also a program of its own, `tok-mcp`, from crates.io, from the archives of the releases (https://github.com/tok-lang-bpm/tok/releases) or built from the repository (Rust 1.99 or newer):
 
 ```
 cargo install tok-mcp
 cd rust && cargo build --release -p tok-mcp      # target/release/tok-mcp (tok-mcp.exe on Windows)
 ```
 
-`tools/check.sh` builds it and copies it to `dist/`. Put the program on the `PATH` or give the client its full path. `tok-mcp --version` prints the version; without arguments it serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends.
+`tools/check.sh` builds it and copies it to `dist/`. Put the program on the `PATH` or give the client its full path. `tok mcp --version` and `tok-mcp --version` print the version; without arguments the server serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends. Both are the same server.
+
+The server is listed in the MCP Registry as `io.github.tok-lang-bpm/tok` (`server.json` of the repository), from which registry-aware clients install it. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries the server configuration and the skill together, as a plugin for agent applications that install plugins from a marketplace.
 
 ## Configuring a client
 
-The server needs no arguments and no environment. Clients that read a JSON configuration with an `mcpServers` object take:
+The server needs no environment. Clients that read a JSON configuration with an `mcpServers` object take, with the Python package:
 
 ```json
 {
   "mcpServers": {
     "tok": {
-      "command": "tok-mcp"
+      "command": "tok",
+      "args": ["mcp"]
     }
   }
 }
 ```
+
+or, with the program of its own, `"command": "tok-mcp"` without arguments.
 
 With a full path on Windows: `"command": "C:\\tools\\tok\\tok-mcp.exe"`. VS Code reads MCP servers of a workspace from `.vscode/mcp.json`:
 

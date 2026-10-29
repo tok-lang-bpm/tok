@@ -1,6 +1,6 @@
 # Python
 
-The package `tok-lang` gives the `tok` command and the module `tok.api` for programs and notebooks. Both run on the Rust engine, the extension module `tok._engine`. With the environment variable `TOK_ENGINE=python` they run on the pure-Python implementation instead, which is frozen at language 0.3; both give the same results for documents of languages 0.1 and 0.3, and everything added later exists only in the engine.
+The package `tok-lang` gives the `tok` command (also as `tok-lang`), the MCP server for AI agents (`tok mcp`, `docs/mcp.md`) and the module `tok.api` for programs and notebooks. Both run on the Rust engine, the extension module `tok._engine`. With the environment variable `TOK_ENGINE=python` they run on the pure-Python implementation instead, which is frozen at language 0.3; both give the same results for documents of languages 0.1 and 0.3, and everything added later exists only in the engine.
 
 ## Installation and packaging
 

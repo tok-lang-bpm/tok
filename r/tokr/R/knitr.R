@@ -15,6 +15,11 @@
 #'
 #' @param options Chunk options, passed by knitr.
 #' @return The chunk output, for knitr.
+#' @examples
+#' # the engine is registered when the package is loaded
+#' if (requireNamespace("knitr", quietly = TRUE)) {
+#'   is.function(knitr::knit_engines$get("tok"))
+#' }
 #' @export
 eng_tok <- function(options) {
   code <- paste(options$code, collapse = "\n")

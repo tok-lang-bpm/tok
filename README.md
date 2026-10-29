@@ -181,7 +181,7 @@ The BPMN validation comes from the `bpmn.py` validator used in the course *Model
 
 ## Contributing and issues
 
-Report problems and ideas in the [issues](https://github.com/tok-lang-bpm/tok/issues) of the GitHub repository. How to build, test and propose changes: [CONTRIBUTING.md](https://github.com/tok-lang-bpm/tok/blob/main/CONTRIBUTING.md). Security problems: [SECURITY.md](https://github.com/tok-lang-bpm/tok/blob/main/SECURITY.md). To cite tok, use [CITATION.cff](https://github.com/tok-lang-bpm/tok/blob/main/CITATION.cff).
+Report problems and ideas in the [issues](https://github.com/tok-lang-bpm/tok/issues) of the GitHub repository. How to build, test and propose changes: [CONTRIBUTING.md](https://github.com/tok-lang-bpm/tok/blob/main/CONTRIBUTING.md). Security problems: [SECURITY.md](https://github.com/tok-lang-bpm/tok/blob/main/SECURITY.md). To cite tok, use [CITATION.cff](https://github.com/tok-lang-bpm/tok/blob/main/CITATION.cff); the releases are archived on Zenodo, [doi:10.5281/zenodo.23769633](https://doi.org/10.5281/zenodo.23769633) (all versions).
 
 ## License
 

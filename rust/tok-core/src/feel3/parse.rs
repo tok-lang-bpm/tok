@@ -725,12 +725,7 @@ impl P<'_> {
             {
                 self.next();
                 self.deeper()?;
-                // `a >= > 18`: a comparison operator cannot follow another one (the unary
-                // comparison `> 18` is a primary only where nothing is compared with it)
-                let n = self.peek(0).clone();
-                if n.k == K::Op && cmp_op(&n.text).is_some() {
-                    return syntax(format!("unexpected {}", show(&n)));
-                }
+                self.no_second_comparison()?;
                 left = Expr::Cmp(op, Box::new(left), Box::new(self.additive()?));
                 continue;
             }
@@ -761,6 +756,19 @@ impl P<'_> {
             self.depth = base;
             return Ok(left);
         }
+    }
+
+    /// `a >= > 18`: a comparison operator cannot follow another one (the unary comparison
+    /// `> 18` is a primary only where nothing is compared with it). A function of its own,
+    /// so that the frame of the recursive `comparison` stays as small as before (deeply
+    /// nested expressions run at the limit of the stack).
+    #[inline(never)]
+    fn no_second_comparison(&self) -> R<()> {
+        let n = self.peek(0);
+        if n.k == K::Op && cmp_op(&n.text).is_some() {
+            return syntax(format!("unexpected {}", show(n)));
+        }
+        Ok(())
     }
 
     fn in_target(&mut self) -> R<Vec<Expr>> {

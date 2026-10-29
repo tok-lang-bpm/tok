@@ -205,8 +205,17 @@ fn read(path: &str) -> Result<String, u8> {
     }
 }
 
+/// The folder of an output file is made when it does not exist (`-o out/model.bpmn`).
+fn make_parent(path: &Path) -> std::io::Result<()> {
+    match path.parent() {
+        Some(p) if !p.as_os_str().is_empty() && !p.exists() => std::fs::create_dir_all(p),
+        _ => Ok(()),
+    }
+}
+
 /// Write like Python's `open(path, "w", encoding="utf-8")`: platform line endings.
 fn write_platform(path: &Path, text: &str) -> std::io::Result<()> {
+    make_parent(path)?;
     let text = if cfg!(windows) {
         text.replace('\n', "\r\n")
     } else {
@@ -217,6 +226,7 @@ fn write_platform(path: &Path, text: &str) -> std::io::Result<()> {
 
 /// Write with `newline="\n"`.
 fn write_lf(path: &Path, text: &str) -> std::io::Result<()> {
+    make_parent(path)?;
     std::fs::write(path, text)
 }
 
@@ -587,7 +597,7 @@ fn cmd_export(a: &Args) -> u8 {
     }
     for form in doc.forms.values() {
         let p = folder.join(format!("{}.form", form.base.id()));
-        if let Err(e) = write_lf(&p, &forms::export_form(form)) {
+        if let Err(e) = write_lf(&p, &forms::export_form_of(&doc, form)) {
             return fail(&e.to_string());
         }
         written.push(p);

@@ -14,15 +14,12 @@ authors:
   - family-names: Deja
     given-names: Marek
     affiliation: Jagiellonian University
-version: 1.0.1
+version: 1.0.2
 doi: 10.5281/zenodo.23769633
 identifiers:
   - type: doi
     value: 10.5281/zenodo.23769633
     description: "All versions of tok (resolves to the newest)"
-  - type: doi
-    value: 10.5281/zenodo.23769634
-    description: "tok 1.0.1"
 date-released: 2026-10-29
 license: GPL-3.0-or-later
 repository-code: "https://github.com/tok-lang-bpm/tok"

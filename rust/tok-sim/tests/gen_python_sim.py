@@ -650,6 +650,16 @@ def documents(extra_dirs):
     for d in dirs:
         for p in sorted(glob.glob(os.path.join(d, "*.tok"))):
             found.append((p, os.path.basename(p)))
+    # The fixtures of all platforms must hold the same runs: when one exists, only its
+    # documents are taken, so that examples and cases added later (which the Python
+    # reference may not read, e.g. a header `tok 1.0`) do not change the set on one
+    # platform. TOK_SIM_ALL=1 takes every document, for a deliberate regeneration of all
+    # platforms.
+    existing = sorted(glob.glob(os.path.join(FIX, "cases-*.json")))
+    if existing and os.environ.get("TOK_SIM_ALL") != "1":
+        with io.open(existing[0], encoding="utf-8") as f:
+            names = {a for c in json.load(f)["cases"] for a in c["args"] if a.endswith(".tok")}
+        found = [(p, n) for p, n in found if n in names]
     return found
 
 

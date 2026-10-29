@@ -2,7 +2,7 @@
   "name": "tok",
   "displayName": "tok",
   "description": "The tok process language: syntax highlighting, diagnostics, formatting, navigation, rename and a live diagram preview of BPMN 2.0 models written as text.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "tok-lang-bpm",
   "license": "GPL-3.0-or-later",
   "repository": {

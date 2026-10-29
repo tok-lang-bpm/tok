@@ -26,7 +26,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-VERSION = "1.2"
+VERSION = "1.3"
 
 NS = {
     "bpmn": "http://www.omg.org/spec/BPMN/20100524/MODEL",
@@ -614,6 +614,30 @@ def validate(m, kroki=False, opis_kroki=None):
                     "rozdzielić to na dwie bramki." % m.label(e))
         if t in ACT and not m.name(e) and not m.is_event_sub(e):
             add("uwaga", "L030", eid, "%s bez nazwy (%s)." % (TAG_PL.get(t, t).capitalize(), eid))
+        if t not in ("parallelGateway", "eventBasedGateway") and len(outs) > 1 and (
+                dflt or any(f.find(M + "conditionExpression") is not None for f in outs)):
+            for f in outs:
+                if f.get("id") != dflt and f.find(M + "conditionExpression") is None:
+                    add("ostrzeżenie", "W022", f.get("id"), "Gałąź %s elementu %s nie ma warunku, choć element "
+                        "rozgałęzia się warunkowo (ma przepływ domyślny albo inne gałęzie mają warunki); bez "
+                        "warunku nie wiadomo, kiedy ta gałąź jest wybierana." % (f.get("id"), m.label(e)))
+
+    # --- powtórzone przepływy i pętle na jednym elemencie
+    pary = {}
+    for f in m.seq:
+        fid, s, t = f.get("id"), f.get("sourceRef"), f.get("targetRef")
+        if not s or not t:
+            continue
+        c = f.find(M + "conditionExpression")
+        klucz = (s, t, (c.text or "").strip() if c is not None else None)
+        if klucz in pary:
+            add("ostrzeżenie", "W023", fid, "Przepływ %s powtarza przepływ %s (to samo źródło, cel i warunek)."
+                % (fid, pary[klucz]))
+        else:
+            pary[klucz] = fid
+        if s == t and m.get(s) is not None:
+            add("ostrzeżenie", "W043", fid, "Przepływ %s prowadzi z %s z powrotem do tego samego elementu; "
+                "powtórzenie zapisz pętlą (loop) czynności albo bramką." % (fid, m.label(m.get(s))))
 
     # --- linie
     for proc in m.processes:

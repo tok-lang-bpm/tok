@@ -725,6 +725,12 @@ impl P<'_> {
             {
                 self.next();
                 self.deeper()?;
+                // `a >= > 18`: a comparison operator cannot follow another one (the unary
+                // comparison `> 18` is a primary only where nothing is compared with it)
+                let n = self.peek(0).clone();
+                if n.k == K::Op && cmp_op(&n.text).is_some() {
+                    return syntax(format!("unexpected {}", show(&n)));
+                }
                 left = Expr::Cmp(op, Box::new(left), Box::new(self.additive()?));
                 continue;
             }

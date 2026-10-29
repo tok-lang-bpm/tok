@@ -1,6 +1,12 @@
 [
  {
   "poziom": "ostrzeżenie",
+  "kod": "W023",
+  "id": "f-z-e2-2",
+  "komunikat": "Przepływ f-z-e2-2 powtarza przepływ f-z-e2 (to samo źródło, cel i warunek)."
+ },
+ {
+  "poziom": "ostrzeżenie",
   "kod": "K01",
   "id": "s",
   "komunikat": "s: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."

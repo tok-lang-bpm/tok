@@ -1,4 +1,4 @@
-//! Parity with the Python reference `tok.bpmnlib` (= bpmn.py 1.2).
+//! Parity with the Python reference `tok.bpmnlib` (= bpmn.py 1.3).
 //!
 //! Expected outputs are produced by `tests/gen_expected.py`. Identical to them must be:
 //! the diagnostics (codes, levels, element ids and messages of `validate`, `validate_with`

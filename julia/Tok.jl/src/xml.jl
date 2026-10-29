@@ -332,8 +332,12 @@ function run!(ex::Exporter)
     for (k, e) in enumerate(decl)
         insert_at!(root, decl_slot + k - 1, e)
     end
-    # the header documents the definitions of a document with pools
-    isempty(d.pools) || documentation!(root, get(d.attrs, "doc", nothing))
+    # the header documents the collaboration of a document with pools (the definitions of
+    # BPMN 2.0.2 are no base element and have no documentation)
+    if !isempty(d.pools)
+        k = findfirst(c -> c.ns == BPMN_NS && c.name == "collaboration", root.children)
+        k === nothing || documentation!(root.children[k], get(d.attrs, "doc", nothing))
+    end
     return root
 end
 

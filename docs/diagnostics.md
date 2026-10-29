@@ -18,8 +18,8 @@ Every diagnostic has a stable code, a severity and a line number. `tok check --l
 | P002 | error | '{keyword}' needs an identifier | „{keyword}” wymaga identyfikatora |
 | P003 | error | '{keyword}' cannot have an indented block | „{keyword}” nie może mieć wciętego bloku |
 | P004 | error | '{keyword}' is not allowed inside {context} | „{keyword}” nie może wystąpić w bloku {context} |
-| P005 | error | the document must start with the header 'tok 0.1' | dokument musi zaczynać się nagłówkiem „tok 0.1” |
-| P006 | warning | unknown language version {version}; this tool reads version 0.1 | nieznana wersja języka {version}; to narzędzie czyta wersję 0.1 |
+| P005 | error | the document must start with a header such as 'tok 1.0' | dokument musi zaczynać się nagłówkiem, na przykład „tok 1.0” |
+| P006 | warning | unknown language version {version}; this tool reads versions 0.1, 0.3, 0.5, 0.6, 0.7 and 1.0 | nieznana wersja języka {version}; to narzędzie czyta wersje 0.1, 0.3, 0.5, 0.6, 0.7 i 1.0 |
 | P007 | error | malformed attribute near '{near}' | niepoprawny atrybut w pobliżu „{near}” |
 | P008 | error | malformed {keyword} line: {detail} | niepoprawny wiersz {keyword}: {detail} |
 | P009 | error | malformed decision table row: {detail} | niepoprawny wiersz tabeli decyzyjnej: {detail} |
@@ -221,11 +221,14 @@ After the tok-level checks pass, the document is exported to BPMN 2.0 and checke
 | W016 | warning | event after an event-based gateway has other incoming flows |
 | W020 | warning | gateway with one incoming and one outgoing flow is unnecessary |
 | W021 | warning | branch of an XOR/OR split without label, condition or default status |
+| W022 | warning | branch without a condition at an element that splits conditionally (it has a default flow or other branches have conditions) |
+| W023 | warning | sequence flow repeats another one (same source, target and condition) |
 | W030 | warning | lane refers to an element inside a sub-process |
 | W031 | warning | element outside every lane |
 | W040 | warning | process without a start or end event |
 | W041 | warning | element not reachable from a start event |
 | W042 | warning | path without an end event (element without outgoing flow) |
+| W043 | warning | sequence flow from an element back to itself |
 | W050 | warning | OR split without a default flow |
 | W051 | warning | join of a different type than the split (e.g. AND split joined by XOR) |
 | W052 | warning | boundary escalation/error on a sub-process that nothing inside throws |

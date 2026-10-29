@@ -20,7 +20,7 @@ name = "tok-mcp"
 path = "src/main.rs"
 
 [dependencies]
-tok-cli = { path = "../tok-cli", version = "1.0.1" }
+tok-cli = { path = "../tok-cli", version = "1.0.2" }
 serde_json = "1.0.154"
 
 [lints]

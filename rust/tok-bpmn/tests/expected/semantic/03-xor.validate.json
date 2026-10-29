@@ -1,1 +1,8 @@
-[]
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W023",
+  "id": "f-z-e2-2",
+  "komunikat": "Przepływ f-z-e2-2 powtarza przepływ f-z-e2 (to samo źródło, cel i warunek)."
+ }
+]

@@ -4,7 +4,7 @@ members = ["tok-core", "tok-bpmn", "tok-cli", "tok-py", "tok-sim", "tok-capi", "
 exclude = ["fuzz"]
 
 [workspace.package]
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 rust-version = "1.99"
 license = "GPL-3.0-or-later"

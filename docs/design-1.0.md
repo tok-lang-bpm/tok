@@ -45,7 +45,7 @@ Every construct was reviewed for names that do not fit and for redundant forms. 
 | `variable NAME "DIST"` and `text "…"`, whose quoted value stands where a label stands elsewhere | a positional value | kept: these statements have no label |
 | the decision tables of languages 0.1–0.6 (DMN 1.3, the object of outputs from `tok eval`) | another evaluation than 0.7 | kept for documents of those versions; a 1.0 document has the decision tables of 0.7 |
 
-The messages of `P005` ("the document must start with the header 'tok 0.1'") and `P006` ("…; this tool reads version 0.1") still name version 0.1. They are kept as they are, because changing them would change the output of `tok check` for existing documents and they are shared with the frozen pure-Python implementation; a later version may correct them as a documented fix.
+The messages of `P005` ("the document must start with the header 'tok 0.1'") and `P006` ("…; this tool reads version 0.1") still name version 0.1. They are kept as they are, because changing them would change the output of `tok check` for existing documents and they are shared with the frozen pure-Python implementation; a later version may correct them as a documented fix. Release 1.0.2 did: the engine names `tok 1.0` in `P005` and the versions it reads in `P006`; the pure-Python implementation, which reads 0.1 and 0.3, keeps its messages.
 
 ## 5. Compatibility of 1.x
 

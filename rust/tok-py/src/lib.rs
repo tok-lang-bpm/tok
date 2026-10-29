@@ -216,7 +216,10 @@ fn export_files<'py>(py: Python<'py>, text: &str, name: &str) -> PyResult<Bound<
         files.set_item(file, content)?;
     }
     for form in doc.forms.values() {
-        files.set_item(format!("{}.form", form.base.id()), forms::export_form(form))?;
+        files.set_item(
+            format!("{}.form", form.base.id()),
+            forms::export_form_of(&doc, form),
+        )?;
     }
     Ok(files)
 }

@@ -2,6 +2,32 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version could change the language; from 1.0 the compatibility promise of the specification (`docs/spec.md` §4.3) holds for every release 1.x, and a patch version never changes the language.
 
+## [1.0.2] — 2026-10-29
+
+A release of the checker and the exporters, from the findings of the first evidence study of tok (fault injection, and language models writing process models with the checker as their feedback); the language stays 1.0. Outputs change only where listed below: the conformance case 03-xor gets the new warning `W023`, and the exports of cases 45 and 62 carry the documentation of the header in the collaboration.
+
+### Added
+
+- Three warnings of the BPMN rules, for what the BPMN linter of bpmn.io (bpmnlint) reports and the checker did not (`docs/bpmn-rules.md`):
+  - `W022` — a branch without a condition at an element that splits conditionally (it has a default flow, or other branches have conditions): BPMN takes the default only when no condition is true, so the branch needs one (`when="…"`, or `when=""` while it is not known);
+  - `W023` — a sequence flow that repeats another one (same source, target and condition);
+  - `W043` — a sequence flow from an element back to itself.
+  They are warnings, so that every valid document stays valid (the compatibility promise of 1.x). The course tool `bpmn.py` (1.3) has the same rules, as before.
+- The agent skill `tok-modelling` fixes warnings as well as errors and explains the warnings of the BPMN rules.
+
+### Fixed
+
+- The documentation of the header (`doc=` on the first line) of a document with pools was written into `bpmn:definitions`, which has no documentation in BPMN 2.0.2: the file was not valid against the XML Schema of the OMG. It is written into the collaboration; the import reads it from there, and from the definitions in files of earlier releases.
+- In documents of language 0.7 and 1.0, a condition with two comparison operators in a row (`age >= > 18`) was accepted; it is the syntax error `F002`, as in documents of 0.1–0.6.
+- `P005` and `P006` named version 0.1 only: they name `tok 1.0` and the versions the engine reads (0.1, 0.3, 0.5, 0.6, 0.7 and 1.0). The pure-Python implementation keeps its messages (it reads 0.1 and 0.3).
+- `tok bpmn`, `tok svg`, `tok export` and `tok import` with `-o` into a folder that does not exist failed; the folder is made.
+- Camunda forms carry the language version of the document as the version of the exporter, as the BPMN and DMN files do (documents of 0.1 and 0.3 keep 0.1.0, the output of the pure-Python implementation).
+
+### Changed
+
+- The generator of the simulation fixtures (`rust/tok-sim/tests/gen_python_sim.py`) takes the documents of an existing fixture, so that a regeneration on another platform gives the same runs; `TOK_SIM_ALL=1` takes every document.
+- The comment of `julia/binarybuilder/build_tarballs.jl` names the repository on GitHub.
+
 ## [1.0.1] — 2026-10-29
 
 A release of the tools and the packages; the language stays 1.0 and every output for the conformance cases, the examples, the MIWG models and the DMN TCK stays as it was.

@@ -4,7 +4,7 @@
 #   TOK_COMMIT=<sha> julia build_tarballs.jl --verbose                 the release commit
 #   TOK_SOURCE=<dir> julia build_tarballs.jl --verbose x86_64-linux-gnu   a local checkout
 #
-# TOK_COMMIT selects a commit of the repository on Codeberg (the commit of the release tag),
+# TOK_COMMIT selects a commit of the repository on GitHub (the commit of the release tag),
 # as the recipe submitted to Yggdrasil does (README.md). TOK_SOURCE selects a checkout of
 # the repository on disk instead; BinaryBuilder copies it and writes its build folder next
 # to this file, so the checkout must not contain the folder this recipe runs from.
@@ -12,7 +12,7 @@
 using BinaryBuilder, Pkg
 
 name = "tok"
-version = v"1.0.1"
+version = v"1.0.2"
 
 const REPO = "https://github.com/tok-lang-bpm/tok.git"
 

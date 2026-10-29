@@ -115,6 +115,8 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | An instantiating event-based gateway has no incoming sequence flows; the parallel type is used only for instantiation | 10.6.6 (Table 10.127) | R063 |
 | A gateway with one incoming and one outgoing flow does nothing | 10.6 (a gateway controls divergence and convergence) | W020 |
 | A branch of an exclusive or inclusive split has a condition, a label or is the default | 10.6.2, 10.6.3 | W021 |
+| When an element splits conditionally (it has a default flow, or some outgoing flows have conditions), every other outgoing flow has a condition: the default is taken only when no condition is true | 10.6.2, 10.6.3, 13.3.4 | W022 |
+| No two sequence flows have the same source, target and condition | 10.5.1 (a duplicate is the same path twice) | W023 |
 | An inclusive split has a default flow, so that at least one branch is taken | 10.6.3 | W050 |
 | A split and its join have matching types (an AND split joined by XOR runs the rest several times; an XOR split joined by AND deadlocks); a complex gateway may join any split | 13.4.1–13.4.5 | W051 |
 | A complex gateway's activation condition decides when the join fires | 10.6.5 (Tables 10.125, 10.126), 13.4.5 | (simulated, no code) |
@@ -126,6 +128,7 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | A process has a start event (or an instantiating receive task or event-based gateway) and an end event | 10.5.2, 10.5.3, 13.2 | W040 |
 | Every flow node is reachable from a start | 13.2, 13.3.1 | W041 |
 | Every path ends at an end event | 10.5.3, 13.2 | W042 |
+| A sequence flow does not lead from an element back to itself; a repeated activity is a loop or a decision | 10.3.8 (loop characteristics), 13.3.1 | W043 |
 
 ## Data
 

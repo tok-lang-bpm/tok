@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "code": "W023",
+    "severity": "warning",
+    "line": 16,
+    "id": "f-z-e2-2",
+    "message": "sequence flow repeats another one (same source, target and condition) (f-z-e2-2)"
+  }
+]

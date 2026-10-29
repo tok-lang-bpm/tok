@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Rezerwacja podróży" targetNamespace="http://bpmn.io/schema/bpmn">
-  <bpmn:documentation>Współpraca biura podróży z klientem</bpmn:documentation>
   <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
   <bpmn:dataStore id="rezerwacje-store" name="Rezerwacje" />
   <bpmn:category id="categories">
     <bpmn:categoryValue id="etap-value" value="Etap rezerwacji" />
   </bpmn:category>
   <bpmn:collaboration id="collaboration">
+    <bpmn:documentation>Współpraca biura podróży z klientem</bpmn:documentation>
     <bpmn:participant id="biuro" name="Biuro podróży" processRef="biuro-process">
       <bpmn:documentation>Uczestnik: biuro</bpmn:documentation>
     </bpmn:participant>

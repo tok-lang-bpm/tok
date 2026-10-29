@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "code": "W023",
+    "severity": "warning",
+    "line": 16,
+    "id": "f-z-e2-2",
+    "message": "Przepływ f-z-e2-2 powtarza przepływ f-z-e2 (to samo źródło, cel i warunek)."
+  }
+]

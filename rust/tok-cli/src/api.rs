@@ -376,7 +376,7 @@ pub fn export_files(text: &str, options: &str) -> Res {
     for form in doc.forms.values() {
         files.push((
             format!("{}.form", form.base.id()),
-            Json::Str(forms::export_form(form)),
+            Json::Str(forms::export_form_of(&doc, form)),
         ));
     }
     Ok(Json::Obj(files))

@@ -2,7 +2,7 @@
 
 `tok-mcp` gives the tok engine to AI agents through the Model Context Protocol (MCP). An MCP client (an agent application, an editor with an agent, or any program that speaks MCP) starts it as a local program and calls its tools: check a model and read the diagnostics, print the canonical form, export BPMN, SVG, DMN and form files, import BPMN or DMN, simulate, evaluate decisions, and read the language reference. The agent works with the text of a model and never has to write XML or diagram coordinates.
 
-The skill `skills/tok-modelling` teaches an agent the workflow of modelling in tok; it uses the MCP server when the client has it and the `tok` command otherwise.
+The skill `skills/tok-modelling` teaches an agent the workflow of modelling in tok; it uses the MCP server when the client has it and the `tok` command otherwise. The skill `skills/bpmn-modelling` teaches the same for BPMN 2.0 XML, checked with the tool `check_bpmn` or `tok check FILE.bpmn`.
 
 ## Installing
 
@@ -22,7 +22,7 @@ cd rust && cargo build --release -p tok-mcp      # target/release/tok-mcp (tok-m
 
 `tools/check.sh` builds it and copies it to `dist/`. Put the program on the `PATH` or give the client its full path. `tok mcp --version` and `tok-mcp --version` print the version; without arguments the server serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends. Both are the same server.
 
-The server is listed in the MCP Registry as `io.github.tok-lang-bpm/tok` (`server.json` of the repository), from which registry-aware clients install it. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries the server configuration and the skill together, as a plugin for agent applications that install plugins from a marketplace.
+The server is registered for the MCP Registry as `io.github.tok-lang-bpm/tok` (`server.json` of the repository), from which registry-aware clients install it; every client can also start it directly, as below. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries the server configuration and the skill together, as a plugin for agent applications that install plugins from a marketplace.
 
 ## Configuring a client
 
@@ -67,11 +67,12 @@ Its capabilities are `tools` and `resources`. It keeps no state between calls: e
 
 ## Tools
 
-Every tool that reads a document takes it either as `text` (the tok text) or as `path` (a `.tok` file the server reads), never both; `import` takes `xml` or `path`. `lang` (`en` or `pl`) chooses the language of diagnostics and reports. The input schemas are exact: an argument that is not listed, has the wrong type or a value outside its choices is an error of the tool, reported before anything runs.
+Every tool that reads a document takes it either as `text` (the tok text) or as `path` (a `.tok` file the server reads), never both; `import` and `check_bpmn` take `xml` or `path`. `lang` (`en` or `pl`) chooses the language of diagnostics and reports. The input schemas are exact: an argument that is not listed, has the wrong type or a value outside its choices is an error of the tool, reported before anything runs.
 
 | Tool | Arguments | Result (`structuredContent`) |
 |---|---|---|
 | `check` | `text` or `path`, `lang`, `level` (`basic`, `analytic`, `full`), `class` (`descriptive`, `analytic`, `common-executable`, `full`), `bpmn` (boolean, default `true`: also the BPMN 2.0 rules) | `{"errors", "bpmn_class", "diagnostics": [{"code", "severity", "line", "id", "message"}]}`, as `tok check --json`; the text content lists the diagnostics one per line |
+| `check_bpmn` | `xml` or `path` (a `.bpmn` file), `steps` (boolean: names start with step numbers), `description` (the text of a process description whose table lists the steps), `camunda` (boolean: the Camunda 8 profile; with `path` its forms and decisions are looked for in the file's folder), `lang` | `{"errors", "diagnostics": [{"code", "severity", "line", "id", "message"}]}`, as `tok check FILE.bpmn --json`: BPMN 2.0 XML from tok or from any modelling tool, checked with the BPMN rules of the checker; the line is that of the element in the XML |
 | `fmt` | `text` or `path`, `lang` | `{"text"}`: the canonical form, as `tok fmt` (the server does not write the file) |
 | `export` | `text` or `path`, `formats` (a list of `bpmn`, `svg`, `dmn`, `forms`; all when left out), `name` (stem of the BPMN and SVG names; default the stem of `path`, or `model`), `sidecar` (boolean, default `true`), `lang` | `{"files": {NAME: CONTENT}}`: the files `tok export` writes — `NAME.bpmn` with diagram layout, `NAME.svg`, the DMN files of the decisions (`dmn` includes the `.drd.svg` pictures of languages 0.7 and 1.0) and the Camunda forms `ID.form` |
 | `import` | `xml` or `path`, `format` (`auto`, `bpmn`, `dmn`), `flow_ids` (boolean, default `true`), `layout` (boolean, default `true`) | `{"format", "text", "warnings", "layout"}`: the tok document, what the import did not keep, and for BPMN the layout sidecar to save as `FILE.tok.layout` |

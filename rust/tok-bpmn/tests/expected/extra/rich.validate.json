@@ -96,6 +96,18 @@
   "komunikat": "„Złożona” (Cx): nazwa rozgałęziającej bramki powinna być pytaniem (kończyć się „?”)."
  },
  {
+  "poziom": "ostrzeżenie",
+  "kod": "W044",
+  "id": "T1",
+  "komunikat": "„Rejestracja” (T1) ma kilka przepływów wychodzących bez warunku (3), a nie jest bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką równoległą (and) albo daj przepływom warunki."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "EvS",
+  "komunikat": "EvS ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
   "poziom": "błąd",
   "kod": "E030",
   "id": "T1",

@@ -83,6 +83,7 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | A boundary compensation event is connected with its handler by an association, not by a sequence flow | 10.7.1, 10.5.4 | E012 |
 | A timer event definition gives a time date, a duration or a cycle | 10.5.5 (Timer Event Definition, Table 10.101) | W010 |
 | An event with several event definitions is a multiple event; `parallelMultiple` needs a catching event with several definitions | 10.5.1, 10.5.2–10.5.4 (Multiple, Parallel Multiple), 10.5.5 | R062 |
+| An event with several triggers is valid BPMN but rejected by the bpmn.io linters (`single-event-definition`); it is kept only when the process needs it | 10.5.1, 10.5.2–10.5.4 (Multiple) | W047 |
 | Terminate, cancel, compensation and link events have exactly one event definition | 10.5.3 (Table 10.88), 10.5.4 (Tables 10.89, 10.90) | R062 (0.5); R012 (0.1, 0.3) |
 | A message event refers to a message | 10.5.5 (Message Event Definition, `messageRef`) | L010 (note: the reference is optional in the metamodel) |
 | An escalation that is thrown is caught somewhere | 10.5.6 (Handling Events) | W053 |
@@ -116,6 +117,7 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | A gateway with one incoming and one outgoing flow does nothing | 10.6 (a gateway controls divergence and convergence) | W020 |
 | A branch of an exclusive or inclusive split has a condition, a label or is the default | 10.6.2, 10.6.3 | W021 |
 | When an element splits conditionally (it has a default flow, or some outgoing flows have conditions), every other outgoing flow has a condition: the default is taken only when no condition is true | 10.6.2, 10.6.3, 13.3.4 | W022 |
+| An element that is not a gateway splits only through conditions: several outgoing flows without conditions are all taken, which a parallel gateway states explicitly (bpmnlint `no-implicit-split`) | 10.3.1, 10.6.4, 13.3.4 | W044 |
 | No two sequence flows have the same source, target and condition | 10.5.1 (a duplicate is the same path twice) | W023 |
 | An inclusive split has a default flow, so that at least one branch is taken | 10.6.3 | W050 |
 | A split and its join have matching types (an AND split joined by XOR runs the rest several times; an XOR split joined by AND deadlocks); a complex gateway may join any split | 13.4.1–13.4.5 | W051 |
@@ -129,6 +131,7 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | Every flow node is reachable from a start | 13.2, 13.3.1 | W041 |
 | Every path ends at an end event | 10.5.3, 13.2 | W042 |
 | A sequence flow does not lead from an element back to itself; a repeated activity is a loop or a decision | 10.3.8 (loop characteristics), 13.3.1 | W043 |
+| An embedded sub-process or transaction has its own start event and end event; BPMN allows them to be left out, the bpmn.io linters (`start-event-required`, `end-event-required`) do not | 10.3.5 (Sub-Process), 10.5.2, 10.5.3 | W045, W046 |
 
 ## Data
 

@@ -7,6 +7,12 @@
  },
  {
   "poziom": "ostrzeżenie",
+  "kod": "W044",
+  "id": "z",
+  "komunikat": "„Zamówienie w innej bibliotece” (z) ma kilka przepływów wychodzących bez warunku (2), a nie jest bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką równoległą (and) albo daj przepływom warunki."
+ },
+ {
+  "poziom": "ostrzeżenie",
   "kod": "K01",
   "id": "s",
   "komunikat": "s: nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."

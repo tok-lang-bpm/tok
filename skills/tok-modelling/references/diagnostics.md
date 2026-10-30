@@ -229,6 +229,10 @@ After the tok-level checks pass, the document is exported to BPMN 2.0 and checke
 | W041 | warning | element not reachable from a start event |
 | W042 | warning | path without an end event (element without outgoing flow) |
 | W043 | warning | sequence flow from an element back to itself |
+| W044 | warning | activity or event with several outgoing flows without conditions (implicit split; all of them are taken) |
+| W045 | warning | sub-process without a start event |
+| W046 | warning | sub-process without an end event |
+| W047 | warning | event with several triggers (multiple event), reported as an error by bpmn.io linters |
 | W050 | warning | OR split without a default flow |
 | W051 | warning | join of a different type than the split (e.g. AND split joined by XOR) |
 | W052 | warning | boundary escalation/error on a sub-process that nothing inside throws |
@@ -238,3 +242,35 @@ After the tok-level checks pass, the document is exported to BPMN 2.0 and checke
 | L020 | note | name of a splitting gateway is not a question |
 | L021 | note | gateway both joins and splits |
 | L030 | note | task without a name |
+
+## BPMN files (C, D, K)
+
+`tok check FILE.bpmn` reports the BPMN 2.0 rules of the previous section, the diagram of the file (D) and, with its options, the step numbers (K: `--steps`, `--steps-from`) and the Camunda 8 profile of executable models (C: `--camunda`, the same codes as the executable profile of tok documents above). Their messages name the element; the English texts are:
+
+| Code | Severity | Meaning |
+|---|---|---|
+| C001 | warning | no modeler:executionPlatform="Camunda Cloud" on <bpmn:definitions>; Camunda Modeler opens the file as a Camunda 7 model |
+| C002 | error | no process has isExecutable="true"; the engine will not deploy the model |
+| C010 | warning | user task without <zeebe:userTask/>; it does not reach Tasklist as a Camunda user task |
+| C011 | note | user task without a form (zeebe:formDefinition); in Tasklist it can only be completed without data |
+| C012 | warning | the form of the user task is in no .form file of the model's folder |
+| C020 | error | service or send task without <zeebe:taskDefinition type="…"/>; the deployment fails |
+| C021 | note | service or send task waits for a worker of its job type; without one the instance stops there |
+| C030 | error | business rule task without <zeebe:calledDecision decisionId="…" resultVariable="…"/> |
+| C031 | error | zeebe:calledDecision without decisionId or resultVariable |
+| C032 | warning | the decision of the business rule task is in no .dmn file of the model's folder |
+| C040 | error | script task without <zeebe:script expression="=…" resultVariable="…"/> |
+| C041 | error | zeebe:script: the FEEL expression must start with '=' and resultVariable is required |
+| C050 | error | message event or task without messageRef |
+| C051 | error | message without a name; the engine correlates messages by name |
+| C052 | error | message caught by an event or receive task without <zeebe:subscription correlationKey="=…"/> |
+| C060 | warning | element not executed by Camunda 8 |
+| C070 | error | flow leaving a gateway without a condition; the engine needs one on every outgoing flow except the default |
+| C071 | error | condition of a flow is not a FEEL expression starting with '=' (e.g. =approved = true) |
+| C080 | error | timer event without a value (timeDuration, timeDate or timeCycle) |
+| D01 | warning | diagram coordinates of an element that is no longer in the model; run tok bpmn on the file to lay it out again |
+| D02 | warning | elements without diagram coordinates (BPMNDI); run tok bpmn on the file to lay it out |
+| K01 | warning | name does not start with the step number of the process description (e.g. '12. Request for quotation') |
+| K02 | warning | a step of the process description has no element in the model |
+| K03 | warning | an element carries a step number that is not in the process description |
+

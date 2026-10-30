@@ -1,7 +1,7 @@
 name = "TokApp"
 uuid = "89b4a7b7-ba29-48a2-865f-7de7f21a3388"
 authors = ["Marek Deja"]
-version = "1.0.2"
+version = "1.0.3"
 
 [deps]
 Tok = "5f0c7a52-3e8d-4b9a-9c1e-2a6d4e8b7f31"

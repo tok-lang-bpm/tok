@@ -334,11 +334,12 @@ def run_tok(args, engine):
 
 def engine_additions_removed(result):
     """Output of the engine without what the frozen pure-Python command does not print: the
-    BPMN conformance class of ``tok check --json`` and the ``--class`` option of ``tok check``
-    (language 0.6)."""
+    BPMN conformance class of ``tok check --json``, the ``--class`` option of ``tok check``
+    (language 0.6) and its options for BPMN files (tok 1.0.3)."""
     code, out, err = result
     def strip(b):
         b = re.sub(rb'\n  "bpmn_class": "[a-z-]+",', b"", b)
+        b = b.replace(b" [--steps] [--steps-from FILE] [--camunda]", b"")
         return b.replace(b" [--class {descriptive,analytic,common-executable,full}]", b"")
     return code, strip(out), strip(err)
 

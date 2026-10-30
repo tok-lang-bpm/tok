@@ -1,5 +1,12 @@
 [
   {
+    "code": "W044",
+    "severity": "warning",
+    "line": 7,
+    "id": "z",
+    "message": "„Zamówienie w innej bibliotece” (z) ma kilka przepływów wychodzących bez warunku (2), a nie jest bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką równoległą (and) albo daj przepływom warunki."
+  },
+  {
     "code": "W023",
     "severity": "warning",
     "line": 16,

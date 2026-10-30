@@ -26,7 +26,7 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 
-VERSION = "1.3"
+VERSION = "1.4"
 
 NS = {
     "bpmn": "http://www.omg.org/spec/BPMN/20100524/MODEL",
@@ -639,6 +639,23 @@ def validate(m, kroki=False, opis_kroki=None):
             add("ostrzeżenie", "W043", fid, "Przepływ %s prowadzi z %s z powrotem do tego samego elementu; "
                 "powtórzenie zapisz pętlą (loop) czynności albo bramką." % (fid, m.label(m.get(s))))
 
+    # --- niejawne rozgałęzienia i zdarzenia z kilkoma wyzwalaczami
+    for e in r.iter():
+        t = local(e.tag)
+        if t not in ACT and t not in EVT:
+            continue
+        eid = e.get("id")
+        bez = [f for f in m.out.get(eid, []) if f.get("id") != e.get("default")
+               and f.find(M + "conditionExpression") is None]
+        if len(bez) > 1:
+            add("ostrzeżenie", "W044", eid, "%s ma kilka przepływów wychodzących bez warunku (%d), a nie jest "
+                "bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką "
+                "równoległą (and) albo daj przepływom warunki." % (m.label(e), len(bez)))
+        if t in EVT and len([d for d in m.eventdefs(e) if d != "ref"]) > 1:
+            add("ostrzeżenie", "W047", eid, "%s ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to "
+                "dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis "
+                "procesu tego wymaga." % m.label(e))
+
     # --- linie
     for proc in m.processes:
         lanes = m.lanes_of(proc)
@@ -675,11 +692,19 @@ def validate(m, kroki=False, opis_kroki=None):
 
     for cont in containers():
         nodes = [c for c in cont if local(c.tag) in FLOWNODE]
+        starts = [n.get("id") for n in nodes if local(n.tag) == "startEvent"]
+        is_top = local(cont.tag) == "process"
+        if local(cont.tag) in ("subProcess", "transaction"):
+            # start of an event sub-process: E013
+            if not starts and not m.is_event_sub(cont):
+                add("ostrzeżenie", "W045", cont.get("id"), "%s nie ma zdarzenia początkowego; podproces "
+                    "zaczyna się od swojego zdarzenia początkowego." % m.label(cont))
+            if not any(local(n.tag) == "endEvent" for n in nodes):
+                add("ostrzeżenie", "W046", cont.get("id"), "%s nie ma zdarzenia końcowego; podproces "
+                    "kończy się swoim zdarzeniem końcowym." % m.label(cont))
         if not nodes:
             continue
         ids = {n.get("id") for n in nodes}
-        starts = [n.get("id") for n in nodes if local(n.tag) == "startEvent"]
-        is_top = local(cont.tag) == "process"
         if not starts:
             if is_top:
                 add("ostrzeżenie", "W040", cont.get("id"), "Proces %s nie ma zdarzenia początkowego."
@@ -854,7 +879,7 @@ def validate(m, kroki=False, opis_kroki=None):
                 have.add(be)
                 if be not in m.ids:
                     add("ostrzeżenie", "D01", s.get("id"), "Współrzędne %s dotyczą elementu %s, którego już nie ma "
-                        "w modelu. Po zmianach w modelu uruchom: bpmn.py all (odświeży układ)." % (s.get("id"), be))
+                        "w modelu. Po zmianach w modelu uruchom: tok bpmn (odświeży układ)." % (s.get("id"), be))
         missing = []
         for e in r.iter():
             t = local(e.tag)
@@ -864,7 +889,7 @@ def validate(m, kroki=False, opis_kroki=None):
                 missing.append(e.get("id"))
         if missing:
             add("ostrzeżenie", "D02", None, "%d elementów nie ma współrzędnych (BPMNDI), np. %s. Uruchom: "
-                "bpmn.py layout." % (len(missing), ", ".join(missing[:5])))
+                "tok bpmn." % (len(missing), ", ".join(missing[:5])))
     return issues
 
 
@@ -2015,7 +2040,7 @@ def render_svg(m, title=None):
     for e in m.root.iter(BDI + "BPMNEdge"):
         edges[e.get("bpmnElement")] = [(float(p.get("x")), float(p.get("y"))) for p in e.findall(DI + "waypoint")]
     if not shapes:
-        raise LoadError("Model nie ma współrzędnych (BPMNDI). Najpierw uruchom: bpmn.py layout")
+        raise LoadError("Model nie ma współrzędnych (BPMNDI). Najpierw uruchom: tok bpmn")
 
     xs, ys = [], []
     for (x, y, w, h) in shapes.values():

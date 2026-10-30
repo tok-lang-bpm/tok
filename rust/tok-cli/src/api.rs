@@ -324,6 +324,40 @@ pub fn check(text: &str, options: &str) -> Res {
     ]))
 }
 
+/// `tok check FILE.bpmn`: the findings of the BPMN validator for BPMN 2.0 XML,
+/// `{"errors", "diagnostics"}`. Options: `lang`, `steps` (names start with step numbers),
+/// `steps_from` (the text of a process description whose table lists the steps), `camunda`
+/// (the Camunda 8 profile) and `folder` (where its forms and decisions are; default `.`).
+pub fn check_bpmn(xml: &str, options: &str) -> Res {
+    let o = Options::parse(
+        options,
+        &["lang", "steps", "steps_from", "camunda", "folder"],
+    )?;
+    let lang = o.lang()?;
+    let steps_from = o
+        .string("steps_from")?
+        .map(|t| tok_bpmn::read_opis(&normalize(&t)));
+    let folder = o.string("folder")?.unwrap_or_else(|| ".".to_string());
+    let camunda = o.flag("camunda", false)?;
+    let diags = crate::bpmn_file_diags(
+        &normalize(xml),
+        o.flag("steps", false)?,
+        steps_from,
+        camunda.then_some(std::path::Path::new(&folder)),
+    )
+    .map_err(|e| match (&e, lang.as_str()) {
+        (tok_bpmn::Error::Xml(m), "en") => {
+            ApiError::new("xml", format!("not well-formed XML: {m}"))
+        }
+        _ => ApiError::new("xml", e.to_string()),
+    })?;
+    let errors = diags.iter().filter(|d| d.is_error()).count();
+    Ok(obj(vec![
+        ("errors", Json::Int(errors as i64)),
+        ("diagnostics", diagnostics_json(&diags, &lang)),
+    ]))
+}
+
 /// `tok fmt`: the canonical text.
 pub fn fmt(text: &str, options: &str) -> Res {
     let o = Options::parse(options, &["lang"])?;

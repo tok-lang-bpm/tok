@@ -2,6 +2,21 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version could change the language; from 1.0 the compatibility promise of the specification (`docs/spec.md` §4.3) holds for every release 1.x, and a patch version never changes the language.
 
+## [1.0.3] — 2026-10-30
+
+A release of the checker and the command line, from the second evidence study of tok (language models of other makers writing process models with the checker as their feedback, and a scan of every rule of the BPMN linter of bpmn.io against the checker); the language stays 1.0. Outputs change only where listed below: the conformance case 03-xor gets the new warning `W044`, and the cases 36, 44, 62 and 67 the new warning `W047`.
+
+### Added
+
+- Four warnings of the BPMN rules, for what bpmnlint reports and the checker did not (`docs/bpmn-rules.md`); with them the checker reports every rule of bpmnlint that concerns the model rather than its style:
+  - `W044` — an activity or an event with several outgoing sequence flows without conditions: all of them are taken (an implicit split), which a parallel gateway states explicitly (bpmnlint `no-implicit-split`);
+  - `W045`, `W046` — an embedded sub-process or a transaction without its own start or end event; BPMN 2.0.2 allows them to be left out, bpmnlint does not (`start-event-required`, `end-event-required`);
+  - `W047` — an event with several triggers (a multiple event): valid BPMN, reported as an error by bpmnlint (`single-event-definition`); keep it when the process needs it.
+  They are warnings, so that every valid document stays valid. The pure-Python reference `tok.bpmnlib` (1.4) has the same rules.
+- The agent skill `tok-modelling` explains the new warnings.
+- `tok check FILE.bpmn` checks a BPMN 2.0 XML file, from tok or from any modelling tool, with the BPMN rules of the checker, and reports each finding with the line of its element; `--steps` and `--steps-from DESCRIPTION.md` check the step numbers of a process description (`K01`–`K03`), `--camunda` the Camunda 8 profile of executable models (`C…`). `tok bpmn FILE.bpmn` lays out a BPMN file and `tok svg FILE.bpmn` draws it. These are the commands of the course tool `bpmn.py`, run by the engine, so that agents and courses need one program; the codes of BPMN files are listed in `docs/diagnostics.md`.
+- The MCP server has the tool `check_bpmn`, the same check of BPMN 2.0 XML for agents (`docs/mcp.md`).
+
 ## [1.0.2] — 2026-10-29
 
 A release of the checker and the exporters, from the findings of the first evidence study of tok (fault injection, and language models writing process models with the checker as their feedback); the language stays 1.0. Outputs change only where listed below: the conformance case 03-xor gets the new warning `W023`, and the exports of cases 45 and 62 carry the documentation of the header in the collaboration.

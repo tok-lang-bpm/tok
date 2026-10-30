@@ -2,9 +2,12 @@
 
 ```
 tok check FILE [--level basic|analytic|full] [--class descriptive|analytic|common-executable|full] [--lang en|pl] [--json]
+tok check FILE.bpmn [--steps] [--steps-from DESCRIPTION.md] [--camunda] [--lang en|pl] [--json]
 tok fmt FILE [-w|--write] [--check] [--lang en|pl] [--json]
 tok bpmn FILE [-o|--output OUT.bpmn] [--no-layout] [--no-sidecar] [--lang en|pl] [--json]
+tok bpmn FILE.bpmn [-o|--output OUT.bpmn]
 tok svg FILE [-o|--output OUT.svg] [--no-sidecar] [--lang en|pl] [--json]
+tok svg FILE.bpmn [-o|--output OUT.svg]
 tok export FILE [-o|--output FOLDER] [--no-sidecar] [--lang en|pl] [--json]
 tok import FILE.bpmn|FILE.dmn [-o|--output OUT.tok] [--no-flow-ids] [--no-layout] [--lang en|pl]
 tok sim FILE [--cases N] [--seed N] [--log LOG.csv] [--cases-csv CASES.csv] [--xes LOG.xes] [--lang en|pl] [--json]
@@ -17,9 +20,11 @@ tok [COMMAND] -h|--help
 | Command | What it does |
 |---|---|
 | `check` | parses the document and lists diagnostics (codes in `diagnostics.md`). Exit code 1 if there are errors. `--level` restricts the accepted elements to a teaching level. `--class` checks the document against a conformance class of BPMN 2.0.2 and reports every element outside it (`R075`); `--json` also gives the smallest class the document fits (`"bpmn_class"`; see `bpmn-rules.md`). |
+| `check FILE.bpmn` | checks a BPMN 2.0 XML file, from tok or from any modelling tool, with the BPMN rules that `tok check` applies to the export of a document (`bpmn-rules.md`), and lists the findings with the line of each element; exit code 1 if there are errors. `--steps` requires every element name to start with the step number of a process description (`K01`); `--steps-from DESCRIPTION.md` reads the steps from the table of that file and reports steps without an element and elements without a step (`K02`, `K03`); `--camunda` adds the Camunda 8 profile of executable models (`C…`; the forms and decisions it refers to are looked for in the file's folder). The codes are in `diagnostics.md` (BPMN 2.0 rules; BPMN files). |
 | `fmt` | prints the canonical form. `-w` rewrites the file, `--check` only reports whether the file is already canonical. |
 | `bpmn` | writes BPMN 2.0 XML with an automatic diagram layout. The file opens in Camunda Modeler and bpmn.io. When the layout sidecar `FILE.layout` exists next to the document (written by `tok import`), the shapes and edges it names keep their geometry and new elements are placed around them; `--no-sidecar` ignores it. |
 | `svg` | writes a picture of the diagram (with the layout sidecar, as `bpmn`). |
+| `bpmn FILE.bpmn`, `svg FILE.bpmn` | lay out a BPMN 2.0 XML file (a new diagram written into the file, or into `-o`) and draw the picture of its diagram. |
 | `export` | writes the BPMN file, the SVG picture, the decision files and one `.form` file per form: everything Camunda 8 needs for an executable document (with the layout sidecar, as `bpmn`). The decision files are one DMN 1.3 file per decision table in documents of languages 0.1–0.6, and in a document of language 0.7 or 1.0 one DMN 1.5 file per decision requirements graph (`NAME.dmn`, named after its first decision, with a DMNDI diagram) and its picture (`NAME.drd.svg`); a 0.7 or 1.0 document without a process writes only the decision files and forms. In an executable document for Camunda the FEEL names with spaces or symbols are written in backticks (spec §9.5). |
 | `import` | converts a BPMN 2.0 XML file (for example drawn in Camunda Modeler) to tok, or a DMN 1.1–1.5 file (`.dmn`, or any file whose root is a DMN `definitions`) to a document of language 0.7 (`import.md`). Elements tok does not cover are reported on standard error. With `-o OUT.tok` the diagram of the file is written to the layout sidecar `OUT.tok.layout` next to it, so that `tok bpmn OUT.tok` draws the model as it was drawn (`--no-layout`: no sidecar). `--no-flow-ids` drops the identifiers of sequence flows so they print as compact chains. |
 | `sim` | runs the simulation described by `simulate`, `resource`, `variable` and the simulation attributes; prints indicators, optionally writes the event log and the per-case table as CSV (`--log`, `--cases-csv`) and the event log as XES, IEEE 1849-2016, for process-mining tools (`--xes`; see `simulation.md`). |

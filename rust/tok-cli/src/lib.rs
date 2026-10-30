@@ -109,6 +109,9 @@ struct Args {
     no_flow_ids: bool,
     class: Option<String>,
     no_sidecar: bool,
+    steps: bool,
+    steps_from: Option<String>,
+    camunda: bool,
 }
 
 fn usage(msg: &str) -> u8 {
@@ -176,6 +179,9 @@ fn run(argv: &[String]) -> Result<u8, u8> {
         no_flow_ids: p.flag("no_flow_ids"),
         class: p.value("class").map(str::to_string),
         no_sidecar: p.flag("no_sidecar"),
+        steps: p.flag("steps"),
+        steps_from: p.value("steps_from").map(str::to_string),
+        camunda: p.flag("camunda"),
     };
     Ok(match a.cmd.as_str() {
         "check" => cmd_check(&a),
@@ -285,7 +291,82 @@ fn report_class(a: &Args, diags: &[Diag], class: Option<&str>) -> usize {
     errors
 }
 
+/// Whether the file is BPMN 2.0 XML rather than a tok document (by its extension).
+fn is_bpmn_file(file: &str) -> bool {
+    Path::new(file)
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("bpmn"))
+}
+
+/// `tok check FILE.bpmn`: the BPMN rules of a BPMN 2.0 XML file (the validator that `tok
+/// check` runs on the export of a tok document), with the step numbers and the Camunda 8
+/// profile.
+fn cmd_check_bpmn(a: &Args) -> u8 {
+    let xml = match read(&a.file) {
+        Ok(t) => t,
+        Err(code) => return code,
+    };
+    let steps = match &a.steps_from {
+        Some(f) => match read(f) {
+            Ok(t) => Some(tok_bpmn::read_opis(&t)),
+            Err(code) => return code,
+        },
+        None => None,
+    };
+    let folder = Path::new(&a.file)
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let diags = match bpmn_file_diags(&xml, a.steps, steps, a.camunda.then_some(folder)) {
+        Ok(d) => d,
+        Err(e) => return fail(&bpmn_error(a, &e)),
+    };
+    if report(a, &diags) > 0 {
+        EXIT_ERRORS
+    } else {
+        EXIT_OK
+    }
+}
+
+/// The findings of the BPMN validator for a BPMN 2.0 XML file: the rules, the step numbers
+/// (`steps`: names start with step numbers; `steps_from`: the steps of a description), and
+/// with `camunda` the Camunda 8 profile, whose forms and decisions are looked for in that
+/// folder. Each finding has the line of its element's `id="…"` (0 when there is none).
+pub(crate) fn bpmn_file_diags(
+    xml: &str,
+    steps: bool,
+    steps_from: Option<Vec<String>>,
+    camunda: Option<&Path>,
+) -> Result<Vec<Diag>, tok_bpmn::Error> {
+    let opts = tok_bpmn::ValidateOptions {
+        kroki: steps,
+        opis_kroki: steps_from,
+    };
+    let mut issues = tok_bpmn::validate_with(xml, &opts)?;
+    if let Some(folder) = camunda {
+        issues.extend(tok_bpmn::validate_camunda(xml, folder)?);
+    }
+    Ok(issues
+        .into_iter()
+        .map(|i| {
+            let sev = match i.level {
+                tok_bpmn::Level::Error => tok_core::Severity::Error,
+                tok_bpmn::Level::Warning => tok_core::Severity::Warning,
+                tok_bpmn::Level::Note => tok_core::Severity::Note,
+            };
+            let line =
+                i.id.as_deref()
+                    .and_then(|id| xml.find(&format!("id=\"{id}\"")))
+                    .map_or(0, |at| xml[..at].matches('\n').count() + 1);
+            Diag::text(&i.code, line, i.id.as_deref(), sev, i.message, None)
+        })
+        .collect())
+}
+
 fn cmd_check(a: &Args) -> u8 {
+    if is_bpmn_file(&a.file) {
+        return cmd_check_bpmn(a);
+    }
     let (doc, mut diags) = match load(a, true) {
         Ok(r) => r,
         Err(code) => return code,
@@ -417,7 +498,56 @@ fn nothing_to_draw(a: &Args, doc: &tok_core::model::Document) -> Option<u8> {
     None
 }
 
+/// `tok bpmn FILE.bpmn` and `tok svg FILE.bpmn`: the diagram of a BPMN 2.0 XML file (a new
+/// layout written into the file, or into `-o`; the SVG picture of its layout).
+fn draw_bpmn_file(a: &Args, svg: bool) -> u8 {
+    let xml = match read(&a.file) {
+        Ok(t) => t,
+        Err(code) => return code,
+    };
+    let path = a.output.clone().unwrap_or_else(|| {
+        if svg {
+            with_ext(&a.file, ".svg")
+        } else {
+            a.file.clone()
+        }
+    });
+    let title = Path::new(&a.file)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string());
+    let out = if svg {
+        tok_bpmn::render_svg(&xml, title.as_deref())
+    } else {
+        tok_bpmn::layout(&xml)
+    };
+    match out
+        .map_err(|e| bpmn_error(a, &e))
+        .and_then(|t| write_platform(Path::new(&path), &t).map_err(|e| e.to_string()))
+    {
+        Ok(()) => {
+            outln!("{}: {path}", if svg { "SVG" } else { "BPMN" });
+            EXIT_OK
+        }
+        Err(e) => fail(&e),
+    }
+}
+
+/// An error of the BPMN functions in the language of the messages (the crate's are Polish).
+fn bpmn_error(a: &Args, e: &tok_bpmn::Error) -> String {
+    let text = match (e, a.lang.as_str()) {
+        (tok_bpmn::Error::Xml(m), "en") => format!("not well-formed XML: {m}"),
+        (tok_bpmn::Error::NoDiagram, "en") => {
+            "the model has no diagram (BPMNDI); run tok bpmn on it first".to_string()
+        }
+        _ => e.to_string(),
+    };
+    format!("{}: {text}", a.file)
+}
+
 fn cmd_bpmn(a: &Args) -> u8 {
+    if is_bpmn_file(&a.file) {
+        return draw_bpmn_file(a, false);
+    }
     let (doc, diags) = match load(a, true) {
         Ok(r) => r,
         Err(code) => return code,
@@ -449,6 +579,9 @@ fn cmd_bpmn(a: &Args) -> u8 {
 }
 
 fn cmd_svg(a: &Args) -> u8 {
+    if is_bpmn_file(&a.file) {
+        return draw_bpmn_file(a, true);
+    }
     let (doc, diags) = match load(a, true) {
         Ok(r) => r,
         Err(code) => return code,
@@ -687,18 +820,23 @@ const LEVELS: &[&str] = &["basic", "analytic", "full"];
 const CMD_CHECK: argparse::Spec = argparse::Spec {
     name: "check",
     usage: "usage: tok check [-h] [--level {basic,analytic,full}] \
-            [--class {descriptive,analytic,common-executable,full}] [--lang {en,pl}] [--json] file",
+            [--class {descriptive,analytic,common-executable,full}] [--steps] [--steps-from FILE] \
+            [--camunda] [--lang {en,pl}] [--json] file",
     help: "usage: tok check [-h] [--level {basic,analytic,full}] \
-           [--class {descriptive,analytic,common-executable,full}] [--lang {en,pl}] [--json] file
+           [--class {descriptive,analytic,common-executable,full}] [--steps] [--steps-from FILE] \
+           [--camunda] [--lang {en,pl}] [--json] file
 
 positional arguments:
-  file
+  file                  a tok document, or a BPMN 2.0 XML file (.bpmn): its BPMN rules
 
 options:
   -h, --help            show this help message and exit
   --level {basic,analytic,full}
   --class {descriptive,analytic,common-executable,full}
                         BPMN 2.0.2 conformance class to check against (R075)
+  --steps               BPMN file: element names start with step numbers (K01)
+  --steps-from FILE     BPMN file: every step of the table in FILE (e.g. process.md) is in the model (K02, K03)
+  --camunda             BPMN file: the Camunda 8 profile (C codes; forms and decisions in the file's folder)
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -710,6 +848,9 @@ options:
             "--class",
             Opt::Value("class", Conv::Choice(tok_core::classes::CLASSES)),
         ),
+        ("--steps", Opt::Flag("steps")),
+        ("--steps-from", Opt::Value("steps_from", Conv::Text)),
+        ("--camunda", Opt::Flag("camunda")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],

@@ -1,5 +1,12 @@
 [
   {
+    "code": "W044",
+    "severity": "warning",
+    "line": 7,
+    "id": "z",
+    "message": "activity or event with several outgoing flows without conditions (implicit split; all of them are taken) (z)"
+  },
+  {
     "code": "W023",
     "severity": "warning",
     "line": 16,

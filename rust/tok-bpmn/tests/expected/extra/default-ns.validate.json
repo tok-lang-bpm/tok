@@ -1,1 +1,8 @@
-[]
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W044",
+  "id": "B",
+  "komunikat": "„4a Druga” (B) ma kilka przepływów wychodzących bez warunku (2), a nie jest bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką równoległą (and) albo daj przepływom warunki."
+ }
+]

@@ -49,7 +49,7 @@ message request -> other "Order"
 | Repository | What it holds |
 |---|---|
 | [tok-lang-bpm/tok](https://github.com/tok-lang-bpm/tok) | this repository: the language, the engine, every package, the editor support, the MCP server and the documentation |
-| [tok-lang-bpm/tok-agent](https://github.com/tok-lang-bpm/tok-agent) | the agent bundle: the skill `tok-modelling` and the MCP configuration, installable as a plugin |
+| [tok-lang-bpm/tok-agent](https://github.com/tok-lang-bpm/tok-agent) | the agent bundle: the skills `tok-modelling` and `bpmn-modelling` and the MCP configuration, installable as a plugin |
 | [tok-lang-bpm/setup-tok](https://github.com/tok-lang-bpm/setup-tok) | GitHub Action: installs tok and checks the models of a repository |
 | [tok-lang-bpm/tok-lang-bpm.github.io](https://github.com/tok-lang-bpm/tok-lang-bpm.github.io) | the guide (a book) and the playground at https://tok-lang-bpm.github.io/ |
 
@@ -118,10 +118,10 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 
 | Tool | What it gives | Documentation |
 |---|---|---|
-| `tok` | the command line: check, format, export, import, simulate, evaluate | [docs/cli.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/cli.md) |
+| `tok` | the command line: check, format, export, import, simulate, evaluate; also check, lay out and draw BPMN 2.0 XML files from any modelling tool | [docs/cli.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/cli.md) |
 | `tok-lsp` | language server (LSP 3.17) for any editor: diagnostics, formatting, go to definition, references, rename, outline, hover, completion, the diagram | [docs/lsp.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/lsp.md) |
 | VS Code extension | syntax highlighting, the language server, a live diagram preview, export of BPMN and every file | [editors/vscode](https://github.com/tok-lang-bpm/tok/blob/main/editors/vscode/README.md) |
-| `tok mcp`, `tok-mcp` | MCP server for AI agents: the tools `check`, `fmt`, `export`, `import`, `sim`, `eval` and the language reference (`tok mcp` from the Python package, or the program `tok-mcp`) | [docs/mcp.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/mcp.md) |
+| `tok mcp`, `tok-mcp` | MCP server for AI agents: the tools `check`, `check_bpmn` (BPMN 2.0 XML), `fmt`, `export`, `import`, `sim`, `eval` and the language reference (`tok mcp` from the Python package, or the program `tok-mcp`) | [docs/mcp.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/mcp.md) |
 | playground | the engine in the browser (WebAssembly): editor, diagnostics, diagram, bpmn-js viewer, simulation, decisions, downloads | [docs/playground.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/playground.md) |
 | Python, R, Julia | `tok-lang` (Python), `tokr` (R), `Tok.jl` (Julia) on the same engine | [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md), `r/tokr` |
 | C library | `tokengine` with `tok.h`, for any language that calls C | [docs/c-api.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/c-api.md) |
@@ -160,6 +160,7 @@ bash tools/playground.sh                          # the playground in rust/targe
 | [docs/roadmap.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/roadmap.md) | the releases from 0.1 to 1.0: full Camunda 8 and BPMN 2.0.2 coverage, Rust engine for Python and R, Julia standalone |
 | [docs/changelog.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/changelog.md) | the changes of every release |
 | [skills/tok-modelling](https://github.com/tok-lang-bpm/tok/blob/main/skills/tok-modelling/SKILL.md) | a skill that teaches an AI agent to model in tok |
+| [skills/bpmn-modelling](https://github.com/tok-lang-bpm/tok/blob/main/skills/bpmn-modelling/SKILL.md) | a skill that teaches an AI agent to write BPMN 2.0 XML from a process description, checked, laid out and drawn by the `tok` command |
 | [examples/](https://github.com/tok-lang-bpm/tok/tree/main/examples) | example models |
 
 ## Repository

@@ -93,6 +93,24 @@ pub fn definitions() -> Vec<Value> {
             "annotations": {"readOnlyHint": true, "idempotentHint": true, "openWorldHint": false},
         }),
         json!({
+            "name": "check_bpmn",
+            "title": "Check a BPMN file",
+            "description": "Check BPMN 2.0 XML, from tok or from any modelling tool, with the BPMN rules of the tok checker, as `tok check FILE.bpmn --json`: every finding has a code, a severity, the line and the id of its element and a message. steps requires every element name to start with the step number of a process description (K01); description, the text of that description, reports steps without an element and elements without a step (K02, K03); camunda adds the Camunda 8 profile of executable models (C codes; with path, forms and decisions are looked for in the file's folder). XML with errors is a successful call with errors > 0. Codes are explained in the reference topic 'diagnostics'.",
+            "inputSchema": object(json!({
+                "xml": {"type": "string", "description": "The BPMN 2.0 XML. Give either xml or path."},
+                "path": {"type": "string", "description": "Path of a .bpmn file, read by the server (relative to its working directory). Give either xml or path."},
+                "steps": {"type": "boolean", "default": false, "description": "Element names start with step numbers (K01)."},
+                "description": {"type": "string", "description": "The process description whose table lists the steps (its first column holds the step numbers); checks that every step is in the model (K02, K03)."},
+                "camunda": {"type": "boolean", "default": false, "description": "Also check the Camunda 8 profile of executable models (C codes)."},
+                "lang": lang_prop(),
+            }), &[]),
+            "outputSchema": object(json!({
+                "errors": {"type": "integer"},
+                "diagnostics": {"type": "array", "items": diagnostic_schema()},
+            }), &["errors", "diagnostics"]),
+            "annotations": {"readOnlyHint": true, "idempotentHint": true, "openWorldHint": false},
+        }),
+        json!({
             "name": "fmt",
             "title": "Format a tok model",
             "description": "Print a tok document in its canonical form, as `tok fmt`. The document must have no syntax errors. The result is the text only; write it to the file yourself.",
@@ -340,6 +358,7 @@ pub fn run(tool: &str, args: &Value) -> Result<Outcome, String> {
     };
     Ok(match tool {
         "check" => check(&a),
+        "check_bpmn" => check_bpmn(&a),
         "fmt" => fmt(&a),
         "export" => export(&a),
         "import" => import(&a),
@@ -391,6 +410,53 @@ fn check(a: &Args) -> Outcome {
                 count,
                 v["bpmn_class"].as_str().unwrap_or("")
             ));
+            Outcome::Done {
+                text: lines.join("\n"),
+                structured: v,
+            }
+        }
+        Err(e) => fail(e),
+    }
+}
+
+fn check_bpmn(a: &Args) -> Outcome {
+    let (xml, path) = match a.source("xml") {
+        Ok(s) => s,
+        Err(e) => return fail(e),
+    };
+    let folder = path
+        .as_deref()
+        .and_then(|p| std::path::Path::new(p).parent())
+        .map(|p| p.to_string_lossy().to_string())
+        .filter(|p| !p.is_empty())
+        .unwrap_or_else(|| ".".to_string());
+    let mut options = json!({
+        "lang": lang(a),
+        "steps": a.bool("steps", false),
+        "camunda": a.bool("camunda", false),
+        "folder": folder,
+    });
+    if let Some(d) = a.str("description") {
+        options["steps_from"] = json!(d);
+    }
+    match call(api::check_bpmn, &xml, &options) {
+        Ok(v) => {
+            let mut lines: Vec<String> = v["diagnostics"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|d| {
+                    format!(
+                        "line {}: {} {}: {}",
+                        d["line"],
+                        d["severity"].as_str().unwrap_or(""),
+                        d["code"].as_str().unwrap_or(""),
+                        d["message"].as_str().unwrap_or("")
+                    )
+                })
+                .collect();
+            let count = lines.len();
+            lines.push(format!("{} error(s), {} diagnostic(s)", v["errors"], count));
             Outcome::Done {
                 text: lines.join("\n"),
                 structured: v,

@@ -13,7 +13,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use tok_core::diagnostics::{BPMN_EN, MESSAGES};
+use tok_core::diagnostics::{BPMN_EN, BPMN_FILE_EN, MESSAGES};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -138,16 +138,32 @@ fn diagnostic_codes_are_documented() {
             missing.push(format!("{code}: not in docs/bpmn-rules.md"));
         }
     }
-    // every code the BPMN validator reports has its English text (its codes C… belong to
-    // the `--camunda` mode of `bpmn.py`, which `tok check` does not run)
+    // the codes only BPMN files have (`tok check FILE.bpmn`): a row of their own section
+    let file_codes = doc.split("## BPMN files").nth(1).unwrap_or_default();
+    for (code, en) in BPMN_FILE_EN {
+        let row = file_codes
+            .lines()
+            .find(|l| l.starts_with(&format!("| {code} |")));
+        match row {
+            None => missing.push(format!("{code}: no row in the section BPMN files")),
+            Some(r) if !r.contains(&en.replace('|', "\\|")) => {
+                missing.push(format!("{code}: the row does not give the message '{en}'"));
+            }
+            Some(_) => {}
+        }
+    }
+    // every code the BPMN validator reports has its English text (the rules, and for BPMN
+    // files the diagram, the step numbers and the Camunda 8 profile)
     let is_code = |s: &str, first: &[u8]| {
         let b = s.as_bytes();
-        b.len() == 4 && first.contains(&b[0]) && b[1..].iter().all(u8::is_ascii_digit)
+        (b.len() == 4 || (b.len() == 3 && b"DK".contains(&b[0])))
+            && first.contains(&b[0])
+            && b[1..].iter().all(u8::is_ascii_digit)
     };
     let validator = read("rust/tok-bpmn/src/validate.rs");
-    let english: BTreeSet<&str> = BPMN_EN.iter().map(|b| b.0).collect();
+    let english: BTreeSet<&str> = BPMN_EN.iter().chain(BPMN_FILE_EN).map(|b| b.0).collect();
     for part in validator.split('"').skip(1).step_by(2) {
-        if is_code(part, b"EWL") && !english.contains(part) {
+        if is_code(part, b"EWLCDK") && !english.contains(part) {
             missing.push(format!(
                 "{part}: reported by tok-bpmn without an English text"
             ));
@@ -281,10 +297,13 @@ fn commands_and_options_are_documented() {
     assert!(commands.len() >= 9, "commands: {commands:?}");
     let mut missing = Vec::new();
     for cmd in &commands {
+        // a command may have several synopsis lines (a tok document, a BPMN file)
         let synopsis = cli
             .lines()
-            .find(|l| l.starts_with(&format!("tok {cmd}")))
-            .unwrap_or("");
+            .filter(|l| *l == format!("tok {cmd}") || l.starts_with(&format!("tok {cmd} ")))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let synopsis = synopsis.as_str();
         if synopsis.is_empty() {
             missing.push(format!("tok {cmd}: no synopsis line in docs/cli.md"));
         }

@@ -12,7 +12,7 @@
 using BinaryBuilder, Pkg
 
 name = "tok"
-version = v"1.0.2"
+version = v"1.0.3"
 
 const REPO = "https://github.com/tok-lang-bpm/tok.git"
 

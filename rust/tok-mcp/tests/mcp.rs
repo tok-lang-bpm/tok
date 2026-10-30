@@ -219,6 +219,7 @@ fn tools_have_exact_schemas() {
         names,
         vec![
             "check",
+            "check_bpmn",
             "fmt",
             "export",
             "import",
@@ -235,6 +236,42 @@ fn tools_have_exact_schemas() {
         assert!(t["description"].as_str().expect("description").len() > 40);
         assert_eq!(t["annotations"]["readOnlyHint"], true);
     }
+}
+
+#[test]
+fn check_bpmn_reports_the_findings_of_a_bpmn_file() {
+    let mut c = Modern::new();
+    let r = c.tool(
+        "check_bpmn",
+        json!({"path": file("rust/tok-bpmn/tests/fixtures/extra/rich.bpmn")}),
+    );
+    assert_eq!(r["errors"], 13);
+    assert_eq!(r["diagnostics"][0]["code"], "E004");
+    assert_eq!(r["diagnostics"][0]["line"], 73);
+    let xml = std::fs::read_to_string(file("rust/tok-bpmn/tests/fixtures/semantic/03-xor.bpmn"))
+        .expect("fixture");
+    let r = c.tool(
+        "check_bpmn",
+        json!({"xml": xml, "steps": true, "lang": "pl"}),
+    );
+    assert_eq!(r["errors"], 0);
+    assert!(
+        r["diagnostics"]
+            .as_array()
+            .expect("diagnostics")
+            .iter()
+            .any(|d| d["code"] == "K01")
+    );
+    let r = c.tool(
+        "check_bpmn",
+        json!({"path": file("rust/tok-bpmn/tests/fixtures/camunda/propozycja-zakupu.bpmn"), "camunda": true}),
+    );
+    assert_eq!(r["errors"], 0);
+    let r = c.ok(
+        "tools/call",
+        json!({"name": "check_bpmn", "arguments": {"xml": "<definitions"}}),
+    );
+    assert_eq!(r["isError"], true);
 }
 
 #[test]

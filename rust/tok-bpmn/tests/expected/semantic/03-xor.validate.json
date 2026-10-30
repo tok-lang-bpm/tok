@@ -4,5 +4,11 @@
   "kod": "W023",
   "id": "f-z-e2-2",
   "komunikat": "Przepływ f-z-e2-2 powtarza przepływ f-z-e2 (to samo źródło, cel i warunek)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W044",
+  "id": "z",
+  "komunikat": "„Zamówienie w innej bibliotece” (z) ma kilka przepływów wychodzących bez warunku (2), a nie jest bramką: wszystkie zostaną wykonane (niejawne rozgałęzienie); rozgałęzienie zapisz bramką równoległą (and) albo daj przepływom warunki."
  }
 ]

@@ -7,7 +7,9 @@ description: Write, check and repair process models in the tok language (.tok fi
 
 tok is a plain-text language for BPMN 2.0 process models with their DMN decisions, Camunda forms and simulation parameters (language 1.0, the stable language; documents of 0.1–0.7 stay valid and mean the same). You write the semantics; the tok engine checks the model, prints it in canonical form and produces every other format (BPMN XML with layout, SVG, DMN, forms, simulation). Never write BPMN or DMN XML or diagram coordinates by hand.
 
-The whole language fits on one page: read `references/cheatsheet.md` before writing the first line. The full specification is `references/spec.md` (normative; read the section you need when the cheat sheet is not enough), FEEL is in `references/feel.md`, and every diagnostic code is explained in `references/diagnostics.md`.
+## What to read, and when
+
+The whole language fits on one page, `references/cheatsheet.md` (through the MCP server: the tool `reference` with `topic: cheatsheet`, or the resource `tok://reference/cheatsheet`). Read it once, before the first model of a session, and read nothing else before the first check. The checker is the teacher: every diagnostic names a code, a line and an element, and its message says what to change. Open `references/diagnostics.md` (`topic: diagnostics`) only for a message you cannot act on. The specification `references/spec.md` (`topic: spec`) is normative and long: open the one section you need (the executable layer, decisions, simulation), never the whole file, and never before a model has been checked. FEEL expressions are in `references/feel.md` (`topic: feel`). Every page you read comes back with every later turn of the conversation, so one page read once is cheap, and the specification read before the first check is the most expensive thing you can do.
 
 ## Tools: the MCP server or the tok command
 
@@ -21,23 +23,20 @@ Use the **tok MCP server** when your client has it (tools `check`, `fmt`, `expor
 | BPMN or DMN to tok | `import` with `path` → write `text` to `FILE.tok` and `layout` to `FILE.tok.layout` | `tok import FILE.bpmn -o FILE.tok` |
 | simulation | `sim` with `path`, `seed` (and `cases`) | `tok sim FILE --seed 1` |
 | evaluate a decision | `eval` with `path`, `decision`, `values` (JSON object) | `tok eval FILE DECISION name=value …` |
-| language reference | `reference` (`cheatsheet`, `spec`, `diagnostics`, `feel`, `cli`) or the resources `tok://reference/…` | `tok cheatsheet`; the files in `references/` |
+| language reference | `reference` with `topic` (`cheatsheet`, `diagnostics`, `feel`, `spec`, `cli`) | `tok cheatsheet`; the files in `references/` |
 
-The MCP tools return file contents instead of writing files: write what they return with your file tools. A tool error (`isError`) explains what to fix — a document with errors lists them. `check` reports errors as its normal result (`errors` > 0). Paths are read relative to the working directory of the server; give absolute paths when unsure.
-
-Without the MCP server, install the command if it is missing: `pip install tok-lang` (the engine; on a platform without a wheel pip builds it from source and needs Rust) or `cargo install tok-cli`, or in a checkout of the repository `cargo build --release -p tok-cli` in `rust/`. The same Python package runs the MCP server, `tok mcp`, which a client can be configured to start (`"command": "tok", "args": ["mcp"]`). If you can run neither, write the model by the cheat sheet and say clearly that it has not been checked.
+The MCP tools return file contents instead of writing files: write what they return with your file tools. A tool error (`isError`) explains what to fix; a document with errors is a successful call that lists them (`errors` > 0). Paths are read relative to the working directory of the server; give absolute paths when unsure. Without the MCP server, install the command if it is missing: `pip install tok-lang` (the engine; the same package runs the server, `tok mcp`) or `cargo install tok-cli`. If you can run neither, write the model by the cheat sheet and say clearly that it has not been checked.
 
 ## Workflow
 
-1. **Read the process description completely.** Identify participants (pools), roles (lanes), the steps, decisions, deadlines, messages to other organisations and the documents.
-2. **Write a mapping first** (`mapping.md`): one row per step with the tok element (kind and id), the lane, the words in the description that justify the choice, and doubts. The person you work for reviews your model through this table.
-3. **Write the `.tok` file.** One statement per line, explicit identifiers (short, ASCII, e.g. `check-request`), labels in the language of the description. Declare nodes inside lanes; write all `flow` lines after the pools. Write new models with the header `tok 1.0`: it has every element of the language. When you change an existing model, keep its header (`tok 0.1`, `0.3`, `0.5`, `0.6` or `0.7`) unless it needs elements of a later version (below); a model written for an earlier version means the same under `tok 1.0`.
-4. **Check** (`check`, or `tok check FILE --json`). Fix every error and every warning, and check again until there are none. Each diagnostic has a code and a line; codes are explained in `references/diagnostics.md`. The warnings of the BPMN rules (`W…`) are what BPMN linters such as bpmnlint of bpmn.io report as errors: an element without a start or an end, a branch without a condition next to a default flow (`W022`; write `when="…"`, or `when=""` while the condition is not known yet), a flow written twice (`W023`), a flow back to its own element (`W043`; use a loop or a gateway), several outgoing flows from a task or an event without a gateway (`W044`; split with an `and` gateway, or give the flows conditions), a sub-process without its own start or end event (`W045`, `W046`), an event with several triggers (`W047`). Keep a warning only when the description demands it, and say why in `mapping.md`.
-5. **Format** (`fmt`, or `tok fmt FILE -w`). Always keep the canonical form.
-6. **Export** what the task asks for (`export`, or `tok bpmn` / `tok svg` / `tok export`): the BPMN file opens in Camunda Modeler and bpmn.io.
-7. **Report briefly:** files created, number of elements, decisions that were ambiguous. Do not repeat the mapping in the chat.
+1. **Read the description.** List the participants (pools) and the roles (lanes), the activities in their order, the decisions, the parallel work, the deadlines and messages to other organisations, and the start and the end of every path.
+2. **Write the model** in a `.tok` file. New models carry the header `tok 1.0`; an existing model keeps its header (`tok 0.1`, `0.3`, `0.5`, `0.6` or `0.7`) unless it needs elements of a later version. One pool for the organisation, one lane for each actor, one activity for each step named with the words of the description, `xor` for a decision with a label on every outgoing flow, `and` for parallel work with a matching join, a `start` event, and an `end` event on every path. One statement per line, short ASCII identifiers (`check-request`), labels in the language of the description; nodes declared inside lanes, all `flow` lines after the pools.
+3. **Check** (`check`, or `tok check FILE --json`). Fix every error and every warning and check again, until the tool reports no errors and no warnings. Keep the model as small as the description allows. The warnings of the BPMN rules (`W…`) are what BPMN linters such as bpmnlint of bpmn.io report as errors, so a model with a warning left is rejected by them; the message of each warning says what to change (a condition `when="…"` on a branch next to a default flow, a gateway where several flows leave a task, a start and an end event inside a sub-process). Keep a warning only when the description demands the construct, and say so in the report.
+4. **Format** (`fmt`, or `tok fmt FILE -w`). Always keep the canonical form.
+5. **Export** what the task asks for (`export`, or `tok bpmn` / `tok svg` / `tok export`): the BPMN file opens in Camunda Modeler and bpmn.io.
+6. **Report briefly:** the files written, the number of elements, the decisions that were ambiguous. When the description is a numbered table of steps, or the person asks for a review of your choices, add `mapping.md` next to the model: one row per step with the tok element (kind and id), the lane, the words of the description that justify the choice, and doubts. The person reviews your decisions through the table and your model through the diagram; do not repeat the table in the chat. Without file tools, answer with the final model in one fenced code block marked ```tok.
 
-No errors means the model follows the notation rules. It does not mean the model matches the description; that is what the mapping is for.
+No errors and no warnings mean the model follows the notation rules. They do not mean the model matches the description; that is what the mapping and the diagram are for.
 
 ## Rules that models most often break
 
@@ -52,33 +51,6 @@ No errors means the model follows the notation rules. It does not mean the model
 - A line with a label or attributes on a `flow` has exactly one arrow: `flow g -> a "tak" when="zgoda = true"`; chains (`flow a -> b -> c`) have no attributes.
 - Give each attribute and flag once per line. Only the triggers of an event (`message="A" message="B"`) may repeat; in a 1.0 document any other repetition is the deprecation warning `R090`, and only the last value counts.
 
-## The core language (0.1 and 0.3)
+## Beyond a process model
 
-- **Events** `start`, `end`, `catch`, `throw`, `boundary` with one trigger: `message="Name"`, `timer=P3D` (duration, date-time or cycle), `signal=`, `error=`, `escalation=`, `condition="FEEL"`, `link=`, or the flags `terminate`, `compensate`.
-- **Activities** `task`, `user`, `service`, `manual`, `script`, `rule`, `send`, `receive`, `call`; markers `loop`, `parallel`, `sequential`, `compensation`.
-- **Sub-processes** `sub`, `eventsub`, `adhoc` with a block.
-- **Gateways** `xor`, `and`, `or`, `eventgw`; flows take `when="FEEL"`, `default`, `p=` (simulation).
-- **Pools and lanes** (`pool ID "Label"` with a block of lanes; a pool without a block is a black box), **message flows**, **data** (`data`, `store`, `reads`, `writes`, `state=`), **notes** and **groups**.
-- **Decision tables** (`decision ID hit=first` with rows `| input: type || output: type |`), **forms** (`form` with `text` and `field` lines), and the **simulation** statements.
-
-## Executable models
-
-When the document is `executable` (header flag), every `user` task should have `form=`, every `rule` task `decision=` and `result=`, every `script` task `expr=` and `result=`, every flow leaving an `xor`/`or` gateway with several outgoing flows either `when="…"` or `default`. FEEL expressions are written without a leading `=`. Avoid `service` tasks: they need a separate worker program; use `script` or `user` tasks instead. Forms and decisions are written in the same file (`form`, `decision` blocks) and exported together. The executable layer (spec §10.3) adds what Camunda 8 runs: multi-instance (`collection=`, `item=`, `output=`), call activities (`process=`, `binding=`), variable mappings (`inputs=`, `outputs=`), user task assignment (`assignee=`, `candidate-groups=`, `due=`), job types and headers, the REST connector, compensation, conditional events and listeners. Diagnostics `C…` report what Camunda 8 does not accept.
-
-## BPMN beyond Camunda (language 0.5)
-
-With the header `tok 0.5` (or `tok 1.0`) the model may use the rest of BPMN 2.0.2 process modelling: `transaction` with `end … cancel` and `boundary … cancel`, `complex` gateways (`activation=`), standard loops (`loop while="…" test-before loop-max=N`), events with several triggers (`parallel` for all of them), `receive`/`eventgw … instantiate`, process data (`item`, `input`, `output`, `property`, `type=`), `global` tasks, `interface`/`operation` and correlation `key` blocks (in documents with pools), `doc="…"` documentation on any element. They belong to the level `full` (the levels `basic` and `analytic` reject them) and are not executed by Camunda 8: in executable documents they are reported as `C100`–`C110`.
-
-## Collaboration and choreography (language 0.6)
-
-With the header `tok 0.6` (or `tok 1.0`) the model may describe the interactions between participants: `conversation`, `subconversation` and `callconversation` nodes between pools (`pools="a b"`, `messages="m1 m2"` naming message flows with `id=`), `choreography` blocks with `choreo ID "Label" from=a to=b message="M" reply="R"`, `subchoreo` and `callchoreo` activities, and `min=`/`max=` on pools for several participants of one kind. Their participants are pools, usually black-box pools. They belong to the level `full`; in executable documents they are reported as `C120`–`C123`. Checking with `class` (`descriptive`, `analytic`, `common-executable`, `full`) tests the model against a conformance class of BPMN 2.0.2.
-
-When the model comes from a BPMN file drawn in a modelling tool, import it (`import`, or `tok import FILE.bpmn -o FILE.tok`) and keep the layout sidecar `FILE.tok.layout` next to the model: export and the diagram reuse the drawing for every element you do not change.
-
-## Decision models (language 0.7)
-
-With the header `tok 0.7` or `tok 1.0` decisions become DMN 1.5 decision models. Declare `inputdata ID "Label" type=…`, knowledge sources (`source`) and business knowledge models (`bkm ID params="a: number" expr="…"`), and connect them with `requires="ID …"` on decisions; a decision sees only what it requires, and FEEL refers to an element by its identifier (or `name="…"` for a name with spaces). Decision logic is a table (as before, plus `hit=rule-order|output-order`, `aggregation=`, output values `name: type = "a", "b"` and `default=`), `expr="FEEL"`, `invoke=BKM with="p = FEEL; …"`, a context (`entry NAME …` lines, optionally `result …` last), a list (`element …` lines) or a relation (rows without `||`); `params=` on a line makes it a function. DMN types are `item` blocks with `type=`, `allowed=` and components. Every expression of a 0.7 or 1.0 document is full FEEL (dates, durations, `for`, `some`, filters, contexts; `references/feel.md`). Check the model, test decisions with `eval` (or `tok eval FILE DECISION name=value …`; JSON objects and lists are accepted as values), export the DMN 1.5 files and their diagrams with `export`, and read existing DMN files with `import`. In executable documents `C130`–`C132` report what Camunda 8 does not execute.
-
-## Simulation
-
-Add `simulate cases=N seed=N arrival="exp(2h)"`, `resource ID count=N` and `variable NAME "DIST"` statements and `by=`, `duration="DIST"`, `assign=`, `delay=` and `p=` attributes; run the simulation (`sim` with a `seed`, or `tok sim FILE --seed 1`). Report the indicators with the seed you used. Ask for the event log only when the analysis needs it (`log: true`, or `tok sim --log FILE.csv`).
+The cheat sheet covers the core language (events, activities, sub-processes, gateways, pools and lanes, message flows, data, notes, decision tables, forms, simulation statements). When the task asks for more, read `references/layers.md`, one section at a time: executable models for Camunda 8 (forms, decisions and scripts on the tasks, the `C…` diagnostics), the rest of BPMN 2.0.2 beyond Camunda (transactions, complex gateways, standard loops, multiple events, process data), collaboration and choreography between pools, DMN 1.5 decision models (`inputdata`, `bkm`, `requires`, contexts, `eval`), models imported from BPMN or DMN files with their layout, and simulation (`simulate`, `resource`, `variable`, `sim`).

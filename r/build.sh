@@ -19,6 +19,11 @@ mkdir -p "$PKG"
 # value of a key of [workspace.package] in rust/Cargo.toml
 ws() { sed -n '/^\[workspace.package\]/,/^\[/p' "$ROOT/rust/Cargo.toml" | sed -n "s/^$1 = //p"; }
 
+# The package declares the oldest rustc that builds it (SystemRequirements of DESCRIPTION),
+# which can be older than the version the engine is developed with, because the compilers
+# of the CRAN build machines lag behind; the copied engine crates declare the same minimum.
+RUSTC_MIN="$(sed -n 's/.*rustc >= \([0-9.]*\).*/\1/p' "$ROOT/r/tokr/DESCRIPTION")"
+
 mkdir -p "$PKG/src/rust/engine"
 for crate in $CRATES; do
   dst="$PKG/src/rust/engine/$crate"
@@ -31,7 +36,7 @@ for crate in $CRATES; do
   ' "$ROOT/rust/$crate/Cargo.toml" |
     sed -e "s|^version.workspace = true|version = $(ws version)|" \
         -e "s|^edition.workspace = true|edition = $(ws edition)|" \
-        -e "s|^rust-version.workspace = true|rust-version = $(ws rust-version)|" \
+        -e "s|^rust-version.workspace = true|rust-version = \"$RUSTC_MIN\"|" \
         -e "s|^license.workspace = true|license = $(ws license)|" \
         -e "s|^authors.workspace = true|authors = $(ws authors)|" \
         -e "s|^repository.workspace = true|repository = $(ws repository)|" \

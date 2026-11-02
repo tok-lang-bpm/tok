@@ -1,6 +1,6 @@
 # Calibration of simulation parameters
 
-The simulation statements of a tok document (spec §11) say how long activities take, how often cases arrive and which branches they take. The **fit layer** estimates these parameters from an **event log** — the log of a real process exported from a workflow system or a process-mining tool, or the log of a simulation — and writes them back into the document, so that the model simulates the process that produced the log. It is part of the Julia package (`Tok.Fit`, [julia.md](julia.md)) and changes nothing in the language: a fitted document is an ordinary document of the same language version.
+The simulation statements of a tok document (spec §11) say how long activities take, how often cases arrive and which branches they take. The **fit layer** estimates these parameters from an **event log** — the log of a real process exported from a workflow system or a process-mining tool, or the log of a simulation — and writes them back into the document, so that the model simulates the process that produced the log. It is part of the Julia package (`TokLang.Fit`, [julia.md](julia.md)) and changes nothing in the language: a fitted document is an ordinary document of the same language version.
 
 ## What is fitted
 
@@ -44,7 +44,7 @@ The bootstrap draws from a random stream given by `seed`, so the intervals are r
 
 ## Bayesian estimates
 
-`fit_bayes(model, log; samples=1000, warmup=500, seed=1, level=0.95, families=Dict())` samples the posterior of every parameter with the No-U-Turn sampler of Turing.jl. It is available after `using Turing` (the package extension `TokTuringExt`; Turing is not a dependency of Tok.jl). Each parameter has its own model, with the same likelihood as the maximum-likelihood fit (including censored instances) and weakly informative priors on the scale of the data (`m` is the median of the observations):
+`fit_bayes(model, log; samples=1000, warmup=500, seed=1, level=0.95, families=Dict())` samples the posterior of every parameter with the No-U-Turn sampler of Turing.jl. It is available after `using Turing` (the package extension `TokLangTuringExt`; Turing is not a dependency of TokLang.jl). Each parameter has its own model, with the same likelihood as the maximum-likelihood fit (including censored instances) and weakly informative priors on the scale of the data (`m` is the median of the observations):
 
 | Family | Priors |
 |---|---|
@@ -71,16 +71,16 @@ The estimates are posterior means of the parameters of the language (for `lnorm`
 | `n`, `censored` | completed and censored observations (for a probability, the passages through the gateway) |
 | `method` | `:mle` or `:bayes` |
 
-`apply(text, f; digits=4)` writes the estimates into the document — `duration=` of the activities, `arrival=` of `simulate` (added when the document has none) and `p=` of the flows — rounded to `digits` significant digits, with durations in the largest unit that keeps the number at least 1 (`lnorm(30.01m, 10.33m)`). The document is printed in canonical form by the independent core of Tok.jl; comments are kept.
+`apply(text, f; digits=4)` writes the estimates into the document — `duration=` of the activities, `arrival=` of `simulate` (added when the document has none) and `p=` of the flows — rounded to `digits` significant digits, with durations in the largest unit that keeps the number at least 1 (`lnorm(30.01m, 10.33m)`). The document is printed in canonical form by the independent core of TokLang.jl; comments are kept.
 
 ## Example
 
 ```julia
-using Tok
-const F = Tok.Fit
+using TokLang
+const F = TokLang.Fit
 
 text = read("examples/kwerenda-symulacja.tok", String)
-log = F.read_xes(Tok.Engine.sim_xes(text; cases=3000, seed=11))
+log = F.read_xes(TokLang.Engine.sim_xes(text; cases=3000, seed=11))
 f = F.fit(text, log)
 for r in F.table(f)
     println(rpad(r.element, 26), rpad("$(r.family) $(r.name)", 14), round(r.estimate; sigdigits=4),
@@ -103,4 +103,4 @@ The same calibration from the command line of the Julia application: `tok fit ex
 
 ## Tests
 
-The tests of Tok.jl simulate models with known parameters in the engine, fit the log and require the estimates to recover the parameters: within 5 % (10 % for standard deviations) and inside the 99.9 % interval for the example above, for durations censored by boundary timers (`exp` and `lnorm`), for the branches of an inclusive gateway, and for branches told apart only by their end events; the CSV and XES logs of the same run give the same estimates. The Bayesian fit is tested in the same way in an environment with Turing ([julia.md](julia.md#tests)).
+The tests of TokLang.jl simulate models with known parameters in the engine, fit the log and require the estimates to recover the parameters: within 5 % (10 % for standard deviations) and inside the 99.9 % interval for the example above, for durations censored by boundary timers (`exp` and `lnorm`), for the branches of an inclusive gateway, and for branches told apart only by their end events; the CSV and XES logs of the same run give the same estimates. The Bayesian fit is tested in the same way in an environment with Turing ([julia.md](julia.md#tests)).

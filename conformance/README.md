@@ -22,4 +22,4 @@ The expected files are produced by two generators. Run them after a deliberate c
 - `python conformance/generate.py` regenerates the files of the cases whose header declares language 0.1 or 0.3, with the pure-Python implementation (frozen at language 0.3). It skips every other case.
 - `TOK_BLESS=1 cargo test -p tok-core --test conformance` (in `rust/`) regenerates, with the Rust engine, the files of every case `generate.py` skips: the cases whose header declares a newer language or is not a version at all (case 66). It never writes the files of the older cases.
 
-Without `TOK_BLESS` the same test compares the Rust engine with every expected file, old and new; `julia/Tok.jl` checks the core level (`.tok`, `.diag`, `.bpmn`) of all cases, and the Python test suite only the cases of language 0.1 and 0.3.
+Without `TOK_BLESS` the same test compares the Rust engine with every expected file, old and new; `julia/TokLang.jl` checks the core level (`.tok`, `.diag`, `.bpmn`) of all cases, and the Python test suite only the cases of language 0.1 and 0.3.

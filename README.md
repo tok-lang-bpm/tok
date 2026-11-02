@@ -54,7 +54,7 @@ message request -> other "Order"
 | [tok-lang-bpm/tok-lang-bpm.github.io](https://github.com/tok-lang-bpm/tok-lang-bpm.github.io) | the guide (a book) and the playground at https://tok-lang-bpm.github.io/ |
 | [tok-lang-bpm/tok-evidence](https://github.com/tok-lang-bpm/tok-evidence) | the data, scripts and results of the study of tok (size, fault detection, language models, performance, conformance, process mining), archived at Zenodo: [10.5281/zenodo.23881048](https://doi.org/10.5281/zenodo.23881048) |
 
-Packages: [`tok-lang`](https://pypi.org/project/tok-lang/) (PyPI), [`tok-cli`, `tok-core`, `tok-bpmn`, `tok-sim`, `tok-lsp`, `tok-mcp`](https://crates.io/crates/tok-cli) (crates.io), [`tokr`](https://cran.r-project.org/package=tokr) (CRAN, and [R-universe](https://tok-lang-bpm.r-universe.dev)), `Tok` (Julia General registry), [tok for VS Code](https://marketplace.visualstudio.com/items?itemName=tok-lang-bpm.tok) (Visual Studio Marketplace and Open VSX).
+Packages: [`tok-lang`](https://pypi.org/project/tok-lang/) (PyPI), [`tok-cli`, `tok-core`, `tok-bpmn`, `tok-sim`, `tok-lsp`, `tok-mcp`](https://crates.io/crates/tok-cli) (crates.io), [`tokr`](https://cran.r-project.org/package=tokr) (CRAN, and [R-universe](https://tok-lang-bpm.r-universe.dev)), `TokLang` (Julia General registry), [tok for VS Code](https://marketplace.visualstudio.com/items?itemName=tok-lang-bpm.tok) (Visual Studio Marketplace and Open VSX).
 
 ## Why a text language
 
@@ -82,22 +82,22 @@ cd rust && cargo build --release -p tok-cli      # target/release/tok
 
 Every way reads every version of the language, 0.1 to 1.0. The package also keeps the pure-Python implementation frozen at language 0.3, the reference of the parity tests: `TOK_ENGINE=python tok …` runs it (`docs/python.md`).
 
-The package also runs the MCP server for AI agents: `tok mcp` (`docs/mcp.md`). The R package `tokr` (`install.packages("tokr")`), the Julia package `Tok.jl` (below), the language server `tok-lsp` and the MCP server as a program of its own (`cargo install tok-lsp tok-mcp`) and the VS Code extension *tok* are described under Tools.
+The package also runs the MCP server for AI agents: `tok mcp` (`docs/mcp.md`). The R package `tokr` (`install.packages("tokr")`), the Julia package `TokLang.jl` (below), the language server `tok-lsp` and the MCP server as a program of its own (`cargo install tok-lsp tok-mcp`) and the VS Code extension *tok* are described under Tools.
 
 ## Julia
 
-`Tok.jl` gives the whole language to Julia through the C interface of the engine, keeps an independent implementation of the core of the specification, and adds a native simulator for large experiments and the calibration of simulation parameters on event logs:
+`TokLang.jl` gives the whole language to Julia through the C interface of the engine, keeps an independent implementation of the core of the specification, and adds a native simulator for large experiments and the calibration of simulation parameters on event logs:
 
 ```julia
-using Pkg; Pkg.add(["Tok", "tok_jll"])    # or Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/Tok.jl")
-using Tok
+using Pkg; Pkg.add(["TokLang", "tok_jll"])    # or Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/TokLang.jl")
+using TokLang
 text = read("model.tok", String)
-Tok.Engine.check(text)                                  # the engine: every layer of the language
-m = Tok.Sim.model(text)                                 # native simulation (julia -t auto)
-e = Tok.Sim.experiment([m, Tok.Sim.scenario(m; name="+1", resources=Dict("staff" => 3))]; replications=200)
-Tok.Sim.summarize(e)
-f = Tok.Fit.fit(text, Tok.Fit.read_xes("log.xes"))      # calibration on an event log
-Tok.Fit.apply(text, f)                                  # the document with the fitted parameters
+TokLang.Engine.check(text)                                  # the engine: every layer of the language
+m = TokLang.Sim.model(text)                                 # native simulation (julia -t auto)
+e = TokLang.Sim.experiment([m, TokLang.Sim.scenario(m; name="+1", resources=Dict("staff" => 3))]; replications=200)
+TokLang.Sim.summarize(e)
+f = TokLang.Fit.fit(text, TokLang.Fit.read_xes("log.xes"))  # calibration on an event log
+TokLang.Fit.apply(text, f)                                  # the document with the fitted parameters
 ```
 
 The engine library is found through `TOK_LIBTOK`, the package `tok_jll`, or the repository build (`cargo build --release -p tok-capi`); see [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md).
@@ -124,7 +124,7 @@ tok eval model.tok DECISION a=1  # evaluate a decision
 | VS Code extension | syntax highlighting, the language server, a live diagram preview, export of BPMN and every file | [editors/vscode](https://github.com/tok-lang-bpm/tok/blob/main/editors/vscode/README.md) |
 | `tok mcp`, `tok-mcp` | MCP server for AI agents: the tools `check`, `check_bpmn` (BPMN 2.0 XML), `fmt`, `export`, `import`, `sim`, `eval` and the language reference (`tok mcp` from the Python package, or the program `tok-mcp`) | [docs/mcp.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/mcp.md) |
 | playground | the engine in the browser (WebAssembly): editor, diagnostics, diagram, bpmn-js viewer, simulation, decisions, downloads | [docs/playground.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/playground.md) |
-| Python, R, Julia | `tok-lang` (Python), `tokr` (R), `Tok.jl` (Julia) on the same engine | [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md), `r/tokr` |
+| Python, R, Julia | `tok-lang` (Python), `tokr` (R), `TokLang.jl` (Julia) on the same engine | [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md), `r/tokr` |
 | C library | `tokengine` with `tok.h`, for any language that calls C | [docs/c-api.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/c-api.md) |
 
 ```
@@ -149,7 +149,7 @@ bash tools/playground.sh                          # the playground in rust/targe
 | [docs/simulation.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/simulation.md) | simulation semantics, distributions and outputs |
 | [docs/import.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/import.md) | converting BPMN and DMN XML to tok |
 | [docs/python.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/python.md) | the Python module `tok.api` |
-| [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md) | Tok.jl: the engine in Julia, the independent core, native simulation, calibration |
+| [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md) | TokLang.jl: the engine in Julia, the independent core, native simulation, calibration |
 | [docs/calibration.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/calibration.md) | the `fit` layer: estimating simulation parameters from event logs |
 | [docs/c-api.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/c-api.md) | the C interface of the engine (library `tokengine`, header `tok.h`) |
 | [docs/lsp.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/lsp.md) | the language server `tok-lsp` and its use in VS Code, Neovim, Helix and Emacs |
@@ -173,7 +173,7 @@ bash tools/playground.sh                          # the playground in rust/targe
 | `editors/vscode` | VS Code extension: grammar, language client, diagram preview |
 | `playground/` | the page of the browser playground |
 | `r/tokr` | R package `tokr` on the Rust engine: diagnostics as data frames, diagrams in the viewer, knitr engine `{tok}` |
-| `julia/Tok.jl` | Julia package: the engine through the C interface, the independent core, native simulation and calibration; `julia/app` (the `tok` application), `julia/binarybuilder` (the recipe of `tok_jll`) |
+| `julia/TokLang.jl` | Julia package: the engine through the C interface, the independent core, native simulation and calibration; `julia/app` (the `tok` application), `julia/binarybuilder` (the recipe of `tok_jll`) |
 | `conformance/` | shared test corpus: input documents and expected outputs for every implementation |
 | `docs/`, `examples/`, `skills/` | documentation, examples, agent skill |
 

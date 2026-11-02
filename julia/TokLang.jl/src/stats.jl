@@ -3,7 +3,7 @@
 # Nelder–Mead minimization.
 
 """
-    Tok.Stats
+    TokLang.Stats
 
 The normal distribution (`normal_cdf`, `normal_logccdf`, `normal_quantile`), the
 two-sample Kolmogorov–Smirnov test (`ks_test`) and Nelder–Mead minimization

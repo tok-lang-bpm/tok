@@ -4,10 +4,11 @@ All notable changes to the tok language and its reference tools are listed here.
 
 ## [Unreleased]
 
-Changes to the agent skills only (`skills/`); the programs and the language are those of 1.0.3. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries them as plugin version 1.0.3.1.
+Changes to the agent skills (`skills/`) and the name of the Julia package; the programs and the language are those of 1.0.3. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries them as plugin version 1.0.3.1.
 
 ### Changed
 
+- The Julia package is named `TokLang` (folder `julia/TokLang.jl`, module `TokLang`, extension `TokLangTuringExt`), the name under which it is registered in the Julia General registry; its UUID and version 1.0.3 are unchanged. Code that loaded it with `using Tok` loads it with `using TokLang`.
 - The agent skill `tok-modelling` has a reference policy and a shorter workflow, from the third evidence study of tok (four language models as agents on 87 process descriptions of two datasets, with the skill and the MCP server). Read the cheat sheet once and nothing else before the first check; open the specification only for the one section a diagnostic needs; write the model, check it, fix every error and every warning, format, export, report; the mapping table is written when the description is a numbered table of steps or the person asks for a review of the choices. The sections on the layers of the language (the core language, executable models, BPMN beyond Camunda, collaboration and choreography, models from BPMN or DMN files, decision models, simulation) moved to `references/layers.md`. With the skill of 1.0.3 the agents read the whole reference through the tool `reference` and carried it in every later turn, at 4.4 to 6.5 times the tokens of a run from the one-page reference; the new workflow keeps their validity (97.6–100 %) at 36–60 % of those tokens.
 - The agent skill `bpmn-modelling` fixes every warning as well as every error (BPMN linters such as bpmnlint report the `W…` rules as errors; the previous text let an agent justify a warning instead, and the models left `W022`), and gives a BPMN file to the MCP tool `check_bpmn` as `path`, with `xml` for clients without file tools. The tool calls of one of the studied models (Beam, through Ollama) arrive without an argument named `xml`; a later release of the MCP server may accept `text` as well.
 

@@ -4,7 +4,7 @@ build/
 dist/
 .venv/
 venv/
-julia/Tok.jl/Manifest.toml
+julia/TokLang.jl/Manifest.toml
 *.svg.tmp
 rust/target/
 .venv-engine/

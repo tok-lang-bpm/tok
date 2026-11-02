@@ -1,7 +1,7 @@
-# The native simulator (Tok.Sim): what it runs, reproducibility, and a statistical
+# The native simulator (TokLang.Sim): what it runs, reproducibility, and a statistical
 # comparison with the simulator of the engine.
 
-const S = Tok.Sim
+const S = TokLang.Sim
 const SIM_FIXTURES = joinpath(ROOT, "rust", "tok-sim", "tests", "fixtures", "sim")
 const KWERENDA = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
 
@@ -141,7 +141,7 @@ const FEW_REPLICATIONS = Dict("03-kwerenda-bramki.tok" => 10)
             for k in sort(tests)
                 @test !isempty(rs[k]) && !isempty(ns[k])
                 (isempty(rs[k]) || isempty(ns[k])) && continue
-                t = Tok.Stats.ks_test(rs[k], ns[k])
+                t = TokLang.Stats.ks_test(rs[k], ns[k])
                 push!(report, rpad(name, 42) * rpad(k, 30) * " D = " * rpad(string(round(t.statistic; digits=3)), 6) *
                               " p = " * string(round(t.pvalue; digits=3)))
                 @test t.pvalue > ALPHA / length(tests)
@@ -161,17 +161,17 @@ end
     slower = replace(KWERENDA, "duration=\"lnorm(6h, 3h)\"" => "duration=\"lnorm(6.6h, 3.3h)\"")
     rs, _ = rust_samples(KWERENDA, 200, 300)
     ns, _ = native_samples(S.model(slower), 200, 300)
-    @test Tok.Stats.ks_test(rs["utilization of archiwisci"], ns["utilization of archiwisci"]).pvalue < 1e-6
-    @test Tok.Stats.ks_test(rs["mean cycle time"], ns["mean cycle time"]).pvalue < 1e-6
+    @test TokLang.Stats.ks_test(rs["utilization of archiwisci"], ns["utilization of archiwisci"]).pvalue < 1e-6
+    @test TokLang.Stats.ks_test(rs["mean cycle time"], ns["mean cycle time"]).pvalue < 1e-6
 end
 
 @testset "statistics" begin
-    @test Tok.Stats.normal_quantile(0.975) ≈ 1.959963984540054 atol = 1e-12
-    @test Tok.Stats.normal_cdf(1.959963984540054) ≈ 0.975 atol = 1e-12
-    t = Tok.Stats.ks_test([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
+    @test TokLang.Stats.normal_quantile(0.975) ≈ 1.959963984540054 atol = 1e-12
+    @test TokLang.Stats.normal_cdf(1.959963984540054) ≈ 0.975 atol = 1e-12
+    t = TokLang.Stats.ks_test([1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
     @test t.statistic == 0 && t.pvalue == 1
-    t = Tok.Stats.ks_test(collect(1.0:100.0), collect(51.0:150.0))
+    t = TokLang.Stats.ks_test(collect(1.0:100.0), collect(51.0:150.0))
     @test t.statistic ≈ 0.5 && t.pvalue < 1e-8
-    x, fx = Tok.Stats.nelder_mead(v -> (v[1] - 3)^2 + (v[2] + 1)^2, [0.0, 0.0])
+    x, fx = TokLang.Stats.nelder_mead(v -> (v[1] - 3)^2 + (v[2] + 1)^2, [0.0, 0.0])
     @test x ≈ [3.0, -1.0] atol = 1e-4
 end

@@ -18,7 +18,7 @@ end
 function Base.showerror(io::IO, e::UnsupportedModel)
     print(io, "UnsupportedModel: the native simulator does not run ")
     print(io, join(["$f ('$id')" for (id, f) in e.features], ", "))
-    print(io, "; use Tok.Engine.simulate for this model")
+    print(io, "; use TokLang.Engine.simulate for this model")
 end
 
 "A timer resolved by the engine: a duration, a date (seconds from the start), or not understood."

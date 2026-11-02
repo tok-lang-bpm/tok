@@ -1,14 +1,14 @@
 """
-    Tok
+    TokLang
 
 The tok language in Julia. The independent core of the package (lexer, parser,
 canonical printer `fmt` and semantic BPMN 2.0 export `semantic_xml`) is a second
 implementation of the specification, checked against the conformance corpus in
-`conformance/`. [`Tok.Engine`](@ref) gives the whole language through the Rust engine,
-[`Tok.Sim`](@ref) the native simulator for large experiments and [`Tok.Fit`](@ref) the
+`conformance/`. [`TokLang.Engine`](@ref) gives the whole language through the Rust engine,
+[`TokLang.Sim`](@ref) the native simulator for large experiments and [`TokLang.Fit`](@ref) the
 calibration of simulation parameters on event logs.
 """
-module Tok
+module TokLang
 
 const VERSION_STRING = "1.0.3"
 

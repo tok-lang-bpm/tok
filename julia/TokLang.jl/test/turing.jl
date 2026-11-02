@@ -1,19 +1,19 @@
-# Bayesian calibration with Turing.jl (the extension TokTuringExt). Not part of
-# `Pkg.test()`: run it in an environment that has Tok and Turing,
+# Bayesian calibration with Turing.jl (the extension TokLangTuringExt). Not part of
+# `Pkg.test()`: run it in an environment that has TokLang and Turing,
 #
-#   julia --project=ENV -e 'using Pkg; Pkg.develop(path="julia/Tok.jl"); Pkg.add("Turing")'
-#   julia --project=ENV julia/Tok.jl/test/turing.jl
+#   julia --project=ENV -e 'using Pkg; Pkg.develop(path="julia/TokLang.jl"); Pkg.add("Turing")'
+#   julia --project=ENV julia/TokLang.jl/test/turing.jl
 
 using Test
-using Tok
+using TokLang
 using Turing
 
 const ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
-const F = Tok.Fit
+const F = TokLang.Fit
 
 @testset "Bayesian calibration (Turing)" begin
     text = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
-    r = Tok.Engine.simulate(text; cases=800, seed=5, log=false, cases_table=false, xes=true)
+    r = TokLang.Engine.simulate(text; cases=800, seed=5, log=false, cases_table=false, xes=true)
     log = F.read_xes(r.xes)
     f = F.fit_bayes(text, log; samples=400, warmup=300, seed=1)
     m = F.fit(text, log; bootstrap=0)
@@ -31,5 +31,5 @@ const F = Tok.Fit
     end
     @test abs(value_of(f, "rejestracja", "mode") - 600) < 0.1 * 900
     fitted = F.apply(text, f)
-    @test isempty(filter(d -> d["severity"] == "error", Tok.Engine.check(fitted)))
+    @test isempty(filter(d -> d["severity"] == "error", TokLang.Engine.check(fitted)))
 end

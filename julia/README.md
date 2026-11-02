@@ -2,7 +2,7 @@
 
 | Folder | Contents |
 |---|---|
-| `Tok.jl/` | the package `Tok`: the whole language through the Rust engine (`Tok.Engine`), the independent core (lexer, parser, canonical printer, semantic BPMN export), the native simulator (`Tok.Sim`) and the calibration on event logs (`Tok.Fit`, with Bayesian estimates in the extension `TokTuringExt`) |
+| `TokLang.jl/` | the package `TokLang`: the whole language through the Rust engine (`TokLang.Engine`), the independent core (lexer, parser, canonical printer, semantic BPMN export), the native simulator (`TokLang.Sim`) and the calibration on event logs (`TokLang.Fit`, with Bayesian estimates in the extension `TokLangTuringExt`) |
 | `app/` | the `tok` application for Julia users, built with PackageCompiler (`julia app/build.jl`) |
 | `binarybuilder/` | the BinaryBuilder recipe of `tok_jll`, the engine library for every platform, and how it is submitted to Yggdrasil |
 
@@ -11,7 +11,7 @@ The package and its use are described in [../docs/julia.md](../docs/julia.md), t
 Requires Julia 1.10 or newer. The independent core needs no other package and no library:
 
 ```
-cd julia/Tok.jl
+cd julia/TokLang.jl
 julia --project=. bin/tok.jl check  ../../examples/propozycja-zakupu.tok
 julia --project=. bin/tok.jl fmt    ../../examples/propozycja-zakupu.tok
 julia --project=. bin/tok.jl xml    ../../examples/propozycja-zakupu.tok

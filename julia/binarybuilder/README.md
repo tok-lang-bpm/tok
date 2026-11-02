@@ -1,6 +1,6 @@
 # tok_jll: the engine library for Julia
 
-`build_tarballs.jl` is the BinaryBuilder recipe of `tok_jll`, the binary package that gives Tok.jl the C library of the tok engine (`tokengine`, crate `rust/tok-capi`, see `docs/c-api.md`) without a Rust compiler. It builds the library from the source of a release on Codeberg for:
+`build_tarballs.jl` is the BinaryBuilder recipe of `tok_jll`, the binary package that gives TokLang.jl the C library of the tok engine (`tokengine`, crate `rust/tok-capi`, see `docs/c-api.md`) without a Rust compiler. It builds the library from the source of a release on Codeberg for:
 
 | Platform | Triplet |
 |---|---|
@@ -9,7 +9,7 @@
 | macOS x86_64 and Apple silicon | `x86_64-apple-darwin`, `aarch64-apple-darwin` |
 | Windows x86_64 | `x86_64-w64-mingw32` |
 
-The package has one product, `libtokengine` (`libtokengine.so`, `libtokengine.dylib`, `tokengine.dll`), and installs the header `include/tok.h` and the license. Tok.jl finds the library of `tok_jll` when the package is installed in the active environment (after `TOK_LIBTOK`, before the build directory of the repository); it does not depend on `tok_jll`, so it works without it.
+The package has one product, `libtokengine` (`libtokengine.so`, `libtokengine.dylib`, `tokengine.dll`), and installs the header `include/tok.h` and the license. TokLang.jl finds the library of `tok_jll` when the package is installed in the active environment (after `TOK_LIBTOK`, before the build directory of the repository); it does not depend on `tok_jll`, so it works without it.
 
 ## Building locally
 
@@ -28,4 +28,4 @@ The recipe builds with the newest Rust toolchain of BinaryBuilder (1.94 at this 
 
 ## In the General registry
 
-The recipe is the one of the package `tok_jll` in [Yggdrasil](https://github.com/JuliaPackaging/Yggdrasil) (`T/tok/build_tarballs.jl`), which builds the library for every platform from the commit of a release tag of https://github.com/tok-lang-bpm/tok; the recipe in this folder carries the version of the release (`version = v"1.0.3"`) and builds from a local checkout as well. Tok.jl loads the library from `tok_jll`; without it, build the library with `cargo build --release -p tok-capi` and point `TOK_LIBTOK` to it (`docs/julia.md`).
+The recipe is the one of the package `tok_jll` in [Yggdrasil](https://github.com/JuliaPackaging/Yggdrasil) (`T/tok/build_tarballs.jl`), which builds the library for every platform from the commit of a release tag of https://github.com/tok-lang-bpm/tok; the recipe in this folder carries the version of the release (`version = v"1.0.3"`) and builds from a local checkout as well. TokLang.jl loads the library from `tok_jll`; without it, build the library with `cargo build --release -p tok-capi` and point `TOK_LIBTOK` to it (`docs/julia.md`).

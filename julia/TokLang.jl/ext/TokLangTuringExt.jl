@@ -1,16 +1,16 @@
-# Bayesian calibration of simulation parameters with Turing.jl (`Tok.Fit.fit_bayes`).
+# Bayesian calibration of simulation parameters with Turing.jl (`TokLang.Fit.fit_bayes`).
 #
 # Every parameter is sampled with NUTS from its own model: the likelihood of the observed
 # processing times (interrupted instances as right-censored observations), of the times
 # between arrivals, or of the branch counts of a gateway, with weakly informative priors
 # on the scale of the data (docs/calibration.md lists them).
 
-module TokTuringExt
+module TokLangTuringExt
 
-using Tok
+using TokLang
 using Turing
 
-const F = Tok.Fit
+const F = TokLang.Fit
 const Random = Turing.Random
 
 logistic(v) = 1 / (1 + exp(-v))
@@ -126,13 +126,13 @@ function duration_estimate(element, parameter, family, x, c, seed, samples, warm
                       [i[3] for i in iv], length(x), length(c), :bayes)
 end
 
-function F.fit_bayes(m::Tok.Sim.SimModel, log::F.EventLog; samples::Integer=1000, warmup::Integer=500,
+function F.fit_bayes(m::TokLang.Sim.SimModel, log::F.EventLog; samples::Integer=1000, warmup::Integer=500,
                      seed::Integer=1, level=0.95, families=Dict())
     obs = F.observations(m, log; families=families)
     notes = copy(obs.notes)
     est = F.Estimate[]
     k = 0
-    stream() = (k += 1; Tok.Sim.stream_seed(seed, k))
+    stream() = (k += 1; TokLang.Sim.stream_seed(seed, k))
     function add(element, parameter, family, x, c)
         x, c = copy(x), copy(c)
         all(==(0.0), x) && return
@@ -163,6 +163,6 @@ function F.fit_bayes(m::Tok.Sim.SimModel, log::F.EventLog; samples::Integer=1000
     return F.FitResult(est, Float64(level), notes)
 end
 
-F.fit_bayes(text::AbstractString, log::F.EventLog; kw...) = F.fit_bayes(Tok.Sim.model(text), log; kw...)
+F.fit_bayes(text::AbstractString, log::F.EventLog; kw...) = F.fit_bayes(TokLang.Sim.model(text), log; kw...)
 
-end # module TokTuringExt
+end # module TokLangTuringExt

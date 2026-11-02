@@ -1,5 +1,5 @@
 """
-    Tok.Fit
+    TokLang.Fit
 
 Calibration of simulation parameters on event logs (the `fit` layer, see
 `docs/calibration.md`): processing times of activities, times between arrivals and
@@ -9,10 +9,10 @@ intervals; `fit_bayes` gives posterior estimates with credible intervals when Tu
 is loaded (`using Turing`). [`apply`](@ref) writes the estimates into the document.
 
 ```julia
-log = Tok.Fit.read_xes("log.xes")
-f = Tok.Fit.fit(text, log)
-Tok.Fit.table(f)
-fitted = Tok.Fit.apply(text, f)
+log = TokLang.Fit.read_xes("log.xes")
+f = TokLang.Fit.fit(text, log)
+TokLang.Fit.table(f)
+fitted = TokLang.Fit.apply(text, f)
 ```
 """
 module Fit
@@ -36,7 +36,7 @@ include("fit/apply.jl")
 Bayesian calibration with Turing.jl: the same parameters as [`fit`](@ref), with weakly
 informative priors, sampled with NUTS; the estimates are posterior means and the
 intervals equal-tailed credible intervals. Available after `using Turing` (the package
-extension `TokTuringExt`).
+extension `TokLangTuringExt`).
 """
 function fit_bayes(args...; kwargs...)
     throw(ErrorException("fit_bayes needs Turing.jl: install it and load it with `using Turing`"))

@@ -1,7 +1,7 @@
 # The Rust engine of tok through its C interface (the shared library `tokengine`).
 
 """
-    Tok.Engine
+    TokLang.Engine
 
 The whole tok language through the Rust engine: the checker of every layer, canonical
 text, BPMN, SVG, DMN and form export, BPMN and DMN import, decisions and simulation.
@@ -100,7 +100,7 @@ function lib()
         syms = Dict{Symbol,Ptr{Cvoid}}(s => Base.Libc.Libdl.dlsym_e(handle, s) for s in SYMBOLS)
         abi = syms[:tok_abi_version] == C_NULL ? 0 : Int(ccall(syms[:tok_abi_version], UInt32, ()))
         abi == ABI_VERSION || error("$path implements version $abi of the C interface of tok; " *
-                                    "Tok.jl needs version $ABI_VERSION")
+                                    "TokLang.jl needs version $ABI_VERSION")
         LIB[] = Lib(path, handle, syms)
         return LIB[]
     end
@@ -311,7 +311,7 @@ sim_xes(text; cases=nothing, seed=nothing) =
 
 The simulation model of a document as the engine reads it: parameters of `simulate`,
 resources, variables, nodes with parsed distributions and timers, and sequence flows.
-The native simulator ([`Tok.Sim`](@ref)) is built from it.
+The native simulator ([`TokLang.Sim`](@ref)) is built from it.
 """
 sim_model(text; cases=nothing, seed=nothing, lang="en") =
     call(:tok_sim_model, text, opts(:cases => cases, :seed => seed, :lang => lang))

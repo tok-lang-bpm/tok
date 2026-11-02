@@ -1,5 +1,5 @@
 using Test
-using Tok
+using TokLang
 
 const ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
 const CONFORMANCE = joinpath(ROOT, "conformance")
@@ -16,7 +16,7 @@ readtext(path) = replace(read(path, String), "\r\n" => "\n")
         expected = joinpath(CONFORMANCE, "expected", stem)
         @testset "$stem" begin
             @test fmt(doc) == readtext(expected * ".tok")
-            codes = sort([d.code for d in diags if d.code in Tok.CORE_CODES])
+            codes = sort([d.code for d in diags if d.code in TokLang.CORE_CODES])
             @test join(codes .* "\n") == readtext(expected * ".diag")
             has_errors = any(d -> severity(d) == "error", diags)
             @test isfile(expected * ".bpmn") == !has_errors
@@ -47,11 +47,11 @@ end
 
 # The Rust engine, the native simulator and the calibration need the engine library
 # (TOK_LIBTOK, the package tok_jll, or rust/target/release of the repository).
-if Tok.Engine.available()
+if TokLang.Engine.available()
     include("engine.jl")
     include("sim.jl")
     include("fit.jl")
     include("app.jl")
 else
-    @info "tok engine library not found: the tests of Tok.Engine, Tok.Sim and Tok.Fit are skipped"
+    @info "tok engine library not found: the tests of TokLang.Engine, TokLang.Sim and TokLang.Fit are skipped"
 end

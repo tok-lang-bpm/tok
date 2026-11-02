@@ -1,7 +1,7 @@
-# Calibration (Tok.Fit): event logs, and the round trip simulate with known parameters ->
+# Calibration (TokLang.Fit): event logs, and the round trip simulate with known parameters ->
 # fit -> recover the parameters.
 
-const F = Tok.Fit
+const F = TokLang.Fit
 
 "The estimate of one parameter in a fit result."
 function estimate(f, element, name)
@@ -162,7 +162,7 @@ simulate cases=2000 seed=4
 end
 
 @testset "calibration: Bayesian fit needs Turing" begin
-    if Base.get_extension(Tok, :TokTuringExt) === nothing
+    if Base.get_extension(TokLang, :TokLangTuringExt) === nothing
         @test_throws ErrorException F.fit_bayes(KWERENDA, F.EventLog(F.Trace[], false))
     else
         @test true

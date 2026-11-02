@@ -6,7 +6,7 @@
 The document `text` with the estimates of `f` written into it: `duration=` of the
 activities, `arrival=` of `simulate` (added when the document has none) and `p=` of the
 flows, rounded to `digits` significant digits. The document is read and printed in
-canonical form by the core of Tok.jl; comments are kept.
+canonical form by the core of TokLang.jl; comments are kept.
 """
 function apply(text::AbstractString, f::FitResult; digits::Int=4)
     doc, diags = TokCore.parse_tok(text)

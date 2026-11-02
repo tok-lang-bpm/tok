@@ -120,7 +120,7 @@ if command -v julia > /dev/null; then
   # the engine library just built; the tests use two threads for the parallel runs
   TOK_LIBTOK="$ROOT/rust/target/release/$LIB"
   [ "$PLATFORM" = windows ] && TOK_LIBTOK="$(cygpath -w "$TOK_LIBTOK")"
-  TOK_LIBTOK="$TOK_LIBTOK" julia --project=julia/Tok.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
+  TOK_LIBTOK="$TOK_LIBTOK" julia --project=julia/TokLang.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
 else
   step "Julia: skipped (julia not installed)"
 fi

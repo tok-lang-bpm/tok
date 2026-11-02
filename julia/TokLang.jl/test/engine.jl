@@ -1,9 +1,9 @@
-# The Rust engine through the C interface (Tok.Engine).
+# The Rust engine through the C interface (TokLang.Engine).
 
-const E = Tok.Engine
+const E = TokLang.Engine
 
 @testset "engine: library" begin
-    @test E.version() == Tok.VERSION_STRING
+    @test E.version() == TokLang.VERSION_STRING
     @test E.abi_version() == 1
     @test isfile(E.library())
 end

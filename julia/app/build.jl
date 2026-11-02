@@ -1,9 +1,9 @@
-# Build the `tok` application of Tok.jl with PackageCompiler.
+# Build the `tok` application of TokLang.jl with PackageCompiler.
 #
 #   julia julia/app/build.jl [OUTPUT]          default OUTPUT: julia/app/build/tok
 #
 # The result is a folder with bin/tok (bin/tok.exe on Windows), the Julia runtime and the
-# compiled code of Tok.jl. The engine library of the repository build
+# compiled code of TokLang.jl. The engine library of the repository build
 # (rust/target/release, built with `cargo build --release -p tok-capi`) or of TOK_LIBTOK
 # is copied into bin/, where the program finds it. PackageCompiler is installed into a
 # temporary environment; it needs a C compiler (on Windows it downloads one).
@@ -14,9 +14,9 @@ const HERE = @__DIR__
 const APP = joinpath(HERE, "TokApp")
 const OUTPUT = length(ARGS) >= 1 ? abspath(ARGS[1]) : joinpath(HERE, "build", "tok")
 
-# the application environment, with Tok.jl from this repository
+# the application environment, with TokLang.jl from this repository
 Pkg.activate(APP)
-Pkg.develop(path=normpath(joinpath(HERE, "..", "Tok.jl")))
+Pkg.develop(path=normpath(joinpath(HERE, "..", "TokLang.jl")))
 Pkg.instantiate()
 
 Pkg.activate(; temp=true)

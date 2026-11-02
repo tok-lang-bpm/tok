@@ -8,7 +8,7 @@ usage: tok COMMAND ...
 The commands of the tok program (through the engine):
   check, fmt, bpmn, svg, export, import, sim, eval, cheatsheet, --version
 
-Commands of Tok.jl:
+Commands of TokLang.jl:
   experiment FILE [--replications N] [--seed N] [--cases N] [--resource ID=COUNT ...] [--json]
                  replications of the native simulator, in parallel on the threads of Julia;
                  every --resource adds a scenario with another number of performers
@@ -17,7 +17,7 @@ Commands of Tok.jl:
                  tok sim --log with the table of cases of --cases-csv); -o writes the
                  document with the fitted parameters
   core (fmt|xml|check) FILE [--lang en|pl]
-                 the independent core of Tok.jl
+                 the independent core of TokLang.jl
 """
 
 "Value of an option `--name VALUE` (removed from `args`), or `default`."
@@ -113,7 +113,7 @@ end
 """
     app_main(args; out=stdout) -> exit status
 
-The `tok` application of Tok.jl (`julia/app`): `experiment` and `fit` run in Julia,
+The `tok` application of TokLang.jl (`julia/app`): `experiment` and `fit` run in Julia,
 `core …` runs the independent core, every other command runs the command line of the
 engine.
 """

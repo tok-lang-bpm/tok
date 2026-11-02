@@ -17,7 +17,7 @@ The repository https://github.com/tok-lang-bpm/tok is the public home of the pro
 | engine and programs | Rust 1.99 or newer (`rust/rust-toolchain.toml`) | `cd rust && cargo test --workspace`, `cargo build --release -p tok-cli` |
 | Python package | Python 3.8 or newer, maturin | `bash tools/wheel.sh -o dist`, then `pip install dist/*.whl` |
 | R package | R 4.2 or newer, Rust | `bash r/build.sh`, `R CMD check --as-cran dist/tokr_*.tar.gz` |
-| Julia package | Julia 1.10 or newer, the engine library | `julia --project=julia/Tok.jl -e 'using Pkg; Pkg.test()'` |
+| Julia package | Julia 1.10 or newer, the engine library | `julia --project=julia/TokLang.jl -e 'using Pkg; Pkg.test()'` |
 | VS Code extension | Node.js 20 or newer | `cd editors/vscode && npm ci && npm test` |
 | playground | the Rust target `wasm32-unknown-unknown`, wasm-bindgen | `bash tools/playground.sh` |
 

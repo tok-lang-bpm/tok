@@ -52,6 +52,7 @@ message request -> other "Order"
 | [tok-lang-bpm/tok-agent](https://github.com/tok-lang-bpm/tok-agent) | the agent bundle: the skills `tok-modelling` and `bpmn-modelling` and the MCP configuration, installable as a plugin |
 | [tok-lang-bpm/setup-tok](https://github.com/tok-lang-bpm/setup-tok) | GitHub Action: installs tok and checks the models of a repository |
 | [tok-lang-bpm/tok-lang-bpm.github.io](https://github.com/tok-lang-bpm/tok-lang-bpm.github.io) | the guide (a book) and the playground at https://tok-lang-bpm.github.io/ |
+| [tok-lang-bpm/tok-evidence](https://github.com/tok-lang-bpm/tok-evidence) | the data, scripts and results of the study of tok (size, fault detection, language models, performance, conformance, process mining), archived at Zenodo: [10.5281/zenodo.23881048](https://doi.org/10.5281/zenodo.23881048) |
 
 Packages: [`tok-lang`](https://pypi.org/project/tok-lang/) (PyPI), [`tok-cli`, `tok-core`, `tok-bpmn`, `tok-sim`, `tok-lsp`, `tok-mcp`](https://crates.io/crates/tok-cli) (crates.io), [`tokr`](https://cran.r-project.org/package=tokr) (CRAN, and [R-universe](https://tok-lang-bpm.r-universe.dev)), `Tok` (Julia General registry), [tok for VS Code](https://marketplace.visualstudio.com/items?itemName=tok-lang-bpm.tok) (Visual Studio Marketplace and Open VSX).
 

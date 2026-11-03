@@ -6,27 +6,29 @@ The skill `skills/tok-modelling` teaches an agent the workflow of modelling in t
 
 ## Installing
 
-The Python package `tok-lang` runs the server as `tok mcp`; with uv no installation is needed at all (`uvx tok-lang mcp` downloads the package and starts the server):
+The Python package `tok-lang` runs the server as `tok mcp`:
 
 ```
 pip install tok-lang
 tok mcp --version
 ```
 
-The server is also a program of its own, `tok-mcp`, from crates.io, from the archives of the releases (https://github.com/tok-lang-bpm/tok/releases) or built from the repository (Rust 1.99 or newer):
+With uv (https://docs.astral.sh/uv/) installed, tok itself need not be installed: `uvx tok-lang mcp` downloads the package and starts the server.
+
+The server is also a program of its own, `tok-mcp`. The archives of the releases for Windows, Linux and macOS (https://github.com/tok-lang-bpm/tok/releases) hold it next to `tok`; it is also on crates.io and can be built from the repository (Rust 1.99 or newer):
 
 ```
 cargo install tok-mcp
 cd rust && cargo build --release -p tok-mcp      # target/release/tok-mcp (tok-mcp.exe on Windows)
 ```
 
-`tools/check.sh` builds it and copies it to `dist/`. Put the program on the `PATH` or give the client its full path. `tok mcp --version` and `tok-mcp --version` print the version; without arguments the server serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends. Both are the same server.
+In a clone of the repository, `tools/check.sh` builds it and copies it to `dist/`. The client finds `tok` and `tok-mcp` only on its `PATH`. When tok is installed in a virtual environment that is not active when the client starts, or the program is elsewhere, give the client the full path. `tok mcp --version` and `tok-mcp --version` print the version; without arguments the server serves one client on its standard input and output (the stdio transport of MCP: one JSON-RPC message per line) until the input ends. Both are the same server.
 
-The server is registered for the MCP Registry as `io.github.tok-lang-bpm/tok` (`server.json` of the repository), from which registry-aware clients install it; every client can also start it directly, as below. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries the server configuration and the skill together, as a plugin for agent applications that install plugins from a marketplace.
+The server is listed in the MCP Registry (https://registry.modelcontextprotocol.io) under the name `io.github.tok-lang-bpm/tok` (`server.json` of the repository); a search of the registry for `tok-lang` finds it. The entry starts the server with `uvx tok-lang mcp`. Every client can also start it directly, as below. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries the server configuration and the skill together, as a plugin for agent applications that install plugins from a marketplace.
 
 ## Configuring a client
 
-The server needs no environment. Clients that read a JSON configuration with an `mcpServers` object take, with the Python package:
+The server needs no environment variables. Clients that read a JSON configuration with an `mcpServers` object take, with the Python package:
 
 ```json
 {
@@ -34,6 +36,19 @@ The server needs no environment. Clients that read a JSON configuration with an 
     "tok": {
       "command": "tok",
       "args": ["mcp"]
+    }
+  }
+}
+```
+
+with uv, without installing tok (uv downloads the package `tok-lang` at the first start and keeps it in its cache):
+
+```json
+{
+  "mcpServers": {
+    "tok": {
+      "command": "uvx",
+      "args": ["tok-lang", "mcp"]
     }
   }
 }
@@ -48,13 +63,16 @@ With a full path on Windows: `"command": "C:\\tools\\tok\\tok-mcp.exe"`. VS Code
   "servers": {
     "tok": {
       "type": "stdio",
-      "command": "tok-mcp"
+      "command": "tok",
+      "args": ["mcp"]
     }
   }
 }
 ```
 
-Clients configured on the command line take the command `tok-mcp` as the server of the stdio transport. Paths given to the tools (`path`) are read relative to the working directory of the server, which is the one the client starts it in; give absolute paths when in doubt. To try the server by hand, the MCP Inspector of the protocol project starts it and lists its tools: `npx @modelcontextprotocol/inspector tok-mcp`.
+with uv: `"command": "uvx"` and `"args": ["tok-lang", "mcp"]`.
+
+Clients configured on the command line take the command of the server after their own options, for example Claude Code: `claude mcp add tok -- tok mcp`, or with uv `claude mcp add tok -- uvx tok-lang mcp`. Without `--scope`, Claude Code adds the server for the current folder only; `--scope user` adds it for every folder, and `--scope project` writes it to `.mcp.json` of the project, which Claude Code asks to approve when it next starts there. The README of the agent bundle gives the configuration of further clients (Claude Desktop, Cursor, Gemini CLI, Codex CLI). Paths given to the tools (`path`) are read relative to the working directory of the server, which is the one the client starts it in; give absolute paths when in doubt. To try the server by hand, the MCP Inspector of the protocol project (it needs Node.js) starts it: `npx @modelcontextprotocol/inspector tok mcp` opens the Inspector in the browser, and `npx @modelcontextprotocol/inspector --cli tok mcp --method tools/list` prints the tools in the terminal.
 
 ## Protocol
 

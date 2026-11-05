@@ -56,6 +56,10 @@ message request -> other "Order"
 
 Packages: [`tok-lang`](https://pypi.org/project/tok-lang/) (PyPI), [`tok-cli`, `tok-core`, `tok-bpmn`, `tok-sim`, `tok-lsp`, `tok-mcp`](https://crates.io/crates/tok-cli) (crates.io), [`tokr`](https://cran.r-project.org/package=tokr) (CRAN, and [R-universe](https://tok-lang-bpm.r-universe.dev)), `TokLang` (Julia General registry), [tok for VS Code](https://marketplace.visualstudio.com/items?itemName=tok-lang-bpm.tok) (Visual Studio Marketplace and Open VSX).
 
+## Who it is for
+
+tok is for process analysts and information managers who keep models as documents, for teachers and students of process modelling, for developers of executable processes on Camunda 8, and for researchers who need a process-model format that can be written, checked and compared as text, for example in studies of process modelling with language models.
+
 ## Why a text language
 
 - **Readable and reviewable.** Every line starts with a keyword and describes one element. Changes show up as clear diffs in version control.
@@ -183,7 +187,7 @@ The BPMN validation comes from the `bpmn.py` validator used in the course *Model
 
 ## Contributing and issues
 
-Report problems and ideas in the [issues](https://github.com/tok-lang-bpm/tok/issues) of the GitHub repository. How to build, test and propose changes: [CONTRIBUTING.md](https://github.com/tok-lang-bpm/tok/blob/main/CONTRIBUTING.md). Security problems: [SECURITY.md](https://github.com/tok-lang-bpm/tok/blob/main/SECURITY.md). To cite tok, use [CITATION.cff](https://github.com/tok-lang-bpm/tok/blob/main/CITATION.cff); the releases are archived on Zenodo, [doi:10.5281/zenodo.23769633](https://doi.org/10.5281/zenodo.23769633) (all versions). The language and its study are described in the preprint *tok: a textual concrete syntax of BPMN and DMN for humans and AI agents* (Marek Deja, 2026), [hal-05848142](https://hal.science/hal-05848142).
+Report problems, ideas and questions in the [issues](https://github.com/tok-lang-bpm/tok/issues) of the GitHub repository. How to build, test and propose changes: [CONTRIBUTING.md](https://github.com/tok-lang-bpm/tok/blob/main/CONTRIBUTING.md). Security problems: [SECURITY.md](https://github.com/tok-lang-bpm/tok/blob/main/SECURITY.md). To cite tok, use [CITATION.cff](https://github.com/tok-lang-bpm/tok/blob/main/CITATION.cff); the releases are archived on Zenodo, [doi:10.5281/zenodo.23769633](https://doi.org/10.5281/zenodo.23769633) (all versions). The language and its study are described in the preprint *tok: a textual concrete syntax of BPMN and DMN for humans and AI agents* (Marek Deja, 2026), [hal-05848142](https://hal.science/hal-05848142).
 
 ## License
 

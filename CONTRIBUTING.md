@@ -6,6 +6,10 @@ Thank you for helping with tok. Reports of problems, models that are exported wr
 
 Open an issue in https://github.com/tok-lang-bpm/tok/issues. For a problem with a model, attach the smallest `.tok` (or `.bpmn`, `.dmn`) file that shows it, the command you ran, its output, and the version (`tok --version`). Security problems are reported privately, as described in [SECURITY.md](SECURITY.md).
 
+## Getting help
+
+Questions about the language, the tools or a model are welcome as issues in the same place. Start with [the guide](https://tok-lang-bpm.github.io/) and the [language on one page](https://github.com/tok-lang-bpm/tok/blob/main/docs/cheatsheet.md). tok has one maintainer, who answers issues in public, so that the answer stays available to the next reader.
+
 ## Where the code lives
 
 The repository https://github.com/tok-lang-bpm/tok is the public home of the project, with its issues, releases and workflows. Development happens in https://codeberg.org/MarekDeja/tok, which is mirrored to GitHub after every change; pull requests on GitHub are welcome and are applied there, with their authors kept.

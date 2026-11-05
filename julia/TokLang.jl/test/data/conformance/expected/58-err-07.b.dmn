@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="b-definitions" name="B" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="t1" name="t1" label="Typ">
+    <typeRef>number</typeRef>
+  </itemDefinition>
+  <inputData id="b" name="a" label="B">
+    <variable id="b-variable" name="a" typeRef="tekst" />
+  </inputData>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_b">
+      <dmndi:DMNShape id="DMNShape_b" dmnElementRef="b">
+        <dc:Bounds height="45" width="125" x="151" y="98" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

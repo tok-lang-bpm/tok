@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1" id="definitions" name="Kwerenda genealogiczna" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Wniosek" name="Wniosek" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:message id="Message_Wplata" name="Wpłata" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="wn" name="Wnioskodawca" />
+    <bpmn:participant id="arch" name="Archiwum Państwowe" processRef="kwerenda" />
+    <bpmn:participant id="bank" name="Bank" processRef="platnosci" />
+    <bpmn:messageFlow id="m-wn-s" messageRef="Message_Wniosek" name="Wniosek" sourceRef="wn" targetRef="s" />
+    <bpmn:messageFlow id="m-o-wn" messageRef="Message_Odpowiedz" name="Odpowiedź" sourceRef="o" targetRef="wn" />
+    <bpmn:messageFlow id="mf-przelew" messageRef="Message_Wplata" name="Przelew" sourceRef="wn" targetRef="bp" />
+    <bpmn:messageFlow id="m-wn-bp" sourceRef="wn" targetRef="bp" />
+  </bpmn:collaboration>
+  <bpmn:process id="kwerenda" isExecutable="false" name="Archiwum Państwowe">
+    <bpmn:laneSet id="arch-lanes">
+      <bpmn:lane id="kanc" name="Kancelaria">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>r</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="mer" name="Oddział merytoryczny">
+        <bpmn:childLaneSet id="mer-lanes">
+          <bpmn:lane id="arc" name="Archiwista">
+            <bpmn:flowNodeRef>q</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="kier" name="Kierownik oddziału">
+            <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>o</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>e</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Wniosek wpłynął">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_Wniosek" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="r" name="Rejestracja wniosku" />
+    <bpmn:userTask id="q" name="Poszukiwania" />
+    <bpmn:userTask id="z" name="Zatwierdzenie odpowiedzi" />
+    <bpmn:sendTask id="o" messageRef="Message_Odpowiedz" name="Wysłanie odpowiedzi" />
+    <bpmn:endEvent id="e" name="Odpowiedź wysłana" />
+    <bpmn:sequenceFlow id="f-s-r" sourceRef="s" targetRef="r" />
+    <bpmn:sequenceFlow id="f-r-q" sourceRef="r" targetRef="q" />
+    <bpmn:sequenceFlow id="f-q-z" sourceRef="q" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-o" sourceRef="z" targetRef="o" />
+    <bpmn:sequenceFlow id="f-o-e" sourceRef="o" targetRef="e" />
+  </bpmn:process>
+  <bpmn:process id="platnosci" isExecutable="false" name="Bank">
+    <bpmn:startEvent id="bs" />
+    <bpmn:receiveTask id="bp" messageRef="Message_Wplata" name="Przyjęcie wpłaty" />
+    <bpmn:endEvent id="be" />
+    <bpmn:sequenceFlow id="f-bs-bp" sourceRef="bs" targetRef="bp" />
+    <bpmn:sequenceFlow id="f-bp-be" sourceRef="bp" targetRef="be" />
+  </bpmn:process>
+</bpmn:definitions>

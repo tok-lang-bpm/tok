@@ -117,10 +117,14 @@ fi
 
 if command -v julia > /dev/null; then
   step "Julia: core, engine through the C interface, native simulation, calibration"
-  # the engine library just built; the tests use two threads for the parallel runs
-  TOK_LIBTOK="$ROOT/rust/target/release/$LIB"
-  [ "$PLATFORM" = windows ] && TOK_LIBTOK="$(cygpath -w "$TOK_LIBTOK")"
-  TOK_LIBTOK="$TOK_LIBTOK" julia --project=julia/TokLang.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
+  bash tools/julia-data.sh --check
+  # the engine library just built, through the preference of tok_jll; the tests use two
+  # threads for the parallel runs
+  TOK_LIB="$ROOT/rust/target/release/$LIB"
+  [ "$PLATFORM" = windows ] && TOK_LIB="$(cygpath -m "$TOK_LIB")"
+  printf '[tok_jll]\nlibtokengine_path = "%s"\n' "$TOK_LIB" > julia/TokLang.jl/LocalPreferences.toml
+  julia --project=julia/TokLang.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
+  rm -f julia/TokLang.jl/LocalPreferences.toml
 else
   step "Julia: skipped (julia not installed)"
 fi

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.7" id="definitions" name="FEEL w procesie" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="FEEL w procesie">
+    <bpmn:startEvent id="s" name="Zgłoszenie zwrotu">
+      <bpmn:extensionElements>
+        <zeebe:formDefinition formId="f-zwrot" />
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:businessRuleTask id="ocena" name="Ocena zwrotu">
+      <bpmn:extensionElements>
+        <zeebe:calledDecision decisionId="dni-zwloki" resultVariable="zwloka" />
+      </bpmn:extensionElements>
+    </bpmn:businessRuleTask>
+    <bpmn:exclusiveGateway default="f-czy-e1" id="czy" name="Czy zwrot po terminie?" />
+    <bpmn:scriptTask id="naliczenie" name="Naliczenie kar">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=sum(for d in 1..zwloka return if d &lt;= 14 then 0.5 else 1)" resultVariable="kara" />
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="wezwanie" name="Wezwanie do zapłaty">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="f-wezwanie" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e1" name="Zwrot przyjęty" />
+    <bpmn:endEvent id="e2" name="Wezwanie wysłane" />
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-czy" sourceRef="ocena" targetRef="czy" />
+    <bpmn:sequenceFlow id="f-czy-naliczenie" name="tak" sourceRef="czy" targetRef="naliczenie">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=zwloka &gt; 0 and some t in tytuly satisfies t != null</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-czy-e1" name="nie" sourceRef="czy" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-naliczenie-wezwanie" sourceRef="naliczenie" targetRef="wezwanie" />
+    <bpmn:sequenceFlow id="f-wezwanie-e2" sourceRef="wezwanie" targetRef="e2" />
+  </bpmn:process>
+</bpmn:definitions>

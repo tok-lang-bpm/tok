@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="oplata-definitions" name="Opłata za przetrzymanie" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="0.7" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="egzemplarz-t" name="egzemplarz-t" label="Egzemplarz">
+    <itemComponent id="egzemplarz-t-1" name="sygnatura">
+      <typeRef>string</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-2" name="rok">
+      <typeRef>number</typeRef>
+    </itemComponent>
+    <itemComponent id="egzemplarz-t-3" name="stan zachowania">
+      <typeRef>string</typeRef>
+      <allowedValues>
+        <text>"dobry", "zły"</text>
+      </allowedValues>
+    </itemComponent>
+  </itemDefinition>
+  <itemDefinition id="egzemplarze-t" name="egzemplarze-t" label="Lista egzemplarzy" isCollection="true">
+    <typeRef>egzemplarz-t</typeRef>
+  </itemDefinition>
+  <inputData id="rodzaj" name="rodzaj" label="Rodzaj zbioru">
+    <variable id="rodzaj-variable" name="rodzaj" typeRef="string" />
+  </inputData>
+  <inputData id="dni" name="dni" label="Dni zwłoki">
+    <variable id="dni-variable" name="dni" typeRef="number" />
+  </inputData>
+  <businessKnowledgeModel id="naliczenie" name="naliczenie" label="Naliczenie opłaty">
+    <variable id="naliczenie-variable" name="naliczenie" />
+    <encapsulatedLogic id="naliczenie-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="naliczenie-param-1" name="dni" typeRef="number" />
+      <formalParameter id="naliczenie-param-2" name="stawka" typeRef="number" />
+      <context id="naliczenie-context">
+        <contextEntry id="naliczenie-1-entry">
+          <variable id="naliczenie-1-variable" name="kwota" />
+          <literalExpression id="naliczenie-1-expr">
+            <text>dni * stawka</text>
+          </literalExpression>
+        </contextEntry>
+        <contextEntry id="naliczenie-2-entry">
+          <literalExpression id="naliczenie-2-expr">
+            <text>min([kwota, 100])</text>
+          </literalExpression>
+        </contextEntry>
+      </context>
+    </encapsulatedLogic>
+  </businessKnowledgeModel>
+  <decision id="oplata" name="oplata" label="Opłata za przetrzymanie">
+    <variable id="oplata-variable" name="oplata" typeRef="number" />
+    <informationRequirement id="oplata-requires-rodzaj">
+      <requiredInput href="#rodzaj" />
+    </informationRequirement>
+    <informationRequirement id="oplata-requires-dni">
+      <requiredInput href="#dni" />
+    </informationRequirement>
+    <knowledgeRequirement id="oplata-requires-naliczenie">
+      <requiredKnowledge href="#naliczenie" />
+    </knowledgeRequirement>
+    <context id="oplata-context">
+      <contextEntry id="oplata-1-entry">
+        <variable id="oplata-1-variable" name="stawki" />
+        <relation id="oplata-1-relation">
+          <column id="oplata-1-column-1" name="typ" typeRef="string" />
+          <column id="oplata-1-column-2" name="stawka" typeRef="number" />
+          <row id="oplata-1-row-1">
+            <literalExpression id="oplata-1-row-1-1">
+              <text>"książka"</text>
+            </literalExpression>
+            <literalExpression id="oplata-1-row-1-2">
+              <text>0.5</text>
+            </literalExpression>
+          </row>
+          <row id="oplata-1-row-2">
+            <literalExpression id="oplata-1-row-2-1">
+              <text>"czasopismo"</text>
+            </literalExpression>
+            <literalExpression id="oplata-1-row-2-2">
+              <text>0.2</text>
+            </literalExpression>
+          </row>
+          <row id="oplata-1-row-3">
+            <literalExpression id="oplata-1-row-3-1">
+              <text>"audiobook"</text>
+            </literalExpression>
+            <literalExpression id="oplata-1-row-3-2">
+              <text>0.3</text>
+            </literalExpression>
+          </row>
+        </relation>
+      </contextEntry>
+      <contextEntry id="oplata-2-entry">
+        <variable id="oplata-2-variable" name="stawka" typeRef="number" />
+        <literalExpression id="oplata-2-expr">
+          <text>stawki[typ = rodzaj].stawka[1]</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="oplata-3-entry">
+        <variable id="oplata-3-variable" name="zaokraglenie" />
+        <functionDefinition id="oplata-3-function" kind="FEEL">
+          <formalParameter id="oplata-3-param-1" name="x" typeRef="number" />
+          <literalExpression id="oplata-3-expr">
+            <text>round half up(x, 2)</text>
+          </literalExpression>
+        </functionDefinition>
+      </contextEntry>
+      <contextEntry id="oplata-4-entry">
+        <variable id="oplata-4-variable" name="naliczona" />
+        <invocation id="oplata-4-invocation">
+          <literalExpression id="oplata-4-invocation-callee">
+            <text>naliczenie</text>
+          </literalExpression>
+          <binding>
+            <parameter id="oplata-4-binding-1" name="dni" typeRef="number" />
+            <literalExpression id="oplata-4-binding-1-expr">
+              <text>dni</text>
+            </literalExpression>
+          </binding>
+          <binding>
+            <parameter id="oplata-4-binding-2" name="stawka" typeRef="number" />
+            <literalExpression id="oplata-4-binding-2-expr">
+              <text>stawka</text>
+            </literalExpression>
+          </binding>
+        </invocation>
+      </contextEntry>
+      <contextEntry id="oplata-5-entry">
+        <literalExpression id="oplata-5-expr">
+          <text>zaokraglenie(naliczona)</text>
+        </literalExpression>
+      </contextEntry>
+    </context>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_oplata">
+      <dmndi:DMNShape id="DMNShape_oplata" dmnElementRef="oplata">
+        <dc:Bounds height="80" width="180" x="289" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_rodzaj" dmnElementRef="rodzaj">
+        <dc:Bounds height="45" width="125" x="151" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_dni" dmnElementRef="dni">
+        <dc:Bounds height="45" width="125" x="316" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_naliczenie" dmnElementRef="naliczenie">
+        <dc:Bounds height="46" width="135" x="481" y="247" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_oplata-requires-rodzaj" dmnElementRef="oplata-requires-rodzaj">
+        <di:waypoint x="213" y="248" />
+        <di:waypoint x="334" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_oplata-requires-dni" dmnElementRef="oplata-requires-dni">
+        <di:waypoint x="378" y="248" />
+        <di:waypoint x="379" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_oplata-requires-naliczenie" dmnElementRef="oplata-requires-naliczenie">
+        <di:waypoint x="548" y="247" />
+        <di:waypoint x="424" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

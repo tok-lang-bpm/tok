@@ -1,0 +1,16 @@
+tok 0.1 "Błędy odwołań"
+
+start s
+task a "A"
+task a "Drugie A"
+task ą "Polska litera"
+task 9x "Cyfra na początku"
+end e
+flow s -> a -> e "etykieta"
+flow s -> e when="x" -> a
+message s -> e "M" bad
+
+decision d hit=first extra
+  | x: liczba | y || z: string |
+  | 1 | 2 || 3 |
+  | 1 || 3 | 4 |

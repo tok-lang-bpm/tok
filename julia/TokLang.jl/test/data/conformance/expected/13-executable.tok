@@ -1,0 +1,45 @@
+tok 0.1 "Propozycja zakupu książki" executable
+
+pool biblioteka "Biblioteka uczelniana" process=propozycja-zakupu
+  lane czytelnik "Czytelnik"
+    start zlozona "Propozycja złożona" form=f-propozycja
+  lane system "System biblioteczny"
+    rule tryb "Ustalenie trybu akceptacji" decision=tryb-akceptacji
+    xor potrzebna "Czy potrzebna akceptacja kierownika?"
+    xor scalenie
+    script koszt "Wyliczenie kosztu zakupu" expr="cena + 12.5" result=koszt
+    service powiad "Powiadomienie" type="powiadomienie"
+  lane kierownik "Kierownik Oddziału Gromadzenia"
+    user akceptacja "Akceptacja propozycji" form=f-akceptacja
+    boundary termin "Minęło 7 dni" on=akceptacja timer=P7D
+    xor zgoda "Czy kierownik się zgodził?"
+    end odrzucona "Propozycja odrzucona"
+    end wygasla "Propozycja wygasła"
+  lane gromadzenie "Bibliotekarz gromadzenia"
+    user zamowienie "Złożenie zamówienia u dostawcy"
+    catch potw "Potwierdzenie dostawcy" message="potwierdzenie" correlation="numer_zamowienia"
+    catch war "Warunek" condition="koszt > 100"
+    end zamowiona "Książka zamówiona"
+
+pool dostawca "Dostawca"
+
+flow zlozona -> tryb -> potrzebna
+flow potrzebna -> akceptacja "tak" when="tryb = \"kierownik\""
+flow potrzebna -> scalenie "nie" default
+flow akceptacja -> zgoda
+flow zgoda -> scalenie "tak" when="zgoda = true"
+flow zgoda -> odrzucona "nie" default
+flow termin -> wygasla
+flow scalenie -> koszt -> powiad -> zamowienie -> potw -> war -> zamowiona
+
+message zamowienie -> dostawca "Zamówienie"
+message dostawca -> potw "Potwierdzenie" message="potwierdzenie"
+
+decision tryb-akceptacji "Tryb akceptacji" hit=first
+  | rodzaj: string | cena: number || tryb: string   |
+  | "e-book"       | -            || "kierownik"    |
+  | "drukowana"    | <= 150       || "automatyczny" |
+  | -              | -            || "kierownik"    |
+
+form f-akceptacja "Akceptacja"
+  field zgoda "Decyzja" required type=radio options="true:zgoda, false:odmowa"

@@ -1,0 +1,16 @@
+tok 0.1 "Rozgałęzienie XOR" id=defs-xor process=wypozyczenie
+
+start s
+user k "Sprawdzenie \"katalogu\" i C:\\dane"
+xor g "Czy książka dostępna lokalnie?"
+task w "Wskazanie egzemplarza"
+task z "Zamówienie w innej bibliotece"
+end e1 "Egzemplarz wskazany"
+end e2
+
+flow s -> k -> g
+flow g -> w "tak" when="dostepna = true" id=f-tak
+flow g -> z "nie" default
+flow w -> e1
+flow z -> e2
+flow z -> e2

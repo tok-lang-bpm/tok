@@ -1,0 +1,40 @@
+tok 0.5 "Elements Camunda does not execute" executable
+
+global sprawdzenie "Sprawdzenie" kind=user
+
+interface katalog "Katalog"
+  operation szukaj "Szukaj" in="Zapytanie"
+
+pool biblioteka "Biblioteka"
+  start s "Start" message="E-mail" message="Formularz"
+  transaction t "Transakcja"
+    start ts
+    service rez "Rezerwacja" operation=szukaj type="rezerwacja"
+    end te
+    end anuluj "Anulowanie" cancel
+  boundary tb "Anulowano" cancel on=t
+  complex c "Czy dość?" activation="_activationCount >= 1"
+  call cz "Sprawdzenie" task=sprawdzenie
+  service proba "Próba" loop type="proba" while="proby < 3"
+  catch kilka "Kilka" parallel message="A" signal="B" correlation="id"
+  end e "Koniec"
+  end e2 "Anulowano"
+
+pool czytelnik "Czytelnik"
+  receive przyjecie "Przyjęcie" instantiate message="Zgłoszenie" correlation="id"
+  eventgw g "Co dalej?" instantiate
+  catch odp "Odpowiedź" message="Odpowiedź" correlation="id"
+  catch czas "Czas" timer=P1D
+  end ce "Koniec"
+  end ce2 "Koniec 2"
+  end ce3 "Koniec 3"
+
+flow ts -> rez -> te
+flow s -> t -> c -> cz -> proba -> kilka -> e
+flow tb -> e2
+flow przyjecie -> ce
+flow g -> odp -> ce2
+flow g -> czas -> ce3
+
+key k "Klucz"
+  prop id message="A" path="a.id"

@@ -1,0 +1,12 @@
+tok 0.1 "Obieg pisma z błędami"
+
+start wplyw "Pismo wpłynęło"
+
+pool uczelnia "Uczelnia"
+  user rejestracja "Rejestracja pisma w EZD"
+  lane dziekanat "Dziekanat"
+    user dekretacja "Dekretacja pisma"
+    end koniec "Pismo zadekretowane"
+
+flow wplyw -> rejestracja -> dekretacja -> koniec
+message rejestracja -> dekretacja "Pismo"

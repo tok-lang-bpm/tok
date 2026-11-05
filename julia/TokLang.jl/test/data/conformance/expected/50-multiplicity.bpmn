@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.6" id="definitions" name="Recenzja wydawnicza" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Prosba_o_recenzje" name="Prośba o recenzję" />
+  <bpmn:message id="Message_Recenzja" name="Recenzja" />
+  <bpmn:message id="Message_Zgoda" name="Zgoda" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="wydawnictwo" name="Wydawnictwo" processRef="wydawnictwo-process" />
+    <bpmn:participant id="recenzent" name="Recenzent">
+      <bpmn:participantMultiplicity maximum="5" minimum="2" />
+    </bpmn:participant>
+    <bpmn:participant id="autor" name="Autor">
+      <bpmn:participantMultiplicity maximum="3" minimum="2" />
+    </bpmn:participant>
+    <bpmn:participant id="redakcja" name="Redakcja">
+      <bpmn:participantMultiplicity minimum="1" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="m-wyslij-recenzent" messageRef="Message_Prosba_o_recenzje" name="Prośba o recenzję" sourceRef="wyslij" targetRef="recenzent" />
+    <bpmn:messageFlow id="m-recenzent-odbierz" messageRef="Message_Recenzja" name="Recenzja" sourceRef="recenzent" targetRef="odbierz" />
+  </bpmn:collaboration>
+  <bpmn:process id="wydawnictwo-process" isExecutable="false" name="Recenzja wydawnicza">
+    <bpmn:startEvent id="s" name="Maszynopis wpłynął" />
+    <bpmn:sendTask id="wyslij" messageRef="Message_Prosba_o_recenzje" name="Wysłanie do recenzentów">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" />
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="odbierz" messageRef="Message_Recenzja" name="Odbiór recenzji">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" />
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="e" name="Recenzje zebrane" />
+    <bpmn:sequenceFlow id="f-s-wyslij" sourceRef="s" targetRef="wyslij" />
+    <bpmn:sequenceFlow id="f-wyslij-odbierz" sourceRef="wyslij" targetRef="odbierz" />
+    <bpmn:sequenceFlow id="f-odbierz-e" sourceRef="odbierz" targetRef="e" />
+  </bpmn:process>
+  <bpmn:choreography id="uzgodnienie" name="Uzgodnienie recenzji">
+    <bpmn:participant id="uzgodnienie-wydawnictwo" name="Wydawnictwo" />
+    <bpmn:participant id="uzgodnienie-recenzent" name="Recenzent">
+      <bpmn:participantMultiplicity maximum="5" minimum="2" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="prosba-message" messageRef="Message_Prosba_o_recenzje" sourceRef="uzgodnienie-wydawnictwo" targetRef="uzgodnienie-recenzent" />
+    <bpmn:messageFlow id="prosba-reply" messageRef="Message_Zgoda" sourceRef="uzgodnienie-recenzent" targetRef="uzgodnienie-wydawnictwo" />
+    <bpmn:startEvent id="us" />
+    <bpmn:choreographyTask id="prosba" initiatingParticipantRef="uzgodnienie-wydawnictwo" name="Prośba">
+      <bpmn:participantRef>uzgodnienie-wydawnictwo</bpmn:participantRef>
+      <bpmn:participantRef>uzgodnienie-recenzent</bpmn:participantRef>
+      <bpmn:messageFlowRef>prosba-message</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>prosba-reply</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="ue" />
+    <bpmn:sequenceFlow id="f-us-prosba" sourceRef="us" targetRef="prosba" />
+    <bpmn:sequenceFlow id="f-prosba-ue" sourceRef="prosba" targetRef="ue" />
+  </bpmn:choreography>
+</bpmn:definitions>

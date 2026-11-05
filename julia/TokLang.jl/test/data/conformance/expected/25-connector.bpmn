@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="REST connector" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="REST connector">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:serviceTask id="pobranie" name="Pobranie rekordu">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="io.camunda:http-json:1" />
+        <zeebe:ioMapping>
+          <zeebe:input source="noAuth" target="authentication.type" />
+          <zeebe:input source="GET" target="method" />
+          <zeebe:input source="=&quot;https://api.example.org/rekord/&quot; + id" target="url" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="resultVariable" value="rekord" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="zapis" name="Zapis">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition retries="3" type="io.camunda:http-json:1" />
+        <zeebe:ioMapping>
+          <zeebe:input source="noAuth" target="authentication.type" />
+          <zeebe:input source="POST" target="method" />
+          <zeebe:input source="https://api.example.org/zapis" target="url" />
+          <zeebe:input source="={&quot;X-Zrodlo&quot;: &quot;tok&quot;}" target="headers" />
+          <zeebe:input source="={pilne: true}" target="queryParameters" />
+          <zeebe:input source="={tytul: tytul}" target="body" />
+        </zeebe:ioMapping>
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-pobranie" sourceRef="s" targetRef="pobranie" />
+    <bpmn:sequenceFlow id="f-pobranie-zapis" sourceRef="pobranie" targetRef="zapis" />
+    <bpmn:sequenceFlow id="f-zapis-e" sourceRef="zapis" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

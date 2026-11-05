@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Conditional events" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Conditional events">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:conditionalEventDefinition id="s-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">=gotowe = true</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="czekanie" name="Kompletne dane">
+      <bpmn:extensionElements>
+        <zeebe:conditionalFilter variableEvents="create, update" />
+      </bpmn:extensionElements>
+      <bpmn:conditionalEventDefinition id="czekanie-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">=kompletne = true</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="praca" name="Praca">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent attachedToRef="praca" cancelActivity="false" id="zmiana" name="Zmiana priorytetu">
+      <bpmn:extensionElements>
+        <zeebe:conditionalFilter variableEvents="update" />
+      </bpmn:extensionElements>
+      <bpmn:conditionalEventDefinition id="zmiana-def">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">=priorytet &gt; 80</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:subProcess id="alarm" name="Alarm" triggeredByEvent="true">
+      <bpmn:startEvent id="s2" name="Alarm">
+        <bpmn:extensionElements>
+          <zeebe:conditionalFilter variableEvents="create" />
+        </bpmn:extensionElements>
+        <bpmn:conditionalEventDefinition id="s2-def">
+          <bpmn:condition xsi:type="bpmn:tFormalExpression">=alarm = true</bpmn:condition>
+        </bpmn:conditionalEventDefinition>
+      </bpmn:startEvent>
+      <bpmn:endEvent id="e2" />
+      <bpmn:sequenceFlow id="f-s2-e2" sourceRef="s2" targetRef="e2" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e3" name="Priorytet" />
+    <bpmn:sequenceFlow id="f-s-czekanie" sourceRef="s" targetRef="czekanie" />
+    <bpmn:sequenceFlow id="f-czekanie-praca" sourceRef="czekanie" targetRef="praca" />
+    <bpmn:sequenceFlow id="f-praca-e" sourceRef="praca" targetRef="e" />
+    <bpmn:sequenceFlow id="f-zmiana-e3" sourceRef="zmiana" targetRef="e3" />
+  </bpmn:process>
+</bpmn:definitions>

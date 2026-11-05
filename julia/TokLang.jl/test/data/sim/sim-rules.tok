@@ -1,0 +1,47 @@
+tok 0.3 "Decyzje i skrypty"
+
+start s "Wniosek"
+rule r1 "Limit" decision=limit duration="5m"
+rule r2 "Rabat" decision=rabat result=wynik_rabatu
+rule r3 "Kanały" decision=kanaly
+rule r5 "Niejednoznaczna" decision=dwuznaczna
+script k1 "Suma" expr="limit + wiek" result=suma
+script k2 "Tekst" expr="string(wiek) + \" lat\""
+script k3 "Błąd" expr="wiek ** 2" result=kwadrat
+script k4 "Lista" expr="[wiek, limit, null]" result=lista
+script k5 "Kontekst" expr="wynik_rabatu.rabat * 2" result=podwojony
+script k6 "Czas" expr="duration(\"P1DT2H\")" result=okres
+script k7 "Data" expr="date(\"2027-01-15\")" result=dzien
+task z "Zgoda klienta" duration="1h" assign="zgoda=bern(0.7); kanal_pref=cat(sms=0.5, list=0.5); ocena=norm(3, 1)"
+end e "Koniec"
+
+flow s -> r1 -> r2 -> r3 -> r5 -> k1 -> k2 -> k3 -> k4 -> k5 -> k6 -> k7 -> z -> e
+
+decision limit "Limit" hit=first
+  | wiek: number | typ: string || limit: number |
+  | < 18 | - || 5 |
+  | >= 18 | "student","doktorant" || 15 |
+  | >= 18 | "pracownik" || 30 |
+  | - | - || 10 |
+
+decision rabat "Rabat" hit=unique
+  | kwota: number || rabat: number | opis: string |
+  | < 100 || 0 | "brak" |
+  | >= 100 || kwota * 0.05 | "5%" |
+
+decision kanaly "Kanały" hit=collect
+  | pilne: boolean || kanal: string |
+  | true || "sms" |
+  | - || "e-mail" |
+
+decision dwuznaczna "Dwuznaczna" hit=unique
+  | wiek: number || grupa: string |
+  | >= 18 || "dorosły" |
+  | [30..60] || "średni wiek" |
+  | < 18 || "młody" |
+
+simulate cases=15 seed=3 arrival="exp(1h)"
+variable wiek "unif(10, 70)"
+variable typ "cat(student=0.3, pracownik=0.3, inny=0.4)"
+variable kwota "tri(10, 100, 400)"
+variable pilne "bern(0.3)"

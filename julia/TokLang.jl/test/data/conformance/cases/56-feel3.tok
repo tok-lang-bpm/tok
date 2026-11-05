@@ -1,0 +1,24 @@
+tok 0.7 "FEEL w procesie" executable
+
+start s "Zgłoszenie zwrotu" form=f-zwrot
+rule ocena "Ocena zwrotu" decision=dni-zwloki result=zwloka
+xor czy "Czy zwrot po terminie?"
+script naliczenie "Naliczenie kar" expr="sum(for d in 1..zwloka return if d <= 14 then 0.5 else 1)" result=kara
+user wezwanie "Wezwanie do zapłaty" form=f-wezwanie
+end e1 "Zwrot przyjęty"
+end e2 "Wezwanie wysłane"
+flow s -> ocena -> czy
+flow czy -> naliczenie "tak" when="zwloka > 0 and some t in tytuly satisfies t != null"
+flow czy -> e1 "nie" default
+flow naliczenie -> wezwanie -> e2
+
+inputdata termin "Termin zwrotu" type=date
+inputdata zwrot "Data zwrotu" type=date
+decision dni-zwloki "Dni zwłoki" type=number requires="termin zwrot" expr="max([0, (zwrot - termin).days])"
+
+form f-zwrot "Zwrot"
+  field termin "Termin zwrotu" required type=datetime
+  field zwrot "Data zwrotu" required type=datetime
+form f-wezwanie "Wezwanie"
+  text "## Kara: {{kara}} zł"
+  field zaplacono "Zapłacono" type=checkbox

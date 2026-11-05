@@ -1,0 +1,9 @@
+tok 0.6 "Statements of language 0.7 under an older header"
+
+start s
+end e
+
+flow s -> e
+
+decision limit "Limit" expr="10" requires=wiek
+  |  ||  |

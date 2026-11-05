@@ -1,7 +1,7 @@
 # The `tok` application of TokLang.jl (TokLang.app_main), as julia/app compiles it.
 
 @testset "application" begin
-    path = joinpath(ROOT, "examples", "kwerenda-symulacja.tok")
+    path = joinpath(EXAMPLES, "kwerenda-symulacja.tok")
     io = IOBuffer()
     @test TokLang.app_main(["experiment", path, "--replications", "4", "--cases", "50", "--resource", "archiwisci=3"];
                        out=io) == 0

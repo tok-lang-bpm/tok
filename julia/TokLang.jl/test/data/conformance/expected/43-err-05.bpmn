@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Errors of language 0.5" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:itemDefinition id="i" itemKind="Information" structureRef="typy.xsd#Typ">
+    <bpmn:documentation>Typ</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:message id="Message_M" name="M" />
+  <bpmn:message id="Message_A" name="A" />
+  <bpmn:message id="Message_R" name="R" />
+  <bpmn:correlationProperty id="CorrelationProperty_id" name="id">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_M">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression" />
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:globalTask id="g" name="Zadanie" />
+  <bpmn:process id="process" isExecutable="false" name="Errors of language 0.5">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_M" />
+      <bpmn:terminateEventDefinition id="s-def-2" />
+    </bpmn:startEvent>
+    <bpmn:transaction id="t" name="Transakcja">
+      <bpmn:startEvent id="ts" />
+      <bpmn:endEvent id="te" />
+      <bpmn:sequenceFlow id="f-ts-te" sourceRef="ts" targetRef="te" />
+    </bpmn:transaction>
+    <bpmn:subProcess id="p" name="Podproces">
+      <bpmn:startEvent id="ps" />
+      <bpmn:endEvent id="anuluj" name="Anulowanie">
+        <bpmn:cancelEventDefinition id="anuluj-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ps-anuluj" sourceRef="ps" targetRef="anuluj" />
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent attachedToRef="p" cancelActivity="false" id="b" name="Anulowano">
+      <bpmn:cancelEventDefinition id="b-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="powtorz" name="Powtórzenie" />
+    <bpmn:intermediateCatchEvent id="c" name="Czekanie" parallelMultiple="true">
+      <bpmn:messageEventDefinition id="c-def" messageRef="Message_A" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="odbior" name="Odbiór" />
+    <bpmn:receiveTask id="r" instantiate="true" messageRef="Message_R" name="Odbiór" />
+    <bpmn:eventBasedGateway eventGatewayType="Parallel" id="g2" name="Co dalej?" />
+    <bpmn:callActivity calledElement="g" id="w" name="Wywołanie" />
+    <bpmn:callActivity calledElement="brak" id="w2" name="Wywołanie 2" />
+    <bpmn:serviceTask id="op" name="Operacja" operationRef="nieznana" />
+    <bpmn:userTask id="ocena" name="Ocena">
+      <bpmn:ioSpecification id="ocena-io">
+        <bpmn:dataInput id="ocena-in-1" name="Dokument" />
+        <bpmn:dataOutput id="ocena-out-2" name="Dokument" />
+        <bpmn:inputSet id="ocena-inputs">
+          <bpmn:dataInputRefs>ocena-in-1</bpmn:dataInputRefs>
+        </bpmn:inputSet>
+        <bpmn:outputSet id="ocena-outputs">
+          <bpmn:dataOutputRefs>ocena-out-2</bpmn:dataOutputRefs>
+        </bpmn:outputSet>
+      </bpmn:ioSpecification>
+      <bpmn:dataInputAssociation id="ocena-dia-1">
+        <bpmn:sourceRef>d</bpmn:sourceRef>
+        <bpmn:targetRef>ocena-in-1</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="ocena-doa-2">
+        <bpmn:sourceRef>ocena-out-2</bpmn:sourceRef>
+        <bpmn:targetRef>d2</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e2" name="Koniec 2" />
+    <bpmn:sequenceFlow id="f-s-t" sourceRef="s" targetRef="t" />
+    <bpmn:sequenceFlow id="f-t-p" sourceRef="t" targetRef="p" />
+    <bpmn:sequenceFlow id="f-p-powtorz" sourceRef="p" targetRef="powtorz" />
+    <bpmn:sequenceFlow id="f-powtorz-c" sourceRef="powtorz" targetRef="c" />
+    <bpmn:sequenceFlow id="f-c-odbior" sourceRef="c" targetRef="odbior" />
+    <bpmn:sequenceFlow id="f-odbior-r" sourceRef="odbior" targetRef="r" />
+    <bpmn:sequenceFlow id="f-r-g2" sourceRef="r" targetRef="g2" />
+    <bpmn:sequenceFlow id="f-g2-w" sourceRef="g2" targetRef="w" />
+    <bpmn:sequenceFlow id="f-w-w2" sourceRef="w" targetRef="w2" />
+    <bpmn:sequenceFlow id="f-w2-op" sourceRef="w2" targetRef="op" />
+    <bpmn:sequenceFlow id="f-op-ocena" sourceRef="op" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-e" sourceRef="ocena" targetRef="e" />
+    <bpmn:sequenceFlow id="f-b-e2" sourceRef="b" targetRef="e2" />
+    <bpmn:dataObject id="d-object" itemSubjectRef="brak-typu" name="Dokument" />
+    <bpmn:dataObjectReference dataObjectRef="d-object" id="d" name="Dokument">
+      <bpmn:dataState id="d-state" name="złożony" />
+    </bpmn:dataObjectReference>
+    <bpmn:dataObject id="d2-object" name="Dokument" />
+    <bpmn:dataObjectReference dataObjectRef="d2-object" id="d2" name="Dokument">
+      <bpmn:dataState id="d2-state" name="złożony" />
+    </bpmn:dataObjectReference>
+  </bpmn:process>
+</bpmn:definitions>

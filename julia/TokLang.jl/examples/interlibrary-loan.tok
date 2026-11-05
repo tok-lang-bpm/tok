@@ -1,0 +1,23 @@
+tok 1.0 "Interlibrary loan"
+
+pool library "University library"
+  lane reader "Reader"
+    start need "Book needed"
+    user order "Place an order"
+  lane librarian "Librarian"
+    user catalogues "Search the catalogues"
+    xor available "Available locally?"
+    user point "Point to the copy"
+    send request "Order from another library" message="Order"
+    end pointed "Copy pointed out"
+    end ordered "Order placed"
+
+pool other "Lending library"
+
+flow need -> order -> catalogues -> available
+flow available -> point "yes"
+flow available -> request "no"
+flow point -> pointed
+flow request -> ordered
+
+message request -> other "Order"

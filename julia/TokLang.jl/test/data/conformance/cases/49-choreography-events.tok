@@ -1,0 +1,30 @@
+tok 0.6 "Rezerwacja sali"
+
+pool wynajmujacy "Wynajmujący"
+pool zarzadca "Zarządca"
+
+# events and gateways that a choreography allows (BPMN 2.0.2 §11.6, §11.7)
+choreography rezerwacja "Rezerwacja sali"
+  start s "Początek miesiąca" timer="R/2027-01-01T08:00/P1M"
+  choreo zapytanie "Zapytanie o termin" from=wynajmujacy to=zarzadca message="Zapytanie" reply="Wolne terminy"
+  boundary limit "Brak odpowiedzi" on=zapytanie timer=P2D
+  eventgw co "Co nastąpi?"
+  catch decyzja "Decyzja zapisana" condition="decyzja != null"
+  catch zmiana "Zmiana cennika" signal="Cennik"
+  choreo potwierdzenie "Potwierdzenie" from=zarzadca to=wynajmujacy message="Potwierdzenie"
+  and razem
+  and zlaczenie
+  choreo umowa "Umowa" from=zarzadca to=wynajmujacy message="Umowa"
+  choreo faktura "Faktura" from=zarzadca to=wynajmujacy message="Faktura"
+  throw dalej "Do archiwum" link="archiwum"
+  catch archiwum "Archiwum" link="archiwum"
+  end koniec
+  end przerwano "Przerwano" terminate
+  flow s -> zapytanie -> co
+  flow co -> decyzja -> potwierdzenie -> razem
+  flow co -> zmiana -> przerwano
+  flow razem -> umowa -> zlaczenie
+  flow razem -> faktura -> zlaczenie
+  flow zlaczenie -> dalej
+  flow archiwum -> koniec
+  flow limit -> przerwano

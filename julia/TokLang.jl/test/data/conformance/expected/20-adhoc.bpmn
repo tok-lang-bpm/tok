@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Ad-hoc" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Ad-hoc">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:adHocSubProcess cancelRemainingInstances="false" id="opracowanie" name="Opracowanie spuścizny">
+      <bpmn:extensionElements>
+        <zeebe:adHoc activeElementsCollection="=wybrane" />
+      </bpmn:extensionElements>
+      <bpmn:userTask id="inwentarz" name="Sporządzenie inwentarza">
+        <bpmn:extensionElements>
+          <zeebe:userTask />
+        </bpmn:extensionElements>
+      </bpmn:userTask>
+      <bpmn:userTask id="skany" name="Digitalizacja">
+        <bpmn:extensionElements>
+          <zeebe:userTask />
+        </bpmn:extensionElements>
+      </bpmn:userTask>
+      <bpmn:manualTask id="konserwacja" name="Konserwacja" />
+      <bpmn:sequenceFlow id="f-inwentarz-skany" sourceRef="inwentarz" targetRef="skany" />
+      <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">=gotowe = true</bpmn:completionCondition>
+    </bpmn:adHocSubProcess>
+    <bpmn:adHocSubProcess id="kolejno" name="Kolejne kroki" ordering="Sequential">
+      <bpmn:task id="a" name="Krok A" />
+      <bpmn:task id="b" name="Krok B" />
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-opracowanie" sourceRef="s" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-kolejno" sourceRef="opracowanie" targetRef="kolejno" />
+    <bpmn:sequenceFlow id="f-kolejno-e" sourceRef="kolejno" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,13 @@
+tok 0.5 "Multiple events"
+
+start zgloszenie "Zgłoszenie e-mailem lub przez formularz" message="E-mail" message="Formularz"
+user rejestracja "Rejestracja zgłoszenia"
+catch potwierdzenie "Potwierdzenie i płatność" signal="Wpłata" message="Potwierdzenie" parallel
+boundary przypomnienie "Przypomnienie lub ponaglenie" on=rejestracja timer=P3D signal="Ponaglenie" noninterrupting
+task monit "Wysłanie monitu"
+end monit-e "Monit wysłany"
+throw ogloszenie "Ogłoszenie" message="Do klienta" escalation="Do kierownika"
+end koniec "Powiadomienia" message="Do klienta" signal="Zamknięto"
+
+flow zgloszenie -> rejestracja -> potwierdzenie -> ogloszenie -> koniec
+flow przypomnienie -> monit -> monit-e

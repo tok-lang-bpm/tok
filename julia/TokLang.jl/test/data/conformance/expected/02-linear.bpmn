@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1" id="definitions" name="Wypożyczenie" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Wypożyczenie">
+    <bpmn:startEvent id="s" name="Potrzeba książki" />
+    <bpmn:userTask id="z" name="Złożenie zamówienia" />
+    <bpmn:task id="k" name="Sprawdzenie katalogów" />
+    <bpmn:endEvent id="e" name="Zamówienie przyjęte" />
+    <bpmn:sequenceFlow id="f-s-z" sourceRef="s" targetRef="z" />
+    <bpmn:sequenceFlow id="f-z-k" sourceRef="z" targetRef="k" />
+    <bpmn:sequenceFlow id="f-k-e" sourceRef="k" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="1.0" id="wypozyczenia" name="Powtórzone atrybuty" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_E_mail" name="E-mail" />
+  <bpmn:message id="Message_Formularz" name="Formularz" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:signal id="Signal_Zamknieto" name="Zamknięto" />
+  <bpmn:error id="Error_Brak_rekordu" name="Brak rekordu" />
+  <bpmn:error id="Error_Katalog_niedostepny" name="Katalog niedostępny" />
+  <bpmn:interface id="katalog" name="Katalog">
+    <bpmn:operation id="szukaj" name="Wyszukanie">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+      <bpmn:errorRef>Error_Brak_rekordu</bpmn:errorRef>
+      <bpmn:errorRef>Error_Katalog_niedostepny</bpmn:errorRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:process id="process" isExecutable="false" name="Powtórzone atrybuty">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:startEvent id="s" name="Zgłoszenie">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_E_mail" />
+      <bpmn:messageEventDefinition id="s-def-2" messageRef="Message_Formularz" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="przyjecie" name="Przyjęcie zgłoszenia">
+      <bpmn:documentation>Opis zgłoszenia</bpmn:documentation>
+      <bpmn:standardLoopCharacteristics />
+    </bpmn:userTask>
+    <bpmn:serviceTask id="wyszukaj" name="Wyszukanie" operationRef="szukaj" />
+    <bpmn:sendTask id="odpowiedz" messageRef="Message_Odpowiedz" name="Odpowiedź" />
+    <bpmn:endEvent id="e" name="Koniec">
+      <bpmn:signalEventDefinition id="e-def" signalRef="Signal_Zamknieto" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-przyjecie" sourceRef="s" targetRef="przyjecie" />
+    <bpmn:sequenceFlow id="f-przyjecie-wyszukaj" sourceRef="przyjecie" targetRef="wyszukaj" />
+    <bpmn:sequenceFlow id="f-wyszukaj-odpowiedz" sourceRef="wyszukaj" targetRef="odpowiedz" />
+    <bpmn:sequenceFlow id="f-odpowiedz-e" name="koniec" sourceRef="odpowiedz" targetRef="e">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">gotowe</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+</bpmn:definitions>

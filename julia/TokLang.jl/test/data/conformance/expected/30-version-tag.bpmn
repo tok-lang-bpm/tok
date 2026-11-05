@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Version tags" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="archiwum" name="Archiwum" processRef="kwerenda" />
+    <bpmn:participant id="biblioteka" name="Biblioteka" processRef="zamowienie" />
+    <bpmn:participant id="czytelnik" name="Czytelnik" />
+  </bpmn:collaboration>
+  <bpmn:process id="kwerenda" isExecutable="true" name="Archiwum">
+    <bpmn:extensionElements>
+      <zeebe:versionTag value="v2.1" />
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-e" sourceRef="s" targetRef="e" />
+  </bpmn:process>
+  <bpmn:process id="zamowienie" isExecutable="true" name="Biblioteka">
+    <bpmn:extensionElements>
+      <zeebe:versionTag value="2027-01" />
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="s2" name="Start" />
+    <bpmn:endEvent id="e2" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s2-e2" sourceRef="s2" targetRef="e2" />
+  </bpmn:process>
+</bpmn:definitions>

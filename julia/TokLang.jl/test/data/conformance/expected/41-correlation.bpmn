@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.5" id="definitions" name="Correlation" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Prosba" name="Prośba" />
+  <bpmn:message id="Message_Potwierdzenie" name="Potwierdzenie" />
+  <bpmn:correlationProperty id="CorrelationProperty_numer" name="numer">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_Zamowienie">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">zamowienie.numer</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_Potwierdzenie">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">potwierdzenie.nr</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:correlationProperty id="CorrelationProperty_klient" name="klient">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_Zamowienie">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">zamowienie.klient</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="sklep" name="Sklep" processRef="sklep-process" />
+    <bpmn:participant id="klient" name="Klient" />
+    <bpmn:messageFlow id="m-klient-s" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="klient" targetRef="s" />
+    <bpmn:messageFlow id="m-prosba-klient" messageRef="Message_Prosba" name="Prośba" sourceRef="prosba" targetRef="klient" />
+    <bpmn:messageFlow id="m-klient-potwierdzenie" messageRef="Message_Potwierdzenie" name="Potwierdzenie" sourceRef="klient" targetRef="potwierdzenie" />
+    <bpmn:correlationKey id="zamowienie" name="Numer zamówienia">
+      <bpmn:correlationPropertyRef>CorrelationProperty_numer</bpmn:correlationPropertyRef>
+      <bpmn:correlationPropertyRef>CorrelationProperty_klient</bpmn:correlationPropertyRef>
+    </bpmn:correlationKey>
+  </bpmn:collaboration>
+  <bpmn:process id="sklep-process" isExecutable="false" name="Correlation">
+    <bpmn:startEvent id="s" name="Zamówienie przyjęte">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_Zamowienie" />
+    </bpmn:startEvent>
+    <bpmn:sendTask id="prosba" messageRef="Message_Prosba" name="Prośba o potwierdzenie" />
+    <bpmn:receiveTask id="potwierdzenie" messageRef="Message_Potwierdzenie" name="Potwierdzenie" />
+    <bpmn:endEvent id="e" name="Zamówienie potwierdzone" />
+    <bpmn:sequenceFlow id="f-s-prosba" sourceRef="s" targetRef="prosba" />
+    <bpmn:sequenceFlow id="f-prosba-potwierdzenie" sourceRef="prosba" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-e" sourceRef="potwierdzenie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

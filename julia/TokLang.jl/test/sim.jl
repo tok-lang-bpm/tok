@@ -2,8 +2,8 @@
 # comparison with the simulator of the engine.
 
 const S = TokLang.Sim
-const SIM_FIXTURES = joinpath(ROOT, "rust", "tok-sim", "tests", "fixtures", "sim")
-const KWERENDA = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
+const SIM_FIXTURES = joinpath(@__DIR__, "data", "sim")
+const KWERENDA = read(joinpath(EXAMPLES, "kwerenda-symulacja.tok"), String)
 
 @testset "native simulation: supported models" begin
     m = S.model(KWERENDA)

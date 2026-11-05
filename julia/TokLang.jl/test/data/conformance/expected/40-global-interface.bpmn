@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.5" id="definitions" name="Global tasks and interfaces" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Nowy_rekord" name="Nowy rekord" />
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:message id="Message_Rekord" name="Rekord" />
+  <bpmn:error id="Error_Brak_rekordu" name="Brak rekordu" />
+  <bpmn:error id="Error_Katalog_niedostepny" name="Katalog niedostępny" />
+  <bpmn:interface id="katalog" name="Katalog biblioteczny">
+    <bpmn:operation id="szukaj" name="Wyszukanie rekordu">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+      <bpmn:outMessageRef>Message_Rekord</bpmn:outMessageRef>
+      <bpmn:errorRef>Error_Brak_rekordu</bpmn:errorRef>
+      <bpmn:errorRef>Error_Katalog_niedostepny</bpmn:errorRef>
+    </bpmn:operation>
+    <bpmn:operation id="zapisz" name="zapisz">
+      <bpmn:inMessageRef>Message_Nowy_rekord</bpmn:inMessageRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:globalUserTask id="sprawdzenie" name="Sprawdzenie tożsamości" />
+  <bpmn:globalTask id="archiwizacja" name="Archiwizacja" />
+  <bpmn:process id="process" isExecutable="false" name="Global tasks and interfaces">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:startEvent id="s" name="Zamówienie" />
+    <bpmn:callActivity calledElement="sprawdzenie" id="sprawdz" name="Sprawdzenie tożsamości" />
+    <bpmn:serviceTask id="wyszukaj" name="Wyszukanie w katalogu" operationRef="szukaj" />
+    <bpmn:sendTask id="zapis" messageRef="Message_Nowy_rekord" name="Zapis rekordu" operationRef="zapisz" />
+    <bpmn:callActivity calledElement="archiwizacja" id="archiwum" name="Archiwizacja" />
+    <bpmn:endEvent id="e" name="Gotowe" />
+    <bpmn:sequenceFlow id="f-s-sprawdz" sourceRef="s" targetRef="sprawdz" />
+    <bpmn:sequenceFlow id="f-sprawdz-wyszukaj" sourceRef="sprawdz" targetRef="wyszukaj" />
+    <bpmn:sequenceFlow id="f-wyszukaj-zapis" sourceRef="wyszukaj" targetRef="zapis" />
+    <bpmn:sequenceFlow id="f-zapis-archiwum" sourceRef="zapis" targetRef="archiwum" />
+    <bpmn:sequenceFlow id="f-archiwum-e" sourceRef="archiwum" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

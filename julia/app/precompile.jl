@@ -2,7 +2,7 @@
 # examples of the repository, so that they start without compiling.
 using TokLang
 
-const EXAMPLES = joinpath(@__DIR__, "..", "..", "examples")
+const EXAMPLES = joinpath(@__DIR__, "..", "TokLang.jl", "examples")
 path = joinpath(EXAMPLES, "kwerenda-symulacja.tok")
 io = IOBuffer()
 TokLang.app_main(["core", "fmt", path]; out=io)

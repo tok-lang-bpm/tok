@@ -1,0 +1,17 @@
+tok 0.5 "Global tasks and interfaces"
+
+global sprawdzenie "Sprawdzenie tożsamości" kind=user
+global archiwizacja "Archiwizacja"
+
+interface katalog "Katalog biblioteczny"
+  operation szukaj "Wyszukanie rekordu" in="Zapytanie" out="Rekord" error="Brak rekordu" error="Katalog niedostępny"
+  operation zapisz in="Nowy rekord"
+
+start s "Zamówienie"
+call sprawdz "Sprawdzenie tożsamości" task=sprawdzenie
+service wyszukaj "Wyszukanie w katalogu" operation=szukaj
+send zapis "Zapis rekordu" message="Nowy rekord" operation=zapisz
+call archiwum "Archiwizacja" task=archiwizacja
+end e "Gotowe"
+
+flow s -> sprawdz -> wyszukaj -> zapis -> archiwum -> e

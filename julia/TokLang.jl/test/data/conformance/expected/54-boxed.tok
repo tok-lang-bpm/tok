@@ -1,0 +1,43 @@
+tok 0.7 "Wyrażenia ramkowe"
+
+item egzemplarz-t "Egzemplarz"
+  item sygnatura type=string
+  item rok type=number
+  item "stan zachowania" type=string allowed="\"dobry\", \"zły\""
+item egzemplarze-t "Lista egzemplarzy" collection type=egzemplarz-t
+
+inputdata rodzaj "Rodzaj zbioru" type=string
+inputdata dni "Dni zwłoki" type=number
+inputdata egzemplarze "Egzemplarze" type=egzemplarze-t
+
+bkm naliczenie "Naliczenie opłaty" params="dni: number, stawka: number" type=number
+  entry kwota expr="dni * stawka"
+  result expr="min([kwota, 100])"
+
+# a context with a relation, a function definition, an invocation and a result
+decision oplata "Opłata za przetrzymanie" type=number requires="rodzaj dni naliczenie"
+  entry stawki
+    | typ: string  | stawka: number |
+    | "książka"    | 0.5            |
+    | "czasopismo" | 0.2            |
+    | "audiobook"  | 0.3            |
+  entry stawka type=number expr="stawki[typ = rodzaj].stawka[1]"
+  entry zaokraglenie params="x: number" expr="round half up(x, 2)"
+  entry naliczona invoke=naliczenie with="dni = dni; stawka = stawka"
+  result expr="zaokraglenie(naliczona)"
+
+# a list
+decision kategorie "Kategorie kont"
+  element expr="\"student\""
+  element expr="\"doktorant\""
+  element expr="\"pracownik\""
+
+# a context without a result: its value is the context
+decision podsumowanie "Podsumowanie egzemplarzy" requires="egzemplarze"
+  entry liczba expr="count(egzemplarze)"
+  entry najstarszy expr="min(egzemplarze.rok)"
+  entry "do naprawy" expr="egzemplarze[stan zachowania = \"zły\"].sygnatura"
+  entry przeglad type=boolean hit=first
+    | najstarszy: number || przegląd: boolean |
+    | < 1950             || true              |
+    | -                  || false             |

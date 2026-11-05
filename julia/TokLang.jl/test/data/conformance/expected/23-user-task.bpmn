@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="User task assignment" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="User task assignment">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:userTask id="akceptacja" name="Akceptacja">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition assignee="=wniosek.przelozony" candidateGroups="kierownicy, sekretariat" candidateUsers="anna, jan" />
+        <zeebe:taskSchedule dueDate="2027-01-15T12:00:00+01:00" followUpDate="=now() + duration(&quot;P1D&quot;)" />
+        <zeebe:priorityDefinition priority="70" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:userTask id="sprawdzenie" name="Sprawdzenie">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:assignmentDefinition assignee="kierownik" />
+        <zeebe:priorityDefinition priority="=pilnosc * 10" />
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-akceptacja" sourceRef="s" targetRef="akceptacja" />
+    <bpmn:sequenceFlow id="f-akceptacja-sprawdzenie" sourceRef="akceptacja" targetRef="sprawdzenie" />
+    <bpmn:sequenceFlow id="f-sprawdzenie-e" sourceRef="sprawdzenie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

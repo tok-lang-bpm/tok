@@ -1,0 +1,19 @@
+tok 0.7 "Decyzje w dokumencie wykonywalnym" executable
+
+start s "Wniosek"
+rule decyzja "Decyzja o wypożyczeniu" decision=wypozyczenie result=wynik
+end e "Rozpatrzony"
+flow s -> decyzja -> e
+
+inputdata wiek "Wiek" type=number
+
+bkm stawka "Stawka" params="wiek: number" type=number expr="if wiek < 18 then 0 else 1"
+bkm przez-wywolanie "Stawka przez wywołanie" params="wiek: number" requires="stawka" invoke=stawka with="wiek = wiek"
+
+decision wypozyczenie "Wypożyczenie" requires="wiek stawka"
+  entry podwojenie params="x: number"
+    | x: number || wynik: number |
+    | -         || x * 2         |
+  result expr="podwojenie(stawka(wiek))"
+
+decision opisowa "Decyzja opisowa" requires="wiek"

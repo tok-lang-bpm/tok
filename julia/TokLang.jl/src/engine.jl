@@ -7,13 +7,13 @@ The whole tok language through the Rust engine: the checker of every layer, cano
 text, BPMN, SVG, DMN and form export, BPMN and DMN import, decisions and simulation.
 The functions mirror the Python package (`tok.api`) and the R package (`tokr`).
 
-The shared library is found, in this order, at the path in the environment variable
-`TOK_LIBTOK`, in the binary package `tok_jll` when it is installed in the active
-environment, and in the build directory `rust/target/release` of the repository.
-[`available`](@ref) tells whether it was found. Errors of the engine are thrown as
-[`TokError`](@ref).
+The shared library comes from the binary package `tok_jll`, a dependency of TokLang.jl.
+[`available`](@ref) tells whether it can be loaded on this platform. Errors of the engine
+are thrown as [`TokError`](@ref).
 """
 module Engine
+
+import tok_jll
 
 using ..JSON: parse_json, write_json
 
@@ -38,9 +38,6 @@ Base.showerror(io::IO, e::TokError) = print(io, "TokError (", e.kind, "): ", e.m
 "Version of the C interface this module is written for."
 const ABI_VERSION = 1
 
-const LIBNAME = Sys.iswindows() ? "tokengine.dll" : Sys.isapple() ? "libtokengine.dylib" : "libtokengine.so"
-const REPO_LIB = normpath(joinpath(@__DIR__, "..", "..", "..", "rust", "target", "release", LIBNAME))
-
 mutable struct Lib
     path::String
     handle::Ptr{Cvoid}
@@ -50,41 +47,12 @@ end
 const LIB = Ref{Union{Nothing,Lib}}(nothing)
 const LIB_LOCK = ReentrantLock()
 
-"The path of the library from the binary package `tok_jll`, or `nothing`."
-function jll_path()
-    id = Base.identify_package("tok_jll")
-    id === nothing && return nothing
-    mod = try
-        Base.require(id)
-    catch
-        return nothing
-    end
-    for name in (:libtokengine_path, :libtokengine)
-        if isdefined(mod, name)
-            p = getfield(mod, name)
-            p isa AbstractString && isfile(p) && return String(p)
-        end
-    end
-    return nothing
-end
-
 """
     find_library() -> path or nothing
 
-Where the engine library is: `TOK_LIBTOK`, the package `tok_jll`, or the build
-directory of the repository.
+The path of the engine library of `tok_jll`, or `nothing` on a platform it has no build for.
 """
-function find_library()
-    p = get(ENV, "TOK_LIBTOK", "")
-    if !isempty(p)
-        isfile(p) || error("TOK_LIBTOK is set to $(repr(p)), which is not a file")
-        return p
-    end
-    p = jll_path()
-    p !== nothing && return p
-    isfile(REPO_LIB) && return REPO_LIB
-    return nothing
-end
+find_library() = tok_jll.is_available() ? String(tok_jll.libtokengine_path) : nothing
 
 function lib()
     l = LIB[]
@@ -92,9 +60,8 @@ function lib()
     lock(LIB_LOCK) do
         LIB[] !== nothing && return LIB[]
         path = find_library()
-        path === nothing && error("the tok engine library was not found: set TOK_LIBTOK to the path of " *
-                                  "$LIBNAME, install the package tok_jll, or build it with " *
-                                  "`cargo build --release -p tok-capi` in the rust folder of the repository")
+        path === nothing && error("the tok engine library is not available: tok_jll has no build for " *
+                                  "$(Sys.MACHINE); the independent core of TokLang works without it")
         handle = Base.Libc.Libdl.dlopen(path)
         # every function is looked up once, so that calls from several threads only read
         syms = Dict{Symbol,Ptr{Cvoid}}(s => Base.Libc.Libdl.dlsym_e(handle, s) for s in SYMBOLS)

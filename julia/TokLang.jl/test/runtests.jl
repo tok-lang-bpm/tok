@@ -1,10 +1,25 @@
+using Aqua
 using Test
 using TokLang
 
-const ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
-const CONFORMANCE = joinpath(ROOT, "conformance")
+# The models and the corpus are copies inside the package (tools/julia-data.sh of the
+# repository), so that the tests also run from an installed package.
+const EXAMPLES = normpath(joinpath(@__DIR__, "..", "examples"))
+const CONFORMANCE = joinpath(@__DIR__, "data", "conformance")
 
 readtext(path) = replace(read(path, String), "\r\n" => "\n")
+
+# Runs a script of examples/ in a module of its own, as `julia examples/NAME` would.
+function run_example(name)
+    redirect_stdout(devnull) do
+        Base.include(Module(), joinpath(EXAMPLES, name))
+    end
+    @test true
+end
+
+@testset "quality of the package (Aqua)" begin
+    Aqua.test_all(TokLang)
+end
 
 @testset "conformance (core)" begin
     cases = sort(filter(f -> endswith(f, ".tok"), readdir(joinpath(CONFORMANCE, "cases"))))
@@ -45,13 +60,20 @@ end
     @test format_diag(diags[1], "pl") == "wiersz 2: błąd P001: nieznane słowo kluczowe „procez”"
 end
 
-# The Rust engine, the native simulator and the calibration need the engine library
-# (TOK_LIBTOK, the package tok_jll, or rust/target/release of the repository).
+@testset "example of the core" begin
+    run_example("01-core.jl")
+end
+
+# The Rust engine, the native simulator and the calibration need the engine library, which
+# tok_jll has for every platform of its recipe.
 if TokLang.Engine.available()
     include("engine.jl")
     include("sim.jl")
     include("fit.jl")
     include("app.jl")
+    @testset "examples of the engine" begin
+        foreach(run_example, ("02-engine.jl", "03-simulation.jl", "04-calibration.jl"))
+    end
 else
-    @info "tok engine library not found: the tests of TokLang.Engine, TokLang.Sim and TokLang.Fit are skipped"
+    @info "tok engine library not available: the tests of TokLang.Engine, TokLang.Sim and TokLang.Fit are skipped"
 end

@@ -89,7 +89,7 @@ The package also runs the MCP server for AI agents: `tok mcp` (`docs/mcp.md`). T
 `TokLang.jl` gives the whole language to Julia through the C interface of the engine, keeps an independent implementation of the core of the specification, and adds a native simulator for large experiments and the calibration of simulation parameters on event logs:
 
 ```julia
-using Pkg; Pkg.add(["TokLang", "tok_jll"])    # or Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/TokLang.jl")
+using Pkg; Pkg.add("TokLang")                 # or Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/TokLang.jl")
 using TokLang
 text = read("model.tok", String)
 TokLang.Engine.check(text)                                  # the engine: every layer of the language
@@ -100,7 +100,7 @@ f = TokLang.Fit.fit(text, TokLang.Fit.read_xes("log.xes"))  # calibration on an 
 TokLang.Fit.apply(text, f)                                  # the document with the fitted parameters
 ```
 
-The engine library is found through `TOK_LIBTOK`, the package `tok_jll`, or the repository build (`cargo build --release -p tok-capi`); see [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md).
+The engine library comes with the package, through its dependency `tok_jll`; see [docs/julia.md](https://github.com/tok-lang-bpm/tok/blob/main/docs/julia.md) and the [API reference](https://tok-lang-bpm.github.io/julia/).
 
 ## Use
 

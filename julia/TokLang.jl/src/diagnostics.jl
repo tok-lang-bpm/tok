@@ -43,6 +43,13 @@ const MESSAGES = Dict{String,Tuple{String,String,String}}(
 const CORE_CODES = Set(["T001", "T002", "T003", "P001", "P002", "P003", "P004", "P005", "P006", "P007",
                         "P008", "P009", "P010", "R001", "R004", "R020", "D002", "D004", "D008", "D009"])
 
+"""
+    Diag(code, line, id=nothing; arguments...)
+
+A diagnostic of the independent core: its `code` (for example `"P001"`), the `line` of the
+document, the `id` of the element it concerns, or `nothing`, and the `args` of its message.
+[`message`](@ref) gives the text and [`severity`](@ref) the severity.
+"""
 struct Diag
     code::String
     line::Int
@@ -54,8 +61,18 @@ Diag(code, line, id=nothing; kw...) =
     Diag(String(code), Int(line), id === nothing ? nothing : String(id),
          Dict{String,String}(String(k) => string(v) for (k, v) in kw))
 
+"""
+    severity(d::Diag) -> String
+
+The severity of a diagnostic: `"error"`, `"warning"` or `"note"`.
+"""
 severity(d::Diag) = haskey(MESSAGES, d.code) ? MESSAGES[d.code][1] : ERROR
 
+"""
+    message(d::Diag, lang="en") -> String
+
+The text of a diagnostic, in English (`"en"`) or in Polish (`"pl"`).
+"""
 function message(d::Diag, lang::AbstractString="en")
     haskey(MESSAGES, d.code) || return d.code
     template = lang == "en" ? MESSAGES[d.code][2] : MESSAGES[d.code][3]
@@ -66,6 +83,12 @@ function message(d::Diag, lang::AbstractString="en")
     return out
 end
 
+"""
+    format_diag(d::Diag, lang="en", path=nothing) -> String
+
+One line for a person to read, with the place, the severity, the code and the text of the
+diagnostic, as `tok check` prints it; `path` is the file named at the start of the line.
+"""
 function format_diag(d::Diag, lang::AbstractString="en", path=nothing)
     sev = lang == "en" ? Dict(ERROR => "error", WARNING => "warning", NOTE => "note") :
                          Dict(ERROR => "błąd", WARNING => "ostrzeżenie", NOTE => "uwaga")

@@ -33,14 +33,14 @@ end
     end
     d = E.check("tok 0.1\nprocez x\n"; lang="pl")
     @test length(d) == 1 && d[1]["code"] == "P001" && d[1]["message"] == "nieznane słowo kluczowe „procez”"
-    @test E.bpmn_class(read(joinpath(ROOT, "examples", "wypozyczenie.tok"), String)) in
+    @test E.bpmn_class(read(joinpath(EXAMPLES, "wypozyczenie.tok"), String)) in
           ("descriptive", "analytic", "common-executable", "full")
     text = read(joinpath(CONFORMANCE, "cases", "47-conversation.tok"), String)
     @test any(d -> d["code"] == "R075", E.check(text; class="descriptive"))
 end
 
 @testset "engine: export and import" begin
-    text = read(joinpath(ROOT, "examples", "propozycja-zakupu.tok"), String)
+    text = read(joinpath(EXAMPLES, "propozycja-zakupu.tok"), String)
     @test occursin("bpmndi:BPMNDiagram", E.bpmn(text))
     @test !occursin("bpmndi:BPMNDiagram", E.bpmn(text; layout=false))
     @test occursin("<svg", E.svg(text; title="Propozycja"))
@@ -54,7 +54,7 @@ end
     @test r["format"] == "bpmn" && r["layout"] isa String
     # the imported text keeps the drawing through the layout sidecar
     @test occursin("bpmndi:BPMNDiagram", E.bpmn(r["text"]; sidecar=r["layout"]))
-    dmn = read(joinpath(CONFORMANCE, "dmn-tck", "compliance-level-3", "0001-filter", "0001-filter.dmn"), String)
+    dmn = read(joinpath(CONFORMANCE, "dmn", "0001-filter.dmn"), String)
     t, _ = E.import_dmn(dmn)
     @test startswith(t, "tok 0.7")
     @test E.import_file(dmn)["format"] == "dmn"
@@ -98,7 +98,7 @@ end
 end
 
 @testset "engine: simulation" begin
-    text = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
+    text = read(joinpath(EXAMPLES, "kwerenda-symulacja.tok"), String)
     r = E.simulate(text; cases=40, seed=3, xes=true, csv=true)
     @test r.kpi["cases"]["started"] == 40
     @test startswith(r.report, "Simulation (seed 3): 40 cases started")
@@ -116,7 +116,7 @@ end
 end
 
 @testset "engine: calls from several threads" begin
-    text = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
+    text = read(joinpath(EXAMPLES, "kwerenda-symulacja.tok"), String)
     out = Vector{Any}(undef, 8)
     Threads.@threads for k in 1:8
         out[k] = E.simulate(text; cases=20, seed=k, log=false, cases_table=false).kpi["seed"]

@@ -1,0 +1,9 @@
+tok 0.3 "Jobs" executable
+
+start s "Start"
+service powiadomienie "Powiadomienie" type="email" retries=5 headers="szablon: odmowa; jezyk: pl"
+send wyslanie "Wysłanie" message="Zamówienie" type="wysylka" retries=2
+throw zawiadomienie "Zawiadomienie" message="Zawiadomienie" type="zawiadomienie"
+end e "Wysłano" message="Odpowiedź" type="odpowiedz" headers="kanal: poczta"
+
+flow s -> powiadomienie -> wyslanie -> zawiadomienie -> e

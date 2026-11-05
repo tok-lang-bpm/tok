@@ -1,0 +1,28 @@
+tok 0.1 "Kwerenda genealogiczna"
+
+pool wn "Wnioskodawca"
+
+pool arch "Archiwum Państwowe" process=kwerenda
+  lane kanc "Kancelaria"
+    start s "Wniosek wpłynął" message="Wniosek"
+    user r "Rejestracja wniosku"
+  lane mer "Oddział merytoryczny"
+    lane arc "Archiwista"
+      user q "Poszukiwania"
+    lane kier "Kierownik oddziału"
+      user z "Zatwierdzenie odpowiedzi"
+      send o "Wysłanie odpowiedzi" message="Odpowiedź"
+      end e "Odpowiedź wysłana"
+
+pool bank "Bank" process=platnosci
+  start bs
+  receive bp "Przyjęcie wpłaty" message="Wpłata"
+  end be
+
+flow s -> r -> q -> z -> o -> e
+flow bs -> bp -> be
+
+message wn -> s "Wniosek"
+message o -> wn "Odpowiedź" message="Odpowiedź"
+message wn -> bp "Przelew" message="Wpłata" id=mf-przelew
+message wn -> bp

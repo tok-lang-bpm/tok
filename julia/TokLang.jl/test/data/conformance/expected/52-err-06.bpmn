@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.6" id="definitions" name="Errors of language 0.6" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Wiadomosc" name="Wiadomość" />
+  <bpmn:message id="Message_Druga" name="Druga" />
+  <bpmn:message id="Message_M" name="M" />
+  <bpmn:message id="Message_N" name="N" />
+  <bpmn:signal id="Signal_S" name="S" />
+  <bpmn:error id="Error_E" name="E" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="a" name="A">
+      <bpmn:participantMultiplicity maximum="2" minimum="3" />
+    </bpmn:participant>
+    <bpmn:participant id="b" name="B">
+      <bpmn:participantMultiplicity minimum="-1" />
+    </bpmn:participant>
+    <bpmn:participant id="c" name="C">
+      <bpmn:participantMultiplicity maximum="1" minimum="2" />
+    </bpmn:participant>
+    <bpmn:participant id="d" name="D">
+      <bpmn:participantMultiplicity maximum="dwa" minimum="2" />
+    </bpmn:participant>
+    <bpmn:participant id="e" name="E" processRef="e-process" />
+    <bpmn:messageFlow id="m-ab" messageRef="Message_Wiadomosc" name="Wiadomość" sourceRef="a" targetRef="b" />
+    <bpmn:messageFlow id="m-ae" messageRef="Message_Druga" name="Druga" sourceRef="a" targetRef="e" />
+    <bpmn:conversation id="k1" name="Jeden basen">
+      <bpmn:participantRef>a</bpmn:participantRef>
+    </bpmn:conversation>
+    <bpmn:conversation id="k2" name="Nieznany basen">
+      <bpmn:participantRef>a</bpmn:participantRef>
+      <bpmn:participantRef>x</bpmn:participantRef>
+    </bpmn:conversation>
+    <bpmn:conversation id="k3" name="Inne baseny">
+      <bpmn:participantRef>b</bpmn:participantRef>
+      <bpmn:participantRef>c</bpmn:participantRef>
+      <bpmn:messageFlowRef>m-ab</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>m-ae</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:conversation id="k4" name="Nie przepływ">
+      <bpmn:participantRef>a</bpmn:participantRef>
+      <bpmn:participantRef>b</bpmn:participantRef>
+      <bpmn:messageFlowRef>es</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:subConversation id="k5" name="Podkonwersacja">
+      <bpmn:participantRef>a</bpmn:participantRef>
+      <bpmn:participantRef>b</bpmn:participantRef>
+      <bpmn:conversation id="k6" name="Poza podkonwersacją">
+        <bpmn:participantRef>a</bpmn:participantRef>
+        <bpmn:participantRef>c</bpmn:participantRef>
+      </bpmn:conversation>
+    </bpmn:subConversation>
+    <bpmn:callConversation id="k7" name="Wywołanie">
+      <bpmn:participantRef>a</bpmn:participantRef>
+      <bpmn:participantRef>b</bpmn:participantRef>
+    </bpmn:callConversation>
+    <bpmn:conversationLink id="k1-link-a" sourceRef="a" targetRef="k1" />
+    <bpmn:conversationLink id="k2-link-a" sourceRef="a" targetRef="k2" />
+    <bpmn:conversationLink id="k2-link-x" sourceRef="x" targetRef="k2" />
+    <bpmn:conversationLink id="k3-link-b" sourceRef="b" targetRef="k3" />
+    <bpmn:conversationLink id="k3-link-c" sourceRef="c" targetRef="k3" />
+    <bpmn:conversationLink id="k4-link-a" sourceRef="a" targetRef="k4" />
+    <bpmn:conversationLink id="k4-link-b" sourceRef="b" targetRef="k4" />
+    <bpmn:conversationLink id="k5-link-a" sourceRef="a" targetRef="k5" />
+    <bpmn:conversationLink id="k5-link-b" sourceRef="b" targetRef="k5" />
+    <bpmn:conversationLink id="k7-link-a" sourceRef="a" targetRef="k7" />
+    <bpmn:conversationLink id="k7-link-b" sourceRef="b" targetRef="k7" />
+  </bpmn:collaboration>
+  <bpmn:process id="e-process" isExecutable="false" name="Errors of language 0.6">
+    <bpmn:startEvent id="es" />
+    <bpmn:endEvent id="ee" />
+    <bpmn:sequenceFlow id="f-es-ee" sourceRef="es" targetRef="ee" />
+  </bpmn:process>
+  <bpmn:choreography id="ch" name="Błędy choreografii">
+    <bpmn:participant id="ch-a" name="A">
+      <bpmn:participantMultiplicity maximum="2" minimum="3" />
+    </bpmn:participant>
+    <bpmn:participant id="ch-b" name="B">
+      <bpmn:participantMultiplicity minimum="-1" />
+    </bpmn:participant>
+    <bpmn:participant id="ch-c" name="C">
+      <bpmn:participantMultiplicity maximum="1" minimum="2" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="t1-message" sourceRef="ch-a" targetRef="ch-" />
+    <bpmn:messageFlow id="t2-message" messageRef="Message_M" sourceRef="ch-a" targetRef="ch-a" />
+    <bpmn:messageFlow id="t4-message" sourceRef="ch-a" targetRef="ch-c" />
+    <bpmn:startEvent id="s" name="Wiadomość">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_M" />
+    </bpmn:startEvent>
+    <bpmn:choreographyTask id="t1" initiatingParticipantRef="ch-a" name="Bez odbiorcy">
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:messageFlowRef>t1-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:choreographyTask id="t2" initiatingParticipantRef="ch-a" name="Ten sam basen">
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:messageFlowRef>t2-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:subChoreography id="t3" initiatingParticipantRef="ch-b" name="Jeden uczestnik">
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:choreographyTask id="t4" initiatingParticipantRef="ch-a" name="Spoza">
+        <bpmn:participantRef>ch-a</bpmn:participantRef>
+        <bpmn:participantRef>ch-c</bpmn:participantRef>
+        <bpmn:messageFlowRef>t4-message</bpmn:messageFlowRef>
+      </bpmn:choreographyTask>
+    </bpmn:subChoreography>
+    <bpmn:callChoreography id="t5" initiatingParticipantRef="ch-a" name="Bez choreografii">
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:participantRef>ch-b</bpmn:participantRef>
+    </bpmn:callChoreography>
+    <bpmn:callChoreography calledChoreographyRef="inna" id="t6" initiatingParticipantRef="ch-a" name="Zła mapa">
+      <bpmn:participantRef>ch-a</bpmn:participantRef>
+      <bpmn:participantRef>ch-b</bpmn:participantRef>
+      <bpmn:participantAssociation>
+        <bpmn:innerParticipantRef>inna-c</bpmn:innerParticipantRef>
+        <bpmn:outerParticipantRef>ch-d</bpmn:outerParticipantRef>
+      </bpmn:participantAssociation>
+    </bpmn:callChoreography>
+    <bpmn:userTask id="t7" name="Zadanie" />
+    <bpmn:intermediateThrowEvent id="t8" name="Sygnał">
+      <bpmn:signalEventDefinition id="t8-def" signalRef="Signal_S" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="t9" name="Wiadomość">
+      <bpmn:messageEventDefinition id="t9-def" messageRef="Message_N" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="t10" name="Błąd">
+      <bpmn:errorEventDefinition errorRef="Error_E" id="t10-def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-t1" sourceRef="s" targetRef="t1" />
+    <bpmn:sequenceFlow id="f-t1-t2" sourceRef="t1" targetRef="t2" />
+    <bpmn:sequenceFlow id="f-t2-t3" sourceRef="t2" targetRef="t3" />
+    <bpmn:sequenceFlow id="f-t3-t5" sourceRef="t3" targetRef="t5" />
+    <bpmn:sequenceFlow id="f-t5-t6" sourceRef="t5" targetRef="t6" />
+    <bpmn:sequenceFlow id="f-t6-t7" sourceRef="t6" targetRef="t7" />
+    <bpmn:sequenceFlow id="f-t7-t8" sourceRef="t7" targetRef="t8" />
+    <bpmn:sequenceFlow id="f-t8-t9" sourceRef="t8" targetRef="t9" />
+    <bpmn:sequenceFlow id="f-t9-t10" sourceRef="t9" targetRef="t10" />
+  </bpmn:choreography>
+  <bpmn:choreography id="inna" name="Inna">
+    <bpmn:participant id="inna-a" name="A">
+      <bpmn:participantMultiplicity maximum="2" minimum="3" />
+    </bpmn:participant>
+    <bpmn:participant id="inna-b" name="B">
+      <bpmn:participantMultiplicity minimum="-1" />
+    </bpmn:participant>
+    <bpmn:messageFlow id="it-message" sourceRef="inna-a" targetRef="inna-b" />
+    <bpmn:startEvent id="is" />
+    <bpmn:choreographyTask id="it" initiatingParticipantRef="inna-a" name="Zadanie">
+      <bpmn:participantRef>inna-a</bpmn:participantRef>
+      <bpmn:participantRef>inna-b</bpmn:participantRef>
+      <bpmn:messageFlowRef>it-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="ie" />
+    <bpmn:sequenceFlow id="f-is-it" sourceRef="is" targetRef="it" />
+    <bpmn:sequenceFlow id="f-it-ie" sourceRef="it" targetRef="ie" />
+  </bpmn:choreography>
+  <bpmn:choreography id="pusta" name="Pusta" />
+</bpmn:definitions>

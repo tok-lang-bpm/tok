@@ -1,0 +1,15 @@
+tok 0.3 "Conditional events" executable
+
+start s "Start" condition="gotowe = true"
+catch czekanie "Kompletne dane" condition="kompletne = true" events="create, update"
+user praca "Praca"
+boundary zmiana "Zmiana priorytetu" noninterrupting on=praca condition="priorytet > 80" events="update"
+eventsub alarm "Alarm"
+  start s2 "Alarm" condition="alarm = true" events="create"
+  end e2
+end e "Koniec"
+end e3 "Priorytet"
+
+flow s2 -> e2
+flow s -> czekanie -> praca -> e
+flow zmiana -> e3

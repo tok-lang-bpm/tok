@@ -3,3 +3,4 @@
 *-crlf.tok -text
 conformance/miwg/*.bpmn -text
 conformance/dmn-tck/** -text
+julia/TokLang.jl/test/data/conformance/dmn/** -text

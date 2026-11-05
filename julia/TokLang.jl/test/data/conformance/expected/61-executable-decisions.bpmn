@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" exporter="tok" exporterVersion="0.7" id="definitions" name="Decyzje dla Camunda 8" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:itemDefinition id="egzemplarz-t">
+    <bpmn:documentation>Egzemplarz</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:itemDefinition id="egzemplarze-t" isCollection="true">
+    <bpmn:documentation>Lista egzemplarzy</bpmn:documentation>
+  </bpmn:itemDefinition>
+  <bpmn:process id="process" isExecutable="true" name="Decyzje dla Camunda 8" />
+</bpmn:definitions>

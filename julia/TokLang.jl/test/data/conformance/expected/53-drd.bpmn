@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.7" id="definitions" name="Wypożyczenia w bibliotece" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Wypożyczenia w bibliotece">
+    <bpmn:documentation>Decyzje o wypożyczeniach czytelników.</bpmn:documentation>
+  </bpmn:process>
+</bpmn:definitions>

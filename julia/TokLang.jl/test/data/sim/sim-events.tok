@@ -1,0 +1,36 @@
+tok 0.3 "Zdarzenia i czasomierze"
+
+start s "Start"
+catch t1 "Dzień" timer=P1D
+catch t2 "Dwie i pół godziny" timer=PT2H30M
+catch t3 "Cykl" timer="R3/PT1H"
+catch t4 "Termin" timer="2027-01-05T12:00"
+catch t5 "Miniony termin" timer="2026-12-31"
+catch t6 "Niezrozumiały" timer="jutro"
+catch t7 "Tydzień i ułamki" timer="P0.5WT1.5H"
+catch t8 "Rok" timer=P1Y2M
+catch m1 "Wiadomość" message="Odpowiedź" delay="exp(3h)"
+catch m2 "Bez opóźnienia" message="Potwierdzenie"
+catch t9 "Cykl bez okresu" timer="R2/x"
+catch t10 "Data tygodniowa" timer="2027-W02-3T10:00"
+eventgw g "Co pierwsze?"
+catch r1 "Książka" message="Książka" delay="tri(1d, 2d, 5d)"
+catch r2 "Termin minął" timer=P3D
+receive r3 "Odbiór odpowiedzi" message="Odpowiedź" duration="exp(2d)"
+catch r4 "Sygnał" signal="Stop"
+end e1 "Książka"
+end e2 "Termin"
+end e3 "Odpowiedź"
+end e4 "Sygnał"
+
+flow s -> t1 -> t2 -> t3 -> t4 -> t5 -> t6 -> t7 -> t8 -> m1 -> m2 -> t9 -> t10 -> g
+flow g -> r1
+flow g -> r2
+flow g -> r3
+flow g -> r4
+flow r1 -> e1
+flow r2 -> e2
+flow r3 -> e3
+flow r4 -> e4
+
+simulate cases=12 seed=4 arrival="exp(6h)"

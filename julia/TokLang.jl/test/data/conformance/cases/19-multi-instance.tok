@@ -1,0 +1,8 @@
+tok 0.3 "Multi-instance" executable
+
+start s "Start"
+script podwojenie "Podwojenie" parallel expr="x * 2" result=y collection="pozycje" item=x output=wyniki output-item="y"
+user ocena "Ocena recenzji" sequential collection="recenzje" item=recenzja until="numberOfCompletedInstances >= 2"
+end e "Koniec"
+
+flow s -> podwojenie -> ocena -> e

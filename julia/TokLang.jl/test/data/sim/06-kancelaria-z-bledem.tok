@@ -1,0 +1,26 @@
+tok 0.1 "Rejestracja pisma w kancelarii" executable
+
+pool uczelnia "Uczelnia" process=rejestracja-pisma
+  lane kancelaria "Kancelaria"
+    start wplyw "Pismo wpłynęło" message="Pismo" timer=P1D
+    user rejestracja "Rejestracja pisma w EZD" form=f-rejestracja
+    rule dekretacja "Ustalenie jednostki" decision=jednostka result=jednostka
+    xor pilne "Pismo pilne?"
+  lane jednostka "Jednostka merytoryczna"
+    user rozpatrzenie "Rozpatrzenie sprawy" priorytet=wysoki
+    boundary termin "Minęło 14 dni" timer=P14D
+    script odpowiedz "Przygotowanie odpowiedzi"
+    end zalatwiona "Sprawa załatwiona"
+pool nadawca "Nadawca"
+
+flow wplyw -> rejestracja -> dekretacja -> pilne
+flow pilne -> rozpatrzenie "tak" when="pilnosc = = \"wysoka\""
+flow pilne -> rozpatrzeni "nie"
+flow rozpatrzenie -> odpowiedz -> zalatwiona
+flow termin -> zalatwiona
+message zalatwiona -> rejestracja "Odpowiedź"
+
+decision jednostka "Jednostka" hit=unique
+  | rodzaj: string || jednostka: string |
+  | "skarga"       || "Biuro Rektora"   |
+  | "wniosek"      || "Dział Spraw Studenckich" |

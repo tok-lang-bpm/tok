@@ -1,0 +1,31 @@
+tok 0.3 "Zdarzenia brzegowe"
+
+start s "Wniosek"
+user o "Rozpatrzenie" by=urzednik duration="tri(1d, 3d, 7d)"
+boundary b1 "Minęło 5 dni" on=o timer=P5D
+boundary b2 "Przypomnienie" on=o timer="R3/P1D" noninterrupting
+task przyp "Wysłanie przypomnienia" duration="10m"
+end ep "Przypomniano"
+end eu "Upłynął termin"
+sub p "Uzupełnienie"
+  start ps
+  task p1 "Wezwanie" duration="2h"
+  catch pc "Odpowiedź strony" message="Uzupełnienie" delay="exp(4d)"
+  task p2 "Ocena uzupełnienia" duration="1h"
+  end pe
+  flow ps -> p1 -> pc -> p2 -> pe
+boundary b3 "Brak odpowiedzi" on=p timer=P7D
+boundary b4 "Telefon" on=p message="Telefon" delay="exp(2d)" noninterrupting
+task tel "Notatka z rozmowy" duration="15m"
+end et "Zanotowano"
+end eb "Bez uzupełnienia"
+end e "Załatwiony"
+
+flow s -> o -> p -> e
+flow b1 -> eu
+flow b2 -> przyp -> ep
+flow b3 -> eb
+flow b4 -> tel -> et
+
+simulate cases=25 seed=8 arrival="exp(1d)"
+resource urzednik "Urzędnik" count=2

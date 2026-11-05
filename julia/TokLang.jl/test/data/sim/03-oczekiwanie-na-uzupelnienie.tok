@@ -1,0 +1,16 @@
+tok 0.1 "Oczekiwanie na uzupełnienie wniosku"
+
+start wezwano "Wezwanie wysłane"
+eventgw czekanie "Co nastąpi pierwsze?"
+catch uzupelnienie "Uzupełnienie otrzymane" message="Uzupełnienie wniosku"
+catch termin "Minęło 14 dni" timer=P14D
+user ocena "Ponowna ocena wniosku"
+user pozostawienie "Pozostawienie wniosku bez rozpatrzenia"
+end oceniony "Wniosek oceniony ponownie"
+end bez-rozpatrzenia "Wniosek bez rozpatrzenia"
+
+flow wezwano -> czekanie
+flow czekanie -> uzupelnienie
+flow czekanie -> termin
+flow uzupelnienie -> ocena -> oceniony
+flow termin -> pozostawienie -> bez-rozpatrzenia

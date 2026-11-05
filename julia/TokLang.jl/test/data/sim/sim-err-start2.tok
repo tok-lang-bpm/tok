@@ -1,0 +1,8 @@
+tok 0.1 "Niepoprawny start"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate start="jutro"

@@ -1,0 +1,13 @@
+# Przyjęcie zamówienia na kopię cyfrową w bibliotece
+tok 0.1 "Przyjęcie zamówienia na kopię cyfrową"
+
+start wplynelo "Zamówienie wpłynęło" message="Zamówienie kopii"
+service rejestracja "Rejestracja zamówienia"
+user weryfikacja "Weryfikacja praw autorskich"
+manual pobranie "Pobranie oryginału z magazynu"
+user skanowanie "Wykonanie skanu"
+script oplata "Wyliczenie opłaty"
+send wyslanie "Wysłanie kopii" message="Kopia cyfrowa"
+end wyslano "Kopia wysłana"
+
+flow wplynelo -> rejestracja -> weryfikacja -> pobranie -> skanowanie -> oplata -> wyslanie -> wyslano

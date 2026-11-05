@@ -1,0 +1,44 @@
+tok 0.5 "Obsługa zgłoszeń" process-name="" doc="Proces obsługi zgłoszeń serwisowych.\nModel opisowy."
+
+item tekst "Tekst" structure="feel:string" namespace="https://www.omg.org/spec/DMN/20191111/FEEL/"
+item lista structure="feel:list" namespace="https://www.omg.org/spec/DMN/20191111/FEEL/" collection
+
+# triggers without a name or value
+start s "Zgłoszenie przyszło" message doc="Wiadomość od klienta"
+user ocena "Ocena zgłoszenia" doc="Ocena pilności i zakresu"
+xor pilne "Czy pilne?" doc="Rozdział według pilności"
+catch czekaj "Odpowiedź albo upływ czasu" message timer
+catch warunek "Części dostępne" condition
+throw zespol "Powiadomienie zespołu" signal
+sub naprawa "Naprawa"
+  start ns
+  task wymiana "Wymiana części"
+  xor udana "Czy naprawa udana?"
+  end nok "Naprawa udana"
+  end nblad "Naprawa nieudana" error
+  flow ns -> wymiana -> udana
+  flow udana -> nok "tak" when="udana"
+  flow udana -> nblad "nie" default
+boundary blad "Błąd naprawy" on=naprawa error
+end koniec "Załatwione"
+end eskalacja "Do kierownika" escalation
+data zg "Zgłoszenie [nowe]" state="nowe" type=tekst object="Zgłoszenie" doc="Formularz zgłoszenia"
+data zg2 "Zgłoszenie [ocenione]" state="oceniony" object="Zgłoszenie"
+data notatka "Notatka" object=""
+input dane "Dane zgłoszenia" type=tekst collection on=ocena
+output wynik "Wynik oceny" on=ocena doc="Wynik zapisany w zgłoszeniu"
+
+flow s -> ocena -> pilne
+flow pilne -> czekaj "tak" when="" doc="Warunek opisany słownie"
+flow pilne -> warunek "nie" default
+flow czekaj -> zespol -> naprawa -> koniec
+flow warunek -> naprawa
+flow blad -> eskalacja
+
+# data of events and named inputs and outputs of activities
+writes s zg
+reads ocena zg input=dane
+writes ocena zg2 output=wynik
+writes ocena notatka
+
+note uwaga "Pilne zgłoszenia mają termin 24 godzin." on=pilne doc="Z regulaminu serwisu"

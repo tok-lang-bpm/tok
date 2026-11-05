@@ -1,0 +1,7 @@
+tok v1.0 "Wersja zapisana jak słowo"
+
+# the version after tok is a number; a word is not a version (P005)
+
+start s "Początek"
+end e "Koniec"
+flow s -> e

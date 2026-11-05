@@ -1,0 +1,22 @@
+tok 0.1 "Edge cases"
+
+pool p "Organizacja"
+  start s
+  send w "Wysłanie" message="List"
+  end e
+
+pool q "Odbiorca"
+
+flow s -> w -> e
+
+message w -> q "List"
+message w -> q "List" id=m-w-q-2
+
+decision d "D" hit=first
+  | a: number || b: string || uwagi |
+  | < 1       || "x"       || mało  |
+  | -         || "y"       ||       |
+
+form f "Formularz"
+  text "Pierwsza linia\nDruga linia"
+  field k "Pole" type=textfield

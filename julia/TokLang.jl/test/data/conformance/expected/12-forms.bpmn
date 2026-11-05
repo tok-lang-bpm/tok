@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.1" id="definitions" name="Formularze i symulacja" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="process" isExecutable="false" name="Formularze i symulacja">
+    <bpmn:startEvent id="s" />
+    <bpmn:userTask id="a" name="Akceptacja" />
+    <bpmn:endEvent id="e" />
+    <bpmn:sequenceFlow id="f-s-a" sourceRef="s" targetRef="a" />
+    <bpmn:sequenceFlow id="f-a-e" sourceRef="a" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

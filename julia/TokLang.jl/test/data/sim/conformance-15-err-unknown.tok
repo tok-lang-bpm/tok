@@ -1,0 +1,26 @@
+tok 0.1 "Błędy składni"
+
+start s
+proces x "Nieznane słowo"
+task t "Zadanie" label=
+lane l "Tor poza pulą"
+task
+  task inner
+flow s
+flow s t
+message s
+tok 0.1
+"tekst" na początku
+| a || b |
+form f
+  start zle
+decision d
+  | wiersz bez separatora |
+  | "niezamknięty || x |
+data
+reads a
+simulate cases=10 "etykieta"
+variable v 5
+text "poza formularzem"
+task u @ zly
+task w "Niezamknięty

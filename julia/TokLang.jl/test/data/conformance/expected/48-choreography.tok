@@ -1,0 +1,41 @@
+tok 0.6 "Zakupy w sklepie"
+
+pool klient "Klient"
+
+pool sklep "Sklep"
+
+pool kurier "Kurier"
+
+choreography zakupy "Zakupy w sklepie"
+  start s
+  choreo zamow "Złożenie zamówienia" from=klient to=sklep message="Zamówienie" reply="Potwierdzenie"
+  xor dostepne "Czy towar dostępny?"
+  choreo wyslij "Wysyłka" from=sklep to=klient message="Paczka"
+  choreo odmowa "Odmowa" from=sklep to=klient message="Brak towaru"
+  end e1
+  end e2
+  flow s -> zamow -> dostepne
+  flow dostepne -> wyslij "tak" when="dostepne"
+  flow dostepne -> odmowa "nie" default
+  flow wyslij -> e1
+  flow odmowa -> e2
+
+# a sub-choreography, a call of another choreography and the markers of loops
+choreography dostawy "Dostawy" doc="Dostawa z płatnością"
+  start ds
+  callchoreo platnosc "Płatność" pools="klient sklep" from=klient choreography=platnosci map="klient:klient; sklep:sklep"
+  subchoreo dostawa "Dostawa" pools="sklep kurier klient" from=sklep
+    start ss
+    choreo zlecenie "Zlecenie przewozu" sequential from=sklep to=kurier message="Zlecenie"
+    choreo doreczenie "Doręczenie" loop from=kurier to=klient message="Paczka" reply="Pokwitowanie"
+    end se
+  end de
+  flow ss -> zlecenie -> doreczenie -> se
+  flow ds -> platnosc -> dostawa -> de
+
+choreography platnosci "Płatność"
+  start ps
+  choreo zaplata "Zapłata" parallel from=klient to=sklep message="Przelew"
+  choreo potwierdzenie "Potwierdzenie" from=sklep to=klient
+  end pe
+  flow ps -> zaplata -> potwierdzenie -> pe

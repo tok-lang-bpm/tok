@@ -1,0 +1,7 @@
+tok 1 "Wersja bez części dziesiętnej"
+
+# the version is written with its minor part: tok 1.0, not tok 1 (P006)
+start s "Początek"
+end e "Koniec"
+
+flow s -> e

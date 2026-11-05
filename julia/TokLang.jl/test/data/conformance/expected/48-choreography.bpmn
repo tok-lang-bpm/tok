@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" exporter="tok" exporterVersion="0.6" id="definitions" name="Zakupy w sklepie" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie" />
+  <bpmn:message id="Message_Potwierdzenie" name="Potwierdzenie" />
+  <bpmn:message id="Message_Paczka" name="Paczka" />
+  <bpmn:message id="Message_Brak_towaru" name="Brak towaru" />
+  <bpmn:message id="Message_Zlecenie" name="Zlecenie" />
+  <bpmn:message id="Message_Pokwitowanie" name="Pokwitowanie" />
+  <bpmn:message id="Message_Przelew" name="Przelew" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="klient" name="Klient" />
+    <bpmn:participant id="sklep" name="Sklep" />
+    <bpmn:participant id="kurier" name="Kurier" />
+  </bpmn:collaboration>
+  <bpmn:choreography id="zakupy" name="Zakupy w sklepie">
+    <bpmn:participant id="zakupy-klient" name="Klient" />
+    <bpmn:participant id="zakupy-sklep" name="Sklep" />
+    <bpmn:messageFlow id="zamow-message" messageRef="Message_Zamowienie" sourceRef="zakupy-klient" targetRef="zakupy-sklep" />
+    <bpmn:messageFlow id="zamow-reply" messageRef="Message_Potwierdzenie" sourceRef="zakupy-sklep" targetRef="zakupy-klient" />
+    <bpmn:messageFlow id="wyslij-message" messageRef="Message_Paczka" sourceRef="zakupy-sklep" targetRef="zakupy-klient" />
+    <bpmn:messageFlow id="odmowa-message" messageRef="Message_Brak_towaru" sourceRef="zakupy-sklep" targetRef="zakupy-klient" />
+    <bpmn:startEvent id="s" />
+    <bpmn:choreographyTask id="zamow" initiatingParticipantRef="zakupy-klient" name="Złożenie zamówienia">
+      <bpmn:participantRef>zakupy-klient</bpmn:participantRef>
+      <bpmn:participantRef>zakupy-sklep</bpmn:participantRef>
+      <bpmn:messageFlowRef>zamow-message</bpmn:messageFlowRef>
+      <bpmn:messageFlowRef>zamow-reply</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:exclusiveGateway default="f-dostepne-odmowa" id="dostepne" name="Czy towar dostępny?" />
+    <bpmn:choreographyTask id="wyslij" initiatingParticipantRef="zakupy-sklep" name="Wysyłka">
+      <bpmn:participantRef>zakupy-sklep</bpmn:participantRef>
+      <bpmn:participantRef>zakupy-klient</bpmn:participantRef>
+      <bpmn:messageFlowRef>wyslij-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:choreographyTask id="odmowa" initiatingParticipantRef="zakupy-sklep" name="Odmowa">
+      <bpmn:participantRef>zakupy-sklep</bpmn:participantRef>
+      <bpmn:participantRef>zakupy-klient</bpmn:participantRef>
+      <bpmn:messageFlowRef>odmowa-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="e1" />
+    <bpmn:endEvent id="e2" />
+    <bpmn:sequenceFlow id="f-s-zamow" sourceRef="s" targetRef="zamow" />
+    <bpmn:sequenceFlow id="f-zamow-dostepne" sourceRef="zamow" targetRef="dostepne" />
+    <bpmn:sequenceFlow id="f-dostepne-wyslij" name="tak" sourceRef="dostepne" targetRef="wyslij">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">dostepne</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f-dostepne-odmowa" name="nie" sourceRef="dostepne" targetRef="odmowa" />
+    <bpmn:sequenceFlow id="f-wyslij-e1" sourceRef="wyslij" targetRef="e1" />
+    <bpmn:sequenceFlow id="f-odmowa-e2" sourceRef="odmowa" targetRef="e2" />
+  </bpmn:choreography>
+  <bpmn:choreography id="dostawy" name="Dostawy">
+    <bpmn:documentation>Dostawa z płatnością</bpmn:documentation>
+    <bpmn:participant id="dostawy-klient" name="Klient" />
+    <bpmn:participant id="dostawy-sklep" name="Sklep" />
+    <bpmn:participant id="dostawy-kurier" name="Kurier" />
+    <bpmn:messageFlow id="zlecenie-message" messageRef="Message_Zlecenie" sourceRef="dostawy-sklep" targetRef="dostawy-kurier" />
+    <bpmn:messageFlow id="doreczenie-message" messageRef="Message_Paczka" sourceRef="dostawy-kurier" targetRef="dostawy-klient" />
+    <bpmn:messageFlow id="doreczenie-reply" messageRef="Message_Pokwitowanie" sourceRef="dostawy-klient" targetRef="dostawy-kurier" />
+    <bpmn:startEvent id="ds" />
+    <bpmn:callChoreography calledChoreographyRef="platnosci" id="platnosc" initiatingParticipantRef="dostawy-klient" name="Płatność">
+      <bpmn:participantRef>dostawy-klient</bpmn:participantRef>
+      <bpmn:participantRef>dostawy-sklep</bpmn:participantRef>
+      <bpmn:participantAssociation>
+        <bpmn:innerParticipantRef>platnosci-klient</bpmn:innerParticipantRef>
+        <bpmn:outerParticipantRef>dostawy-klient</bpmn:outerParticipantRef>
+      </bpmn:participantAssociation>
+      <bpmn:participantAssociation>
+        <bpmn:innerParticipantRef>platnosci-sklep</bpmn:innerParticipantRef>
+        <bpmn:outerParticipantRef>dostawy-sklep</bpmn:outerParticipantRef>
+      </bpmn:participantAssociation>
+    </bpmn:callChoreography>
+    <bpmn:subChoreography id="dostawa" initiatingParticipantRef="dostawy-sklep" name="Dostawa">
+      <bpmn:participantRef>dostawy-sklep</bpmn:participantRef>
+      <bpmn:participantRef>dostawy-kurier</bpmn:participantRef>
+      <bpmn:participantRef>dostawy-klient</bpmn:participantRef>
+      <bpmn:startEvent id="ss" />
+      <bpmn:choreographyTask id="zlecenie" initiatingParticipantRef="dostawy-sklep" loopType="MultiInstanceSequential" name="Zlecenie przewozu">
+        <bpmn:participantRef>dostawy-sklep</bpmn:participantRef>
+        <bpmn:participantRef>dostawy-kurier</bpmn:participantRef>
+        <bpmn:messageFlowRef>zlecenie-message</bpmn:messageFlowRef>
+      </bpmn:choreographyTask>
+      <bpmn:choreographyTask id="doreczenie" initiatingParticipantRef="dostawy-kurier" loopType="Standard" name="Doręczenie">
+        <bpmn:participantRef>dostawy-kurier</bpmn:participantRef>
+        <bpmn:participantRef>dostawy-klient</bpmn:participantRef>
+        <bpmn:messageFlowRef>doreczenie-message</bpmn:messageFlowRef>
+        <bpmn:messageFlowRef>doreczenie-reply</bpmn:messageFlowRef>
+      </bpmn:choreographyTask>
+      <bpmn:endEvent id="se" />
+      <bpmn:sequenceFlow id="f-ss-zlecenie" sourceRef="ss" targetRef="zlecenie" />
+      <bpmn:sequenceFlow id="f-zlecenie-doreczenie" sourceRef="zlecenie" targetRef="doreczenie" />
+      <bpmn:sequenceFlow id="f-doreczenie-se" sourceRef="doreczenie" targetRef="se" />
+    </bpmn:subChoreography>
+    <bpmn:endEvent id="de" />
+    <bpmn:sequenceFlow id="f-ds-platnosc" sourceRef="ds" targetRef="platnosc" />
+    <bpmn:sequenceFlow id="f-platnosc-dostawa" sourceRef="platnosc" targetRef="dostawa" />
+    <bpmn:sequenceFlow id="f-dostawa-de" sourceRef="dostawa" targetRef="de" />
+  </bpmn:choreography>
+  <bpmn:choreography id="platnosci" name="Płatność">
+    <bpmn:participant id="platnosci-klient" name="Klient" />
+    <bpmn:participant id="platnosci-sklep" name="Sklep" />
+    <bpmn:messageFlow id="zaplata-message" messageRef="Message_Przelew" sourceRef="platnosci-klient" targetRef="platnosci-sklep" />
+    <bpmn:messageFlow id="potwierdzenie-message" sourceRef="platnosci-sklep" targetRef="platnosci-klient" />
+    <bpmn:startEvent id="ps" />
+    <bpmn:choreographyTask id="zaplata" initiatingParticipantRef="platnosci-klient" loopType="MultiInstanceParallel" name="Zapłata">
+      <bpmn:participantRef>platnosci-klient</bpmn:participantRef>
+      <bpmn:participantRef>platnosci-sklep</bpmn:participantRef>
+      <bpmn:messageFlowRef>zaplata-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:choreographyTask id="potwierdzenie" initiatingParticipantRef="platnosci-sklep" name="Potwierdzenie">
+      <bpmn:participantRef>platnosci-sklep</bpmn:participantRef>
+      <bpmn:participantRef>platnosci-klient</bpmn:participantRef>
+      <bpmn:messageFlowRef>potwierdzenie-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="pe" />
+    <bpmn:sequenceFlow id="f-ps-zaplata" sourceRef="ps" targetRef="zaplata" />
+    <bpmn:sequenceFlow id="f-zaplata-potwierdzenie" sourceRef="zaplata" targetRef="potwierdzenie" />
+    <bpmn:sequenceFlow id="f-potwierdzenie-pe" sourceRef="potwierdzenie" targetRef="pe" />
+  </bpmn:choreography>
+</bpmn:definitions>

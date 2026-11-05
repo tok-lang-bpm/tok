@@ -1,0 +1,7 @@
+tok 0.1 "Bez startu"
+
+task a "Praca"
+end e
+flow a -> e
+
+simulate cases=2

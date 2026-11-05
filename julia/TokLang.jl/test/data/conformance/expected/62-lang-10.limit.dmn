@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="limit-definitions" name="Limit wypożyczeń" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="1.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <itemDefinition id="konto-t" name="konto-t" label="Rodzaj konta">
+    <typeRef>string</typeRef>
+    <allowedValues>
+      <text>"student", "pracownik", "gość"</text>
+    </allowedValues>
+  </itemDefinition>
+  <inputData id="wiek" name="wiek" label="Wiek czytelnika">
+    <variable id="wiek-variable" name="wiek" typeRef="number" />
+  </inputData>
+  <inputData id="konto" name="konto" label="Rodzaj konta">
+    <variable id="konto-variable" name="konto" typeRef="konto-t" />
+  </inputData>
+  <knowledgeSource id="regulamin" name="regulamin" label="Regulamin wypożyczalni" locationURI="https://biblioteka.example/regulamin">
+    <type>regulamin</type>
+  </knowledgeSource>
+  <businessKnowledgeModel id="kara" name="kara" label="Kara za zwłokę">
+    <variable id="kara-variable" name="kara" />
+    <encapsulatedLogic id="kara-logic" kind="FEEL" typeRef="number">
+      <formalParameter id="kara-param-1" name="dni" typeRef="number" />
+      <literalExpression id="kara-expr">
+        <text>dni * 0.5</text>
+      </literalExpression>
+    </encapsulatedLogic>
+    <authorityRequirement id="kara-requires-regulamin">
+      <requiredAuthority href="#regulamin" />
+    </authorityRequirement>
+  </businessKnowledgeModel>
+  <decision id="limit" name="limit" label="Limit wypożyczeń">
+    <variable id="limit-variable" name="limit" typeRef="number" />
+    <informationRequirement id="limit-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+    <informationRequirement id="limit-requires-konto">
+      <requiredInput href="#konto" />
+    </informationRequirement>
+    <authorityRequirement id="limit-requires-regulamin">
+      <requiredAuthority href="#regulamin" />
+    </authorityRequirement>
+    <decisionTable id="limit-table" hitPolicy="FIRST">
+      <input id="limit-input-1" label="wiek">
+        <inputExpression id="limit-input-1-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <input id="limit-input-2" label="konto">
+        <inputExpression id="limit-input-2-expr" typeRef="konto-t">
+          <text>konto</text>
+        </inputExpression>
+      </input>
+      <output id="limit-output-1" label="limit" name="limit" typeRef="number" />
+      <rule id="limit-rule-1">
+        <inputEntry id="limit-rule-1-in-1">
+          <text>&lt; 18</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-1-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-1-out-1">
+          <text>5</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-2">
+        <inputEntry id="limit-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-2-in-2">
+          <text>"pracownik"</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-2-out-1">
+          <text>30</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-rule-3">
+        <inputEntry id="limit-rule-3-in-1">
+          <text>-</text>
+        </inputEntry>
+        <inputEntry id="limit-rule-3-in-2">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-rule-3-out-1">
+          <text>10</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <decision id="podsumowanie" name="podsumowanie" label="Podsumowanie konta">
+    <variable id="podsumowanie-variable" name="podsumowanie" />
+    <informationRequirement id="podsumowanie-requires-limit">
+      <requiredDecision href="#limit" />
+    </informationRequirement>
+    <knowledgeRequirement id="podsumowanie-requires-kara">
+      <requiredKnowledge href="#kara" />
+    </knowledgeRequirement>
+    <context id="podsumowanie-context">
+      <contextEntry id="podsumowanie-1-entry">
+        <variable id="podsumowanie-1-variable" name="kara za tydzień" typeRef="number" />
+        <literalExpression id="podsumowanie-1-expr">
+          <text>kara(7)</text>
+        </literalExpression>
+      </contextEntry>
+      <contextEntry id="podsumowanie-2-entry">
+        <variable id="podsumowanie-2-variable" name="progi" />
+        <relation id="podsumowanie-2-relation">
+          <column id="podsumowanie-2-column-1" name="od" typeRef="number" />
+          <column id="podsumowanie-2-column-2" name="do" typeRef="number" />
+          <row id="podsumowanie-2-row-1">
+            <literalExpression id="podsumowanie-2-row-1-1">
+              <text>0</text>
+            </literalExpression>
+            <literalExpression id="podsumowanie-2-row-1-2">
+              <text>5</text>
+            </literalExpression>
+          </row>
+          <row id="podsumowanie-2-row-2">
+            <literalExpression id="podsumowanie-2-row-2-1">
+              <text>5</text>
+            </literalExpression>
+            <literalExpression id="podsumowanie-2-row-2-2">
+              <text>30</text>
+            </literalExpression>
+          </row>
+        </relation>
+      </contextEntry>
+      <contextEntry id="podsumowanie-3-entry">
+        <literalExpression id="podsumowanie-3-expr">
+          <text>{limit: limit, kara: kara za tydzień, progi: count(progi)}</text>
+        </literalExpression>
+      </contextEntry>
+    </context>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_limit">
+      <dmndi:DMNShape id="DMNShape_podsumowanie" dmnElementRef="podsumowanie">
+        <dc:Bounds height="80" width="180" x="226" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_kara" dmnElementRef="kara">
+        <dc:Bounds height="46" width="135" x="151" y="247" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_limit" dmnElementRef="limit">
+        <dc:Bounds height="80" width="180" x="325" y="230" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_regulamin" dmnElementRef="regulamin">
+        <dc:Bounds height="63" width="100" x="168" y="389" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wiek" dmnElementRef="wiek">
+        <dc:Bounds height="45" width="125" x="308" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_konto" dmnElementRef="konto">
+        <dc:Bounds height="45" width="125" x="473" y="398" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_kara-requires-regulamin" dmnElementRef="kara-requires-regulamin">
+        <di:waypoint x="201" y="389" />
+        <di:waypoint x="218" y="293" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-wiek" dmnElementRef="limit-requires-wiek">
+        <di:waypoint x="370" y="398" />
+        <di:waypoint x="370" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-konto" dmnElementRef="limit-requires-konto">
+        <di:waypoint x="535" y="398" />
+        <di:waypoint x="415" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_limit-requires-regulamin" dmnElementRef="limit-requires-regulamin">
+        <di:waypoint x="234" y="389" />
+        <di:waypoint x="460" y="310" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-limit" dmnElementRef="podsumowanie-requires-limit">
+        <di:waypoint x="415" y="230" />
+        <di:waypoint x="286" y="160" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNEdge id="DMNEdge_podsumowanie-requires-kara" dmnElementRef="podsumowanie-requires-kara">
+        <di:waypoint x="218" y="247" />
+        <di:waypoint x="346" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

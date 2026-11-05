@@ -1,0 +1,17 @@
+tok 1.0 "Powtórzone atrybuty" id=definicje id=wypozyczenia
+
+# language 1.0 deprecates a key or a flag given more than once on one line (R090): only
+# the last value counts, and tok fmt keeps only that one. The triggers of an event and the
+# errors of an operation may repeat: each value counts, so they are not reported.
+
+interface katalog "Katalog"
+  operation szukaj "Wyszukanie" in="Zapytanie" error="Brak rekordu" error="Katalog niedostępny"
+
+start s "Zgłoszenie" message="E-mail" message="Formularz"
+user przyjecie "Przyjęcie zgłoszenia" doc="Pierwsza wersja opisu" doc="Opis zgłoszenia" loop loop
+service wyszukaj "Wyszukanie" operation=szukaj
+send odpowiedz "Odpowiedź" message="Odpowiedź" type="odpowiedz" type="odpowiedz-email"
+end e "Koniec" signal="Zamknięto"
+
+flow s -> przyjecie -> wyszukaj -> odpowiedz
+flow odpowiedz -> e "koniec" when="true" when="gotowe"

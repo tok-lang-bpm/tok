@@ -1,0 +1,13 @@
+tok 0.5 "Standard loop"
+
+start s "Start"
+service proba "Próba połączenia" loop while="proby < 3" test-before loop-max=5
+user poprawki "Naniesienie poprawek" loop while="not(zatwierdzono)"
+sub kontrola "Kontrola jakości" loop loop-max=3
+  start ks
+  task sprawdz "Sprawdzenie"
+  end ke
+  flow ks -> sprawdz -> ke
+end e "Koniec"
+
+flow s -> proba -> poprawki -> kontrola -> e

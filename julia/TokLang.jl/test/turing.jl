@@ -8,11 +8,11 @@ using Test
 using TokLang
 using Turing
 
-const ROOT = normpath(joinpath(@__DIR__, "..", "..", ".."))
+const EXAMPLES = normpath(joinpath(@__DIR__, "..", "examples"))
 const F = TokLang.Fit
 
 @testset "Bayesian calibration (Turing)" begin
-    text = read(joinpath(ROOT, "examples", "kwerenda-symulacja.tok"), String)
+    text = read(joinpath(EXAMPLES, "kwerenda-symulacja.tok"), String)
     r = TokLang.Engine.simulate(text; cases=800, seed=5, log=false, cases_table=false, xes=true)
     log = F.read_xes(r.xes)
     f = F.fit_bayes(text, log; samples=400, warmup=300, seed=1)

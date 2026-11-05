@@ -5,28 +5,33 @@
 | Layer | Module | What it does | Needs |
 |---|---|---|---|
 | engine | `TokLang.Engine` | the whole language through the Rust engine: the checker of every layer, canonical text, BPMN, SVG, DMN and form export, BPMN and DMN import, decisions, simulation | the engine library |
-| independent core | `TokLang` | a second implementation of the core of the specification: lexer, parser, canonical printer and semantic BPMN export, checked against the conformance corpus | nothing |
+| independent core | `TokLang` | a second implementation of the core of the specification: lexer, parser, canonical printer and semantic BPMN export, checked against the conformance corpus | no library |
 | native | `TokLang.Sim`, `TokLang.Fit` | a discrete-event simulator for large experiments (many scenarios and replications, parallel runs) and the calibration of simulation parameters on event logs | the engine library (models are read by the engine); Turing.jl for Bayesian calibration |
 
 The engine is the reference: every feature of the language is written once, in Rust, and `TokLang.Engine` gives it to Julia without a second implementation. The independent core exists because two implementations of one specification are the strongest test that the specification is unambiguous; it passes the core level of the conformance corpus (spec §15) for every case, and its output is compared with the engine's in the tests. Native Julia code is used only where Julia adds something: large simulation experiments and Bayesian calibration.
 
 ## Installing
 
-TokLang.jl needs Julia 1.10 or newer. It is installed from the General registry, together with the engine library `tok_jll`, or from the repository:
+TokLang.jl needs Julia 1.10 or newer. It is installed from the General registry, or from the repository:
 
 ```julia
 using Pkg
-Pkg.add(["TokLang", "tok_jll"])
+Pkg.add("TokLang")
 Pkg.add(url="https://github.com/tok-lang-bpm/tok", subdir="julia/TokLang.jl")   # from the repository
 ```
 
-The engine library is found, in this order:
+The engine library comes with the package: the binary package `tok_jll`, a dependency of TokLang.jl, holds it for Linux (x86_64 and aarch64, glibc and musl), macOS (x86_64 and Apple silicon) and Windows (x86_64). `TokLang.Engine.available()` tells whether the library can be loaded, `TokLang.Engine.library()` where it is. On any other platform the package still loads and the independent core works; the engine, the native simulator and the calibration report that the library is not available.
 
-1. at the path in the environment variable `TOK_LIBTOK` (`tokengine.dll`, `libtokengine.so` or `libtokengine.dylib`);
-2. in the binary package `tok_jll`, when it is installed in the active environment (`Pkg.add("tok_jll")`; TokLang.jl does not depend on it, so it can be installed without it);
-3. in the build directory of the repository, `rust/target/release`, after `cargo build --release -p tok-capi` in `rust/` (see [c-api.md](c-api.md)).
+To use your own build of the engine, for example when you work on the engine itself, run `cargo build --release -p tok-capi` in `rust/` (see [c-api.md](c-api.md)) and point `tok_jll` to the library with a preference. The setting is written to `LocalPreferences.toml` of the active project and takes effect when Julia restarts:
 
-`TokLang.Engine.available()` tells whether the library was found, `TokLang.Engine.library()` where. Without it the independent core works as before; the engine, the native simulator and the calibration report that the library is missing.
+```julia
+using Pkg
+Pkg.add("Preferences")
+using Preferences, tok_jll
+set_preferences!(tok_jll, "libtokengine_path" => "/path/to/libtokengine.so"; force=true)
+```
+
+The public API is listed in the reference at https://tok-lang-bpm.github.io/julia/, and TokLang.jl follows semantic versioning for it (page Stable API). The folder `examples` of the package holds runnable scripts, one for each module, with the models they read; in an installed package its path is `pkgdir(TokLang, "examples")`.
 
 ## The engine
 
@@ -129,7 +134,7 @@ Turing.jl is a weak dependency: TokLang.jl does not install it, and `fit_bayes` 
 julia julia/app/build.jl [OUTPUT]       # default: julia/app/build/tok
 ```
 
-The folder it writes holds `bin/tok` (`bin\tok.exe` on Windows) with the Julia runtime and the compiled TokLang.jl; the engine library of the repository (or of `TOK_LIBTOK`) is copied next to the program, where it finds it (the folder takes about 400 MB, and the build several minutes). The program has every command of the `tok` program (they run in the engine) and three of its own:
+The folder it writes holds `bin/tok` (`bin\tok.exe` on Windows) with the Julia runtime, the compiled TokLang.jl and the engine library of `tok_jll` (the folder takes about 400 MB, and the build several minutes). The program has every command of the `tok` program (they run in the engine) and three of its own:
 
 ```
 tok experiment model.tok --replications 200 --resource archiwisci=3     # native simulation, scenarios
@@ -146,9 +151,16 @@ cd julia/TokLang.jl
 julia --project=. -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
 ```
 
-The conformance test of the core always runs. The tests of the engine, the native simulator, the calibration and the application run when the engine library is found; `tools/check.sh` builds it and sets `TOK_LIBTOK`. They include the statistical comparison of the native simulator with the engine's ([simulation.md](simulation.md#native-simulation-in-julia)); `TOK_SIM_REPORT=1` prints its table. The Bayesian calibration is tested in an environment with Turing:
+The tests also run from an installed package (`Pkg.test("TokLang")`): the models and the conformance corpus they read are copies inside the package, in `examples/` and `test/data/`, written by `tools/julia-data.sh`, and `tools/check.sh` checks that they are current. The conformance test of the core always runs. The tests of the engine, the native simulator, the calibration, the application and the examples run when the engine library is available; `tools/check.sh` builds the library and points `tok_jll` to it with a `LocalPreferences.toml` in the folder of the package. They include the statistical comparison of the native simulator with the engine's ([simulation.md](simulation.md#native-simulation-in-julia)); `TOK_SIM_REPORT=1` prints its table. The tests also check the package with Aqua.jl. The Bayesian calibration is tested in an environment with Turing:
 
 ```
 julia --project=ENV -e 'using Pkg; Pkg.develop(path="julia/TokLang.jl"); Pkg.add("Turing")'
 julia --project=ENV julia/TokLang.jl/test/turing.jl
+```
+
+The API reference is built with Documenter.jl, from the folder of the package:
+
+```
+julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+julia --project=docs docs/make.jl
 ```

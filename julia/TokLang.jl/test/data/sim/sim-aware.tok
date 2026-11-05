@@ -1,0 +1,9 @@
+tok 0.1 "Strefy czasowe"
+
+start s
+catch t "Termin" timer="2027-01-05T12:00"
+end e
+
+flow s -> t -> e
+
+simulate start="2027-01-04T08:00Z" cases=2

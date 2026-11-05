@@ -1,0 +1,7 @@
+tok 1.1 "Wersja języka, której nie ma"
+
+# a language version that does not exist (P006, a warning) and a second header (P010)
+start s "Początek"
+end e "Koniec"
+
+flow s -> e

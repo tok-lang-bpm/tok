@@ -1,0 +1,29 @@
+tok 0.5 "Rezerwacja podróży" doc="Współpraca biura podróży z klientem"
+
+pool biuro "Biuro podróży" process-name="Obsługa rezerwacji" doc="Uczestnik: biuro"
+  lane obsluga "Obsługa klienta" doc="Pracownicy działu obsługi"
+    start s "Zamówienie przyszło" message="Zamówienie"
+    service hotel "Rezerwacja hotelu" compensate=anuluj-hotel
+    boundary hotel-zwrot "Zwrot za hotel" on=hotel compensate doc="Kompensacja rezerwacji hotelu"
+    service anuluj-hotel "Anulowanie hotelu" compensation
+    xor ok "Czy klient potwierdził?"
+    end gotowe "Rezerwacja potwierdzona"
+    throw cofnij "Cofnięcie rezerwacji" compensate
+    end anulowano "Rezerwacja anulowana"
+  store rezerwacje "Rezerwacje" doc="System rezerwacyjny"
+pool klient "Klient" process-name="" doc="Uczestnik zewnętrzny"
+  start ks "Potrzeba wyjazdu"
+  send zamow "Wysłanie zamówienia" message="Zamówienie"
+  end ke "Zamówienie wysłane"
+
+flow s -> hotel -> ok
+flow ok -> gotowe "tak" default
+flow ok -> cofnij "nie" when="potwierdzenie = false"
+flow cofnij -> anulowano
+flow ks -> zamow -> ke
+
+message zamow -> s "Zamówienie" doc="Formularz zamówienia"
+
+writes hotel rezerwacje
+
+group etap "Etap rezerwacji" doc="Część rozliczana z hotelem"

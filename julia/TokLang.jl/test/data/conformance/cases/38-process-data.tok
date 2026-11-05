@@ -1,0 +1,26 @@
+tok 0.5 "Process data"
+
+item wniosek-typ "Wniosek" structure="Wniosek"
+item decyzja-typ structure="xsd:string" kind=information
+item teczka-typ "Teczka" kind=physical collection
+
+start s "Wniosek wpłynął"
+user ocena "Ocena wniosku"
+task archiwizacja "Archiwizacja"
+end e "Wniosek rozpatrzony"
+input wniosek "Wniosek o zakup" type=wniosek-typ
+output decyzja "Decyzja" type=decyzja-typ
+property licznik "Licznik prób" on=ocena
+property termin "Termin"
+input kryteria "Kryteria oceny" on=ocena collection
+data skan "Skan wniosku" type=wniosek-typ state="złożony"
+data skan-ocena "Skan wniosku" state="oceniony"
+store akta "Akta" type=teczka-typ
+
+flow s -> ocena -> archiwizacja -> e
+
+reads ocena wniosek
+reads ocena skan
+writes ocena skan-ocena
+writes ocena decyzja
+writes archiwizacja akta

@@ -1,0 +1,20 @@
+tok 0.6 "Recenzja wydawnicza"
+
+pool wydawnictwo "Wydawnictwo"
+  start s "Maszynopis wpłynął"
+  send wyslij "Wysłanie do recenzentów" message="Prośba o recenzję" parallel
+  receive odbierz "Odbiór recenzji" message="Recenzja" parallel
+  end e "Recenzje zebrane"
+  flow s -> wyslij -> odbierz -> e
+pool recenzent "Recenzent" min=2 max=5
+pool autor "Autor" max=3
+pool redakcja "Redakcja" min=1
+
+message wyslij -> recenzent "Prośba o recenzję"
+message recenzent -> odbierz "Recenzja"
+
+choreography uzgodnienie "Uzgodnienie recenzji"
+  start us
+  choreo prosba "Prośba" from=wydawnictwo to=recenzent message="Prośba o recenzję" reply="Zgoda"
+  end ue
+  flow us -> prosba -> ue

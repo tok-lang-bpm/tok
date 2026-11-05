@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.6" id="definitions" name="Elements of language 0.6 in an executable document" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_Zamowienie" name="Zamówienie">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=numer" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_Zamowienie_hurtowe" name="Zamówienie hurtowe" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka" processRef="biblioteka-process" />
+    <bpmn:participant id="czytelnik" name="Czytelnik">
+      <bpmn:participantMultiplicity maximum="10" minimum="2" />
+    </bpmn:participant>
+    <bpmn:participant id="hurtownia" name="Hurtownia" />
+    <bpmn:messageFlow id="m-zamowienie" messageRef="Message_Zamowienie" name="Zamówienie" sourceRef="czytelnik" targetRef="s" />
+    <bpmn:conversation id="wypozyczenie" name="Wypożyczenie">
+      <bpmn:participantRef>czytelnik</bpmn:participantRef>
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:messageFlowRef>m-zamowienie</bpmn:messageFlowRef>
+    </bpmn:conversation>
+    <bpmn:callConversation calledCollaborationRef="reklamacje" id="reklamacja" name="Reklamacja">
+      <bpmn:participantRef>biblioteka</bpmn:participantRef>
+      <bpmn:participantRef>hurtownia</bpmn:participantRef>
+    </bpmn:callConversation>
+    <bpmn:conversationLink id="wypozyczenie-link-czytelnik" sourceRef="czytelnik" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="wypozyczenie-link-biblioteka" sourceRef="biblioteka" targetRef="wypozyczenie" />
+    <bpmn:conversationLink id="reklamacja-link-biblioteka" sourceRef="biblioteka" targetRef="reklamacja" />
+    <bpmn:conversationLink id="reklamacja-link-hurtownia" sourceRef="hurtownia" targetRef="reklamacja" />
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" isExecutable="true" name="Elements of language 0.6 in an executable document">
+    <bpmn:startEvent id="s" name="Zamówienie">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_Zamowienie" />
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="przyjmij" name="Przyjęcie zamówienia">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="przyjecie" />
+      </bpmn:extensionElements>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="e" name="Przyjęto" />
+    <bpmn:sequenceFlow id="f-s-przyjmij" sourceRef="s" targetRef="przyjmij" />
+    <bpmn:sequenceFlow id="f-przyjmij-e" sourceRef="przyjmij" targetRef="e" />
+  </bpmn:process>
+  <bpmn:choreography id="zakup" name="Zakup">
+    <bpmn:participant id="zakup-biblioteka" name="Biblioteka" />
+    <bpmn:participant id="zakup-hurtownia" name="Hurtownia" />
+    <bpmn:messageFlow id="zamowienie-message" messageRef="Message_Zamowienie_hurtowe" sourceRef="zakup-biblioteka" targetRef="zakup-hurtownia" />
+    <bpmn:startEvent id="zs" />
+    <bpmn:choreographyTask id="zamowienie" initiatingParticipantRef="zakup-biblioteka" name="Zamówienie">
+      <bpmn:participantRef>zakup-biblioteka</bpmn:participantRef>
+      <bpmn:participantRef>zakup-hurtownia</bpmn:participantRef>
+      <bpmn:messageFlowRef>zamowienie-message</bpmn:messageFlowRef>
+    </bpmn:choreographyTask>
+    <bpmn:endEvent id="ze" />
+    <bpmn:sequenceFlow id="f-zs-zamowienie" sourceRef="zs" targetRef="zamowienie" />
+    <bpmn:sequenceFlow id="f-zamowienie-ze" sourceRef="zamowienie" targetRef="ze" />
+  </bpmn:choreography>
+</bpmn:definitions>

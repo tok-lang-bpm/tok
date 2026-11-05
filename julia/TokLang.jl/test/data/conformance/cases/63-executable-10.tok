@@ -1,0 +1,36 @@
+tok 1.0 "Wypożyczenie z należnością" executable process=wypozyczenie-10 version-tag="1.0"
+
+# an executable document of language 1.0 for Camunda 8: a process with forms, a script in
+# FEEL of conformance level 3, a job and a user task, and a decision model with a name of
+# two words; conformance/camunda/run.py runs the process and evaluates the decisions
+
+start wniosek "Wniosek o wypożyczenie" form=f-wniosek
+script naleznosc "Wyliczenie należności" expr="sum(for d in dni return d * 0.5)" result=naleznosc
+xor czy-oplata "Czy jest należność?"
+service oplata "Naliczenie opłaty" type="naliczenie" retries=3 headers="waluta: PLN"
+user potwierdzenie "Potwierdzenie wypożyczenia" form=f-potwierdzenie assignee="bibliotekarz" priority=60
+end wydano "Książka wypożyczona"
+
+flow wniosek -> naleznosc -> czy-oplata
+flow czy-oplata -> oplata "tak" when="naleznosc > 0"
+flow czy-oplata -> potwierdzenie "nie" default
+flow oplata -> potwierdzenie -> wydano
+
+inputdata wiek "Wiek czytelnika" type=number
+inputdata dni-zwloki "Dni zwłoki" name="dni zwłoki" type=number
+
+bkm kara "Kara za zwłokę" params="dni: number" type=number expr="dni * 0.5"
+
+decision limit-10 "Limit wypożyczeń" type=number requires="wiek" hit=first
+  | wiek: number || limit: number |
+  | < 18         || 5             |
+  | -            || 10            |
+
+decision oplata-zwloka "Opłata za zwłokę" type=number requires="kara dni-zwloki" expr="kara(dni zwłoki)"
+
+form f-wniosek "Wniosek o wypożyczenie"
+  field czytelnik "Czytelnik" type=textfield required
+
+form f-potwierdzenie "Potwierdzenie"
+  text "## Należność: {{naleznosc}} zł"
+  field wydano "Książka wydana" type=checkbox

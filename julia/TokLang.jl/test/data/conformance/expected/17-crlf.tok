@@ -1,0 +1,7 @@
+tok 0.1 "Koniec linii CRLF"
+
+start s
+# komentarz
+end e
+
+flow s -> e

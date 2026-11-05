@@ -1,0 +1,22 @@
+tok 0.5 "Błędy dodatków 0.5" process-name="Proces"
+
+item zly-prefiks structure="bpmn:string" namespace="http://example.org/typy"
+item bez-prefiksu structure="Wniosek" namespace="http://example.org/typy"
+item feel-1 structure="feel:string" namespace="http://example.org/feel-1"
+item feel-2 structure="feel:number" namespace="http://example.org/feel-2"
+
+pool p "Dział"
+  start s message
+  user ocena "Ocena"
+  task inna "Inne zadanie"
+  end e
+  data d "Dokument"
+  store st "Rejestr" object="Rejestr"
+  input wej "Wejście" on=inna
+pool zewn "Klient" process-name="Klient"
+
+flow s -> ocena -> inna -> e
+
+reads ocena d input=wej
+writes ocena d output=brak
+writes e d

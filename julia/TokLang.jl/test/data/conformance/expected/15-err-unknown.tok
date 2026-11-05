@@ -1,0 +1,11 @@
+tok 0.1 "Błędy składni"
+
+start s
+task t "Zadanie"
+
+decision d
+  |  ||  |
+
+form f
+
+simulate cases=10

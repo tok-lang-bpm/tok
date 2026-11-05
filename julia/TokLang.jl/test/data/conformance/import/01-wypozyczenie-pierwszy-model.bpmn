@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Wypozyczenie" targetNamespace="https://codeberg.org/MarekDeja/ipm/diagramy/01">
+  <bpmn:collaboration id="Collaboration_Wypozyczenie">
+    <bpmn:participant id="Participant_Biblioteka" name="Biblioteka uczelniana" processRef="Process_Wypozyczenie" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Wypozyczenie" name="Wypożyczenie międzybiblioteczne" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Czytelnik" name="Czytelnik">
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zlozenie</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Bibliotekarz" name="Bibliotekarz">
+        <bpmn:flowNodeRef>Task_Sprawdzenie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Dostepna</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wskazanie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zamowienie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Wskazany</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Zamowione</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Potrzeba książki" />
+    <bpmn:userTask id="Task_Zlozenie" name="Złożenie zamówienia" />
+    <bpmn:userTask id="Task_Sprawdzenie" name="Sprawdzenie katalogów" />
+    <bpmn:exclusiveGateway id="Gw_Dostepna" name="Czy książka dostępna lokalnie?" />
+    <bpmn:userTask id="Task_Wskazanie" name="Wskazanie egzemplarza" />
+    <bpmn:userTask id="Task_Zamowienie" name="Zamówienie w innej bibliotece" />
+    <bpmn:endEvent id="End_Wskazany" name="Egzemplarz wskazany" />
+    <bpmn:endEvent id="End_Zamowione" name="Zamówienie złożone" />
+    <bpmn:sequenceFlow id="F1" sourceRef="Start" targetRef="Task_Zlozenie" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Zlozenie" targetRef="Task_Sprawdzenie" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_Sprawdzenie" targetRef="Gw_Dostepna" />
+    <bpmn:sequenceFlow id="F4" name="tak" sourceRef="Gw_Dostepna" targetRef="Task_Wskazanie" />
+    <bpmn:sequenceFlow id="F5" name="nie" sourceRef="Gw_Dostepna" targetRef="Task_Zamowienie" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Task_Wskazanie" targetRef="End_Wskazany" />
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_Zamowienie" targetRef="End_Zamowione" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Wypozyczenie">
+      <bpmndi:BPMNShape id="Participant_Biblioteka_di" bpmnElement="Participant_Biblioteka" isHorizontal="true">
+        <dc:Bounds x="0" y="0" width="800" height="410" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Czytelnik_di" bpmnElement="Lane_Czytelnik" isHorizontal="true">
+        <dc:Bounds x="30" y="0" width="770" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Bibliotekarz_di" bpmnElement="Lane_Bibliotekarz" isHorizontal="true">
+        <dc:Bounds x="30" y="140" width="770" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start">
+        <dc:Bounds x="90" y="52" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zlozenie_di" bpmnElement="Task_Zlozenie">
+        <dc:Bounds x="176" y="30" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Sprawdzenie_di" bpmnElement="Task_Sprawdzenie">
+        <dc:Bounds x="326" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gw_Dostepna_di" bpmnElement="Gw_Dostepna" isMarkerVisible="true">
+        <dc:Bounds x="476" y="185" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wskazanie_di" bpmnElement="Task_Wskazanie">
+        <dc:Bounds x="576" y="170" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Zamowienie_di" bpmnElement="Task_Zamowienie">
+        <dc:Bounds x="576" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Wskazany_di" bpmnElement="End_Wskazany">
+        <dc:Bounds x="726" y="192" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Zamowione_di" bpmnElement="End_Zamowione">
+        <dc:Bounds x="726" y="322" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1">
+        <di:waypoint x="126" y="70" />
+        <di:waypoint x="176" y="70" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2">
+        <di:waypoint x="276" y="70" />
+        <di:waypoint x="301" y="70" />
+        <di:waypoint x="301" y="210" />
+        <di:waypoint x="326" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3">
+        <di:waypoint x="426" y="210" />
+        <di:waypoint x="476" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4">
+        <di:waypoint x="526" y="210" />
+        <di:waypoint x="576" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5">
+        <di:waypoint x="501" y="235" />
+        <di:waypoint x="501" y="340" />
+        <di:waypoint x="576" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6">
+        <di:waypoint x="676" y="210" />
+        <di:waypoint x="726" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7">
+        <di:waypoint x="676" y="340" />
+        <di:waypoint x="726" y="340" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

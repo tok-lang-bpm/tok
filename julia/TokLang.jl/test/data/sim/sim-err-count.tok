@@ -1,0 +1,9 @@
+tok 0.1 "Błędna liczba wykonawców"
+
+start s
+task a "Praca" duration="1h"
+end e
+flow s -> a -> e
+
+simulate
+resource r count=x

@@ -1,0 +1,9 @@
+tok 0.1 "Etykieta jako czas"
+
+start s
+task a "Praca" duration="cat(krótko=0.5, długo=0.5)"
+end e
+
+flow s -> a -> e
+
+simulate cases=2

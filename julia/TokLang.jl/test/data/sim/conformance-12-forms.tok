@@ -1,0 +1,22 @@
+tok 0.1 "Formularze i symulacja"
+
+start s form=f-start
+user a "Akceptacja" form=f-akc by=kier duration="lnorm(2h, 1h)" assign="zgoda=bern(0.8); kwota=unif(10, 300)"
+end e
+flow s -> a -> e
+
+form f-start "Propozycja"
+  text "## Propozycja zakupu"
+  field tytul "Tytuł" type=textfield required
+  field cena "Cena" type=number min=0 max=1000
+  field rodzaj "Rodzaj" type=select options="drukowana:książka drukowana, e-book:e-book" default=drukowana
+
+form f-akc
+  # pola kierownika
+  field zgoda "Decyzja" type=radio required options="true:zgoda, false:odmowa"
+  field uwagi type=textarea
+
+simulate cases=200 seed=7 arrival="exp(2h)" start="2027-01-04T08:00"
+resource kier "Kierownik" count=1
+variable cena "unif(20, 300)"
+variable rodzaj "cat(drukowana=0.7, e-book=0.3)"

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="limit-10-definitions" name="Limit wypożyczeń" namespace="http://camunda.org/schema/1.0/dmn" exporter="tok" exporterVersion="1.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <inputData id="wiek" name="wiek" label="Wiek czytelnika">
+    <variable id="wiek-variable" name="wiek" typeRef="number" />
+  </inputData>
+  <decision id="limit-10" name="limit-10" label="Limit wypożyczeń">
+    <variable id="limit-10-variable" name="limit-10" typeRef="number" />
+    <informationRequirement id="limit-10-requires-wiek">
+      <requiredInput href="#wiek" />
+    </informationRequirement>
+    <decisionTable id="limit-10-table" hitPolicy="FIRST">
+      <input id="limit-10-input-1" label="wiek">
+        <inputExpression id="limit-10-input-1-expr" typeRef="number">
+          <text>wiek</text>
+        </inputExpression>
+      </input>
+      <output id="limit-10-output-1" label="limit" name="limit" typeRef="number" />
+      <rule id="limit-10-rule-1">
+        <inputEntry id="limit-10-rule-1-in-1">
+          <text>&lt; 18</text>
+        </inputEntry>
+        <outputEntry id="limit-10-rule-1-out-1">
+          <text>5</text>
+        </outputEntry>
+      </rule>
+      <rule id="limit-10-rule-2">
+        <inputEntry id="limit-10-rule-2-in-1">
+          <text>-</text>
+        </inputEntry>
+        <outputEntry id="limit-10-rule-2-out-1">
+          <text>10</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="DMNDiagram_limit-10">
+      <dmndi:DMNShape id="DMNShape_limit-10" dmnElementRef="limit-10">
+        <dc:Bounds height="80" width="180" x="150" y="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_wiek" dmnElementRef="wiek">
+        <dc:Bounds height="45" width="125" x="178" y="248" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_limit-10-requires-wiek" dmnElementRef="limit-10-requires-wiek">
+        <di:waypoint x="240" y="248" />
+        <di:waypoint x="240" y="160" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

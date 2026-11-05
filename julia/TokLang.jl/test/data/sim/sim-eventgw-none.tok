@@ -1,0 +1,16 @@
+tok 0.1 "Bramka bez zdarzeń"
+
+start s
+eventgw g "Co pierwsze?"
+catch a "Wiadomość A" message="A"
+catch b "Sygnał B" signal="B"
+end e1
+end e2
+
+flow s -> g
+flow g -> a
+flow g -> b
+flow a -> e1
+flow b -> e2
+
+simulate cases=3

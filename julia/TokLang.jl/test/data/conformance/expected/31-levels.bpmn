@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" exporter="tok" exporterVersion="0.3" id="definitions" name="Executable layer in a descriptive model" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź" />
+  <bpmn:process id="process" isExecutable="false" name="Executable layer in a descriptive model">
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:userTask id="ocena" name="Ocena" />
+    <bpmn:serviceTask id="wysylka" name="Wysyłka" />
+    <bpmn:adHocSubProcess id="opracowanie" name="Opracowanie">
+      <bpmn:task id="a" name="A" />
+    </bpmn:adHocSubProcess>
+    <bpmn:endEvent id="e" name="Koniec">
+      <bpmn:messageEventDefinition id="e-def" messageRef="Message_Odpowiedz" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="f-s-ocena" sourceRef="s" targetRef="ocena" />
+    <bpmn:sequenceFlow id="f-ocena-wysylka" sourceRef="ocena" targetRef="wysylka" />
+    <bpmn:sequenceFlow id="f-wysylka-opracowanie" sourceRef="wysylka" targetRef="opracowanie" />
+    <bpmn:sequenceFlow id="f-opracowanie-e" sourceRef="opracowanie" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

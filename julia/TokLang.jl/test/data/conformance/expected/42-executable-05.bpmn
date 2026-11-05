@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.5" id="definitions" name="Elements Camunda does not execute" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:message id="Message_E_mail" name="E-mail" />
+  <bpmn:message id="Message_Formularz" name="Formularz" />
+  <bpmn:message id="Message_A" name="A">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=id" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_Zgloszenie" name="Zgłoszenie" />
+  <bpmn:message id="Message_Odpowiedz" name="Odpowiedź">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="=id" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_Zapytanie" name="Zapytanie" />
+  <bpmn:signal id="Signal_B" name="B" />
+  <bpmn:correlationProperty id="CorrelationProperty_id" name="id">
+    <bpmn:correlationPropertyRetrievalExpression messageRef="Message_A">
+      <bpmn:messagePath xsi:type="bpmn:tFormalExpression">a.id</bpmn:messagePath>
+    </bpmn:correlationPropertyRetrievalExpression>
+  </bpmn:correlationProperty>
+  <bpmn:interface id="katalog" name="Katalog">
+    <bpmn:operation id="szukaj" name="Szukaj">
+      <bpmn:inMessageRef>Message_Zapytanie</bpmn:inMessageRef>
+    </bpmn:operation>
+  </bpmn:interface>
+  <bpmn:globalUserTask id="sprawdzenie" name="Sprawdzenie" />
+  <bpmn:collaboration id="collaboration">
+    <bpmn:participant id="biblioteka" name="Biblioteka" processRef="biblioteka-process" />
+    <bpmn:participant id="czytelnik" name="Czytelnik" processRef="czytelnik-process" />
+    <bpmn:correlationKey id="k" name="Klucz">
+      <bpmn:correlationPropertyRef>CorrelationProperty_id</bpmn:correlationPropertyRef>
+    </bpmn:correlationKey>
+  </bpmn:collaboration>
+  <bpmn:process id="biblioteka-process" isExecutable="true" name="Biblioteka">
+    <bpmn:supportedInterfaceRef>katalog</bpmn:supportedInterfaceRef>
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:messageEventDefinition id="s-def" messageRef="Message_E_mail" />
+      <bpmn:messageEventDefinition id="s-def-2" messageRef="Message_Formularz" />
+    </bpmn:startEvent>
+    <bpmn:transaction id="t" name="Transakcja">
+      <bpmn:startEvent id="ts" />
+      <bpmn:serviceTask id="rez" name="Rezerwacja" operationRef="szukaj">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="rezerwacja" />
+        </bpmn:extensionElements>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="te" />
+      <bpmn:endEvent id="anuluj" name="Anulowanie">
+        <bpmn:cancelEventDefinition id="anuluj-def" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="f-ts-rez" sourceRef="ts" targetRef="rez" />
+      <bpmn:sequenceFlow id="f-rez-te" sourceRef="rez" targetRef="te" />
+    </bpmn:transaction>
+    <bpmn:boundaryEvent attachedToRef="t" id="tb" name="Anulowano">
+      <bpmn:cancelEventDefinition id="tb-def" />
+    </bpmn:boundaryEvent>
+    <bpmn:complexGateway id="c" name="Czy dość?">
+      <bpmn:activationCondition xsi:type="bpmn:tFormalExpression">=_activationCount &gt;= 1</bpmn:activationCondition>
+    </bpmn:complexGateway>
+    <bpmn:callActivity calledElement="sprawdzenie" id="cz" name="Sprawdzenie" />
+    <bpmn:serviceTask id="proba" name="Próba">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="proba" />
+      </bpmn:extensionElements>
+      <bpmn:standardLoopCharacteristics>
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">=proby &lt; 3</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="kilka" name="Kilka" parallelMultiple="true">
+      <bpmn:messageEventDefinition id="kilka-def" messageRef="Message_A" />
+      <bpmn:signalEventDefinition id="kilka-def-2" signalRef="Signal_B" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:endEvent id="e2" name="Anulowano" />
+    <bpmn:sequenceFlow id="f-s-t" sourceRef="s" targetRef="t" />
+    <bpmn:sequenceFlow id="f-t-c" sourceRef="t" targetRef="c" />
+    <bpmn:sequenceFlow id="f-c-cz" sourceRef="c" targetRef="cz" />
+    <bpmn:sequenceFlow id="f-cz-proba" sourceRef="cz" targetRef="proba" />
+    <bpmn:sequenceFlow id="f-proba-kilka" sourceRef="proba" targetRef="kilka" />
+    <bpmn:sequenceFlow id="f-kilka-e" sourceRef="kilka" targetRef="e" />
+    <bpmn:sequenceFlow id="f-tb-e2" sourceRef="tb" targetRef="e2" />
+  </bpmn:process>
+  <bpmn:process id="czytelnik-process" isExecutable="true" name="Czytelnik">
+    <bpmn:receiveTask id="przyjecie" instantiate="true" messageRef="Message_Zgloszenie" name="Przyjęcie" />
+    <bpmn:eventBasedGateway id="g" instantiate="true" name="Co dalej?" />
+    <bpmn:intermediateCatchEvent id="odp" name="Odpowiedź">
+      <bpmn:messageEventDefinition id="odp-def" messageRef="Message_Odpowiedz" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="czas" name="Czas">
+      <bpmn:timerEventDefinition id="czas-def">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P1D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="ce" name="Koniec" />
+    <bpmn:endEvent id="ce2" name="Koniec 2" />
+    <bpmn:endEvent id="ce3" name="Koniec 3" />
+    <bpmn:sequenceFlow id="f-przyjecie-ce" sourceRef="przyjecie" targetRef="ce" />
+    <bpmn:sequenceFlow id="f-g-odp" sourceRef="g" targetRef="odp" />
+    <bpmn:sequenceFlow id="f-odp-ce2" sourceRef="odp" targetRef="ce2" />
+    <bpmn:sequenceFlow id="f-g-czas" sourceRef="g" targetRef="czas" />
+    <bpmn:sequenceFlow id="f-czas-ce3" sourceRef="czas" targetRef="ce3" />
+  </bpmn:process>
+</bpmn:definitions>

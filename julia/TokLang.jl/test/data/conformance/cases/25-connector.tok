@@ -1,0 +1,8 @@
+tok 0.3 "REST connector" executable
+
+start s "Start"
+service pobranie "Pobranie rekordu" result=rekord connector=rest method=GET url="=\"https://api.example.org/rekord/\" + id"
+service zapis "Zapis" retries=3 connector=rest method=POST url="https://api.example.org/zapis" query="={pilne: true}" headers-in="={\"X-Zrodlo\": \"tok\"}" body="={tytul: tytul}"
+end e "Koniec"
+
+flow s -> pobranie -> zapis -> e

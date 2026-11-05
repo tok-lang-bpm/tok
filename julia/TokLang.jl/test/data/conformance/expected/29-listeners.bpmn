@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" exporter="tok" exporterVersion="0.3" id="definitions" name="Listeners" targetNamespace="http://bpmn.io/schema/bpmn" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.10.0">
+  <bpmn:process id="process" isExecutable="true" name="Listeners">
+    <bpmn:startEvent id="s" name="Start">
+      <bpmn:extensionElements>
+        <zeebe:executionListeners>
+          <zeebe:executionListener eventType="end" type="po-starcie" />
+        </zeebe:executionListeners>
+      </bpmn:extensionElements>
+    </bpmn:startEvent>
+    <bpmn:scriptTask id="wyliczenie" name="Wyliczenie">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=1 + 1" resultVariable="wynik" />
+        <zeebe:executionListeners>
+          <zeebe:executionListener eventType="start" type="przed" />
+          <zeebe:executionListener eventType="end" retries="5" type="po" />
+        </zeebe:executionListeners>
+      </bpmn:extensionElements>
+    </bpmn:scriptTask>
+    <bpmn:userTask id="decyzja" name="Decyzja">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:executionListeners>
+          <zeebe:executionListener eventType="start" type="wejscie" />
+        </zeebe:executionListeners>
+        <zeebe:taskListeners>
+          <zeebe:taskListener eventType="creating" retries="2" type="utworzenie" />
+          <zeebe:taskListener eventType="completing" type="zakonczenie" />
+        </zeebe:taskListeners>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="e" name="Koniec" />
+    <bpmn:sequenceFlow id="f-s-wyliczenie" sourceRef="s" targetRef="wyliczenie" />
+    <bpmn:sequenceFlow id="f-wyliczenie-decyzja" sourceRef="wyliczenie" targetRef="decyzja" />
+    <bpmn:sequenceFlow id="f-decyzja-e" sourceRef="decyzja" targetRef="e" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,15 @@
+tok 0.1 "Równoległość"
+
+start s
+and split "Uruchomienie realizacji"
+service a "Rezerwacja środków" type="rezerwacja"
+service b "Wysłanie zamówienia"
+and join
+manual c "Archiwizacja"
+end e
+
+flow s -> split
+flow split -> a
+flow split -> b
+flow a -> join
+flow b -> join -> c -> e

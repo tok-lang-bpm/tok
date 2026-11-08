@@ -97,8 +97,8 @@ pub fn definitions() -> Vec<Value> {
             "title": "Check a BPMN file",
             "description": "Check BPMN 2.0 XML, from tok or from any modelling tool, with the BPMN rules of the tok checker, as `tok check FILE.bpmn --json`: every finding has a code, a severity, the line and the id of its element and a message. steps requires every element name to start with the step number of a process description (K01); description, the text of that description, reports steps without an element and elements without a step (K02, K03); camunda adds the Camunda 8 profile of executable models (C codes; with path, forms and decisions are looked for in the file's folder). XML with errors is a successful call with errors > 0. Codes are explained in the reference topic 'diagnostics'.",
             "inputSchema": object(json!({
-                "xml": {"type": "string", "description": "The BPMN 2.0 XML. Give either xml or path."},
-                "path": {"type": "string", "description": "Path of a .bpmn file, read by the server (relative to its working directory). Give either xml or path."},
+                "text": {"type": "string", "description": "The BPMN 2.0 XML. Give either text or path."},
+                "path": {"type": "string", "description": "Path of a .bpmn file, read by the server (relative to its working directory). Give either text or path."},
                 "steps": {"type": "boolean", "default": false, "description": "Element names start with step numbers (K01)."},
                 "description": {"type": "string", "description": "The process description whose table lists the steps (its first column holds the step numbers); checks that every step is in the model (K02, K03)."},
                 "camunda": {"type": "boolean", "default": false, "description": "Also check the Camunda 8 profile of executable models (C codes)."},
@@ -144,8 +144,8 @@ pub fn definitions() -> Vec<Value> {
             "title": "Import BPMN or DMN",
             "description": "Convert a BPMN 2.0 XML or DMN 1.1–1.5 file to a tok document, as `tok import`. Elements tok does not keep are listed in warnings. For BPMN the diagram of the file is returned as a layout sidecar: save it as FILE.tok.layout next to the document to keep the drawing.",
             "inputSchema": object(json!({
-                "xml": {"type": "string", "description": "The BPMN or DMN XML. Give either xml or path."},
-                "path": {"type": "string", "description": "Path of a .bpmn or .dmn file, read by the server. Give either xml or path."},
+                "text": {"type": "string", "description": "The BPMN or DMN XML. Give either text or path."},
+                "path": {"type": "string", "description": "Path of a .bpmn or .dmn file, read by the server. Give either text or path."},
                 "format": {"type": "string", "enum": ["auto", "bpmn", "dmn"], "default": "auto"},
                 "flow_ids": {"type": "boolean", "default": true, "description": "Keep the identifiers of sequence flows (false prints compact chains)."},
                 "layout": {"type": "boolean", "default": true, "description": "Return the layout sidecar of a BPMN file."},
@@ -235,7 +235,9 @@ impl<'a> Args<'a> {
             .cloned()
             .unwrap_or_default();
         for (key, value) in map {
-            let Some(p) = props.get(key) else {
+            // `xml` is the name of `text` in the XML tools before 1.0.4.
+            let alias = key == "xml" && matches!(tool, "check_bpmn" | "import");
+            let Some(p) = props.get(if alias { "text" } else { key }) else {
                 let known: Vec<&String> = props.keys().collect();
                 return Err(format!(
                     "unknown argument '{key}'; the arguments of {tool} are: {}",
@@ -271,7 +273,8 @@ impl<'a> Args<'a> {
 
     /// The document: `text`, or the file at `path` (`input` names the text argument).
     fn source(&self, input: &str) -> Result<(String, Option<String>), String> {
-        match (self.str(input), self.str("path")) {
+        let inline = self.str(input).or_else(|| self.str("xml"));
+        match (inline, self.str("path")) {
             (Some(_), Some(_)) => Err(format!("give either {input} or path, not both")),
             (Some(t), None) => Ok((t.to_string(), None)),
             (None, Some(p)) => std::fs::read_to_string(p)
@@ -420,7 +423,7 @@ fn check(a: &Args) -> Outcome {
 }
 
 fn check_bpmn(a: &Args) -> Outcome {
-    let (xml, path) = match a.source("xml") {
+    let (xml, path) = match a.source("text") {
         Ok(s) => s,
         Err(e) => return fail(e),
     };
@@ -538,7 +541,7 @@ fn export(a: &Args) -> Outcome {
 }
 
 fn import(a: &Args) -> Outcome {
-    let (xml, _) = match a.source("xml") {
+    let (xml, _) = match a.source("text") {
         Ok(s) => s,
         Err(e) => return fail(e),
     };

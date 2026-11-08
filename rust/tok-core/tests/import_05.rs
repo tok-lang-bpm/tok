@@ -94,3 +94,26 @@ fn language_05_survives_import() {
         failures.join("\n")
     );
 }
+
+/// A pool whose process has no elements prints without a block, which takes no
+/// `process-name=`; the imported document stays valid.
+#[test]
+fn pool_with_an_empty_process_has_no_process_name() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d">
+  <bpmn:collaboration id="c">
+    <bpmn:participant id="a" name="Bank" processRef="p1"/>
+    <bpmn:participant id="b" name="Office" processRef="p2"/>
+  </bpmn:collaboration>
+  <bpmn:process id="p1"/>
+  <bpmn:process id="p2"><bpmn:task id="t" name="Work"/></bpmn:process>
+</bpmn:definitions>"#;
+    let (doc, _) = tok_core::import::import_bpmn(xml, true).expect("import");
+    let text = tok_core::fmt(&doc);
+    assert!(
+        !text.contains("pool a \"Bank\" process=p1 process-name"),
+        "{text}"
+    );
+    let (_, diags) = tok_core::load(&text, "full", None);
+    assert!(!diags.iter().any(|d| d.is_error()), "{diags:?}\n{text}");
+}

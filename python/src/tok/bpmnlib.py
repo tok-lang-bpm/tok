@@ -2029,6 +2029,32 @@ def _flow_label(nm, pts):
     return _text(lines, x1 + 6, y1 - 8, 10, "start")
 
 
+def _count(n, noun):
+    return "1 %s" % noun if n == 1 else "%d %ss" % (n, noun)
+
+
+def _describe(m, shapes):
+    """The text alternative of the picture: what the diagram shows, counted from the shapes it
+    draws and the flows of the model, for a reader who hears the picture."""
+    pools = lanes = nodes = 0
+    for i in shapes:
+        e = m.get(i)
+        if e is None:
+            continue
+        t = local(e.tag)
+        if t == "participant":
+            pools += 1
+        elif t == "lane":
+            lanes += 1
+        elif t in ACT or t in EVT or t in GWS or t in SUBP:
+            nodes += 1
+    parts = [_count(pools, "pool"), _count(lanes, "lane"), _count(nodes, "flow node"),
+             _count(len(m.seq), "sequence flow")]
+    if m.msg:
+        parts.append(_count(len(m.msg), "message flow"))
+    return "Process diagram with %s and %s." % (", ".join(parts[:-1]), parts[-1])
+
+
 def render_svg(m, title=None):
     shapes, edges = {}, {}
     for s in m.root.iter(BDI + "BPMNShape"):
@@ -2055,9 +2081,11 @@ def render_svg(m, title=None):
     W, H = maxx - minx, maxy - miny
     P = []
     P.append('<svg xmlns="http://www.w3.org/2000/svg" viewBox="%.0f %.0f %.0f %.0f" width="%.0f" height="%.0f" '
-             'font-family="Arial, Helvetica, sans-serif">' % (minx, miny, W, H, W, H))
+             'font-family="Arial, Helvetica, sans-serif" role="img" aria-labelledby="%s">'
+             % (minx, miny, W, H, W, H, "tok-title tok-desc" if title else "tok-desc"))
     if title:
-        P.append("<title>%s</title>" % _esc(title))
+        P.append('<title id="tok-title">%s</title>' % _esc(title))
+    P.append('<desc id="tok-desc">%s</desc>' % _esc(_describe(m, shapes)))
     P.append('<defs>'
              '<marker id="seqEnd" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" '
              'markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="%s"/></marker>'

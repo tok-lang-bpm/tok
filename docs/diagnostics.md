@@ -140,7 +140,7 @@ An expression nested more than 160 levels deep (parentheses, lists, contexts, ca
 
 ## Executable profile (C)
 
-Checked when the header or a pool has the flag `executable`. The codes are the same as in the `--camunda` mode of the `bpmn.py` validator.
+Checked when the header or a pool has the flag `executable`. The codes are the same as those of `tok check FILE.bpmn --camunda`.
 
 | Code | Severity | Meaning |
 |---|---|---|
@@ -194,7 +194,7 @@ Decisions of language 0.7 in executable documents for Camunda (spec §10.4); rep
 
 ## BPMN 2.0 rules (E, W, L)
 
-After the tok-level checks pass, the document is exported to BPMN 2.0 and checked by the BPMN validator shared with the course tool `bpmn.py`: errors `E…` (the model breaks a rule of the BPMN specification, e.g. `E008` message flow inside one pool), warnings `W…` (probably a modelling mistake, e.g. `W051` a split joined by a gateway of another type) and style notes `L…` (e.g. `L020` a splitting gateway whose name is not a question). The validator writes its messages in Polish, with the identifiers of the elements (`--lang pl`); in English `tok check` gives the text below followed by the identifier. `bpmn-rules.md` gives the clause of BPMN 2.0.2 behind every code.
+After the tok-level checks pass, the document is exported to BPMN 2.0 and checked by the BPMN validator that `tok check FILE.bpmn` uses: errors `E…` (the model breaks a rule of the BPMN specification, e.g. `E008` message flow inside one pool), warnings `W…` (probably a modelling mistake, e.g. `W051` a split joined by a gateway of another type) and style notes `L…` (e.g. `L020` a splitting gateway whose name is not a question). The validator writes its messages in Polish, with the identifiers of the elements (`--lang pl`); in English `tok check` gives the text below followed by the identifier. `bpmn-rules.md` gives the clause of BPMN 2.0.2 behind every code.
 
 | Code | Severity | Message (English) |
 |---|---|---|

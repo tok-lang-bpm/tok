@@ -258,10 +258,18 @@ fn bpmn_text(
     doc: &Document,
     layout: bool,
     side: Option<&tok_bpmn::Sidecar>,
+    refs: bool,
 ) -> Result<String, ApiError> {
-    let xml = export::export_xml(doc, None);
+    let xml = if refs {
+        export::export_xml_flow_refs(doc, None)
+    } else {
+        export::export_xml(doc, None)
+    };
     if !layout {
         let mut root = export::export_tree(doc, None);
+        if refs {
+            export::flow_refs(&mut root);
+        }
         root.indent(0);
         return Ok(format!(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{}\n",
@@ -366,11 +374,17 @@ pub fn fmt(text: &str, options: &str) -> Res {
 
 /// `tok bpmn`: BPMN 2.0 XML with diagram layout.
 pub fn bpmn(text: &str, options: &str) -> Res {
-    let o = Options::parse(options, &["lang", "layout", "sidecar"])?;
+    let o = Options::parse(options, &["lang", "layout", "sidecar", "flow_refs"])?;
     let doc = load_ok(text, &o.lang()?, true)?;
     drawable(&doc)?;
     let side = o.sidecar()?;
-    bpmn_text(&doc, o.flag("layout", true)?, side.as_ref()).map(Json::Str)
+    bpmn_text(
+        &doc,
+        o.flag("layout", true)?,
+        side.as_ref(),
+        o.flag("flow_refs", false)?,
+    )
+    .map(Json::Str)
 }
 
 /// `tok svg`: the picture of the diagram.
@@ -379,7 +393,12 @@ pub fn svg(text: &str, options: &str) -> Res {
     let doc = load_ok(text, &o.lang()?, true)?;
     drawable(&doc)?;
     let side = o.sidecar()?;
-    svg_text(&doc, o.string("title")?.as_deref(), side.as_ref()).map(Json::Str)
+    let title = o.string("title")?;
+    let title = title
+        .as_deref()
+        .filter(|t| !t.is_empty())
+        .or(doc.title.as_deref());
+    svg_text(&doc, title, side.as_ref()).map(Json::Str)
 }
 
 /// `tok export`: every file, as an object file name → content.
@@ -398,7 +417,7 @@ pub fn export_files(text: &str, options: &str) -> Res {
     if !decisions_only {
         files.push((
             format!("{name}.bpmn"),
-            Json::Str(bpmn_text(&doc, true, side.as_ref())?),
+            Json::Str(bpmn_text(&doc, true, side.as_ref(), false)?),
         ));
         let svg_name = format!("{name}.svg");
         let svg = svg_text(&doc, Some(&svg_name), side.as_ref())?;

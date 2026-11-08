@@ -1,0 +1,50 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "sklep-process",
+  "komunikat": "Proces „Sklep” (sklep-process) nie ma zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "archiwum-process",
+  "komunikat": "Proces „Archiwum” (archiwum-process) nie ma zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "zamowienie",
+  "komunikat": "„Przyjęcie zamówienia” (zamowienie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "wysylka",
+  "komunikat": "„Wysyłka” (wysylka): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "start-gw",
+  "komunikat": "„Co przyszło najpierw?” (start-gw): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "wniosek",
+  "komunikat": "„Wniosek” (wniosek): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "skan",
+  "komunikat": "„Skan” (skan): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "rejestracja",
+  "komunikat": "„Rejestracja” (rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

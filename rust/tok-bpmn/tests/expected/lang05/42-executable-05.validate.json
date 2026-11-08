@@ -1,0 +1,50 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W020",
+  "id": "c",
+  "komunikat": "„Czy dość?” (c): bramka z jednym wejściem i jednym wyjściem jest zbędna."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "s",
+  "komunikat": "„Start” (s) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "kilka",
+  "komunikat": "„Kilka” (kilka) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W041",
+  "id": "anuluj",
+  "komunikat": "„Anulowanie” (anuluj) jest nieosiągalny ze zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "czytelnik-process",
+  "komunikat": "Proces „Czytelnik” (czytelnik-process) nie ma zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "kilka",
+  "komunikat": "„Kilka” (kilka) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "przyjecie",
+  "komunikat": "„Przyjęcie” (przyjecie) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "odp",
+  "komunikat": "„Odpowiedź” (odp) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ }
+]

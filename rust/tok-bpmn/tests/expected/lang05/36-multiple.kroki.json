@@ -1,0 +1,74 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "zgloszenie",
+  "komunikat": "„Zgłoszenie e-mailem lub przez formularz” (zgloszenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "potwierdzenie",
+  "komunikat": "„Potwierdzenie i płatność” (potwierdzenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "przypomnienie",
+  "komunikat": "„Przypomnienie lub ponaglenie” (przypomnienie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "ogloszenie",
+  "komunikat": "„Ogłoszenie” (ogloszenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "koniec",
+  "komunikat": "„Powiadomienia” (koniec) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W053",
+  "id": "ogloszenie",
+  "komunikat": "„Ogłoszenie” (ogloszenie) rzuca eskalację, której nic nie łapie (brak granicznego zdarzenia eskalacji z tym samym escalationRef na otaczającym podprocesie)."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "zgloszenie",
+  "komunikat": "„Zgłoszenie e-mailem lub przez formularz” (zgloszenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "rejestracja",
+  "komunikat": "„Rejestracja zgłoszenia” (rejestracja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "potwierdzenie",
+  "komunikat": "„Potwierdzenie i płatność” (potwierdzenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "monit",
+  "komunikat": "„Wysłanie monitu” (monit): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "ogloszenie",
+  "komunikat": "„Ogłoszenie” (ogloszenie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "koniec",
+  "komunikat": "„Powiadomienia” (koniec): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

@@ -1,0 +1,38 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "zgloszenie",
+  "komunikat": "„Zgłoszenie e-mailem lub przez formularz” (zgloszenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "potwierdzenie",
+  "komunikat": "„Potwierdzenie i płatność” (potwierdzenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "przypomnienie",
+  "komunikat": "„Przypomnienie lub ponaglenie” (przypomnienie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "ogloszenie",
+  "komunikat": "„Ogłoszenie” (ogloszenie) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "koniec",
+  "komunikat": "„Powiadomienia” (koniec) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W053",
+  "id": "ogloszenie",
+  "komunikat": "„Ogłoszenie” (ogloszenie) rzuca eskalację, której nic nie łapie (brak granicznego zdarzenia eskalacji z tym samym escalationRef na otaczającym podprocesie)."
+ }
+]

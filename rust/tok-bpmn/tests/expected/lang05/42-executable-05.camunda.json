@@ -1,0 +1,32 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C060",
+  "id": "t",
+  "komunikat": "Transakcja „Transakcja” (t) nie jest wykonywany przez Camunda 8."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "C021",
+  "id": "rez",
+  "komunikat": "Zadanie usługowe „Rezerwacja” (rez) czeka na program (worker) obsługujący typ „rezerwacja”. Bez niego instancja zatrzyma się w tym miejscu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "C060",
+  "id": "c",
+  "komunikat": "Bramka złożona „Czy dość?” (c) nie jest wykonywany przez Camunda 8."
+ },
+ {
+  "poziom": "uwaga",
+  "kod": "C021",
+  "id": "proba",
+  "komunikat": "Zadanie usługowe „Próba” (proba) czeka na program (worker) obsługujący typ „proba”. Bez niego instancja zatrzyma się w tym miejscu."
+ },
+ {
+  "poziom": "błąd",
+  "kod": "C052",
+  "id": "Message_Zgloszenie",
+  "komunikat": "Wiadomość „Zgłoszenie” (Message_Zgloszenie), na którą czeka „Przyjęcie” (przyjecie), wymaga <zeebe:subscription correlationKey=\"=…\"/>."
+ }
+]

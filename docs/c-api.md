@@ -64,7 +64,7 @@ char *tok_check(const char *text, const char *options);
 | `void tok_free(char *s)` | — | frees a result; `NULL` is ignored |
 | `tok_check(text, options)` | `lang` (`en`, `pl`), `level` (`basic`, `analytic`, `full`), `bpmn` (boolean, BPMN rules, default `true`), `class` (`descriptive`, `analytic`, `common-executable`, `full`) | `{"errors": N, "bpmn_class": CLASS, "diagnostics": [{"code", "severity", "line", "id", "message"}, …]}`, as `tok check --json` |
 | `tok_fmt(text, options)` | `lang` | the canonical text, as `tok fmt` |
-| `tok_bpmn(text, options)` | `lang`, `layout` (boolean, default `true`), `sidecar` (the text of a layout sidecar) | BPMN 2.0 XML, as `tok bpmn` (`--no-layout` with `"layout": false`) |
+| `tok_bpmn(text, options)` | `lang`, `layout` (boolean, default `true`), `sidecar` (the text of a layout sidecar), `flow_refs` (boolean, default `false`) | BPMN 2.0 XML, as `tok bpmn` (`--no-layout` with `"layout": false`) |
 | `tok_svg(text, options)` | `lang`, `title`, `sidecar` | the SVG picture, as `tok svg` |
 | `tok_export(text, options)` | `lang`, `name` (stem of the BPMN and SVG files, default `model`), `sidecar` | an object file name → content: every file `tok export` writes |
 | `tok_import(xml, options)` | `format` (`auto`, `bpmn`, `dmn`), `flow_ids` (boolean, default `true`; `false` is `--no-flow-ids`), `layout` (boolean, default `true`) | `{"format": "bpmn" or "dmn", "text": DOCUMENT, "warnings": [...], "layout": SIDECAR or null}` |

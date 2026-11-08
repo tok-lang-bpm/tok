@@ -257,6 +257,19 @@ fn drd_picture_and_diagram() {
     assert!(xml.contains("xmlns=\"https://www.omg.org/spec/DMN/20230324/MODEL/\""));
     assert!(xml.contains("<dmndi:DMNShape id=\"DMNShape_opis\" dmnElementRef=\"opis\">"));
     assert!(xml.contains("<authorityRequirement id=\"dyrektor-requires-zaleglosci\">"));
+    // the picture carries a text alternative: the first decision as its title, the counts as its description
+    let svg = &files[1].1;
+    assert!(
+        svg.contains(" role=\"img\" aria-labelledby=\"tok-title tok-desc\">"),
+        "{}",
+        &svg[..300]
+    );
+    assert!(svg.contains("<title id=\"tok-title\">"), "{}", &svg[..300]);
+    assert!(
+        svg.contains("<desc id=\"tok-desc\">Decision requirements diagram with "),
+        "{}",
+        &svg[..400]
+    );
     let (shapes, edges) = export::layout(&d, &tok_core::drg::graphs(&d)[0]);
     // every requirement is drawn from below its requirer, without overlapping shapes
     for e in &edges {
@@ -320,4 +333,32 @@ fn names_for_camunda_are_quoted() {
         .map(|(_, x)| x)
         .collect();
     assert!(xml53.contains("<text>Zaległe opłaty &gt; 50 or limit &lt; 1</text>"));
+}
+
+/// A table without `inputdata` reads variables of the caller, as under Camunda 8. Names the
+/// graph declares keep the meaning of DMN: only what `requires=` names is visible.
+#[test]
+fn table_reads_the_values_of_the_caller() {
+    let text = r#"tok 1.0 "Reading room"
+
+decision access "Access" hit=first
+  | purpose: string | age: number || mode: string |
+  | "private"       | < 30        || "refused"    |
+  | -               | < 30        || "approval"   |
+  | -               | -           || "open"       |
+
+inputdata ward "Ward" type=string
+decision hidden "Hidden" hit=first
+  | ward: string || out: string |
+  | "a"          || "seen"      |
+  | -            || "not seen"  |
+"#;
+    let (doc, diags) = tok_core::load(text, "full", None);
+    assert!(!diags.iter().any(|d| d.is_error()), "{diags:?}");
+    let access = [("purpose", "private"), ("age", "12")];
+    assert_eq!(run(&doc, "access", &access), r#""refused""#);
+    assert!(eval::unset_inputs(&doc, "access", &["purpose", "age"]).is_empty());
+    assert_eq!(eval::unset_inputs(&doc, "access", &["age"]), ["purpose"]);
+    assert_eq!(run(&doc, "hidden", &[("ward", "a")]), r#""not seen""#);
+    assert_eq!(eval::unset_inputs(&doc, "hidden", &["ward"]), ["ward"]);
 }

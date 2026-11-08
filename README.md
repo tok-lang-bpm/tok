@@ -183,7 +183,7 @@ bash tools/playground.sh                          # the playground in rust/targe
 
 `tools/check.sh` runs every check of a release (Rust, Python, R and Julia tests, engine wheel and its parity with the Python implementation, the native `tok` program, the C library of the engine, the language and MCP servers, the VS Code extension and the playground) on Linux, macOS or Windows with Git Bash.
 
-The BPMN validation comes from the `bpmn.py` validator used in the course *Modelowanie procesów informacyjnych* (Jagiellonian University), shipped here as `tok.bpmnlib`; its rule messages are in Polish and `tok` adds English equivalents. The diagram layout and SVG rendering started as a port of `bpmn.py` and, from 0.4, are developed in the Rust engine (`rust/tok-bpmn`), in the same style: left to right, pools stacked, lanes as rows.
+The BPMN validation began as the validator of the course *Modelowanie procesów informacyjnych* (Jagiellonian University), kept here as `tok.bpmnlib`; its rule messages are in Polish and `tok` adds English equivalents. The diagram layout and SVG rendering started as a port of the same course tool and, from 0.4, are developed in the Rust engine (`rust/tok-bpmn`), in the same style: left to right, pools stacked, lanes as rows.
 
 ## Contributing and issues
 

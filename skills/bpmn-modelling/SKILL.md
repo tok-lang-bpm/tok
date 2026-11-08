@@ -22,7 +22,7 @@ Never write coordinates by hand. You write only the semantic part of the XML; th
 
 `tok check` exits with code 1 when the model has errors. Each finding has a code, the id of the element and the line of the element in the file. Messages are in English (`--lang pl` gives them in Polish); the codes are the same in both languages.
 
-When your client has the **tok MCP server**, its tool `check_bpmn` does the same check: give the file as `path` (the server reads it), or the document as `xml` when you have no file tools; `steps`, `description` with the text of the process description, and `camunda` are the options of the command. If the tool answers that no document was given although you passed one, your client dropped the argument: write the file and give `path`. Layout and drawing still need the `tok` command.
+When your client has the **tok MCP server**, its tool `check_bpmn` does the same check: give the file as `path` (the server reads it), or the document as `text` when you have no file tools; `steps`, `description` with the text of the process description, and `camunda` are the options of the command. If the tool answers that no document was given although you passed one, your client dropped the argument: write the file and give `path`. Layout and drawing still need the `tok` command.
 
 If the command is missing, install it: `pip install tok-lang` (the Python package with the engine; it gives the `tok` command), or use the native `tok` program. `tok --version` shows whether it runs. If you cannot run `tok`, write the model by `references/elements.md` and say clearly that it has not been checked.
 

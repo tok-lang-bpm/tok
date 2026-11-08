@@ -1,0 +1,14 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "sklep-process",
+  "komunikat": "Proces „Sklep” (sklep-process) nie ma zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "archiwum-process",
+  "komunikat": "Proces „Archiwum” (archiwum-process) nie ma zdarzenia początkowego."
+ }
+]

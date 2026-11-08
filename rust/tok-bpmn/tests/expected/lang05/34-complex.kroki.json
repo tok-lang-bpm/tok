@@ -1,0 +1,74 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "wybor",
+  "komunikat": "„Czy zebrano dość recenzji?” (wybor) (bramka złożona) łączy gałęzie rozwidlone przez „Rozesłanie do recenzentów” (rozdzial) (bramka równoległa (AND)): wszystkie gałęzie dotrą do złączenia, więc dalsza część procesu wykona się kilka razy."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "scalenie",
+  "komunikat": "scalenie (bramka inkluzywna (OR)) łączy gałęzie rozwidlone przez „Które działania są potrzebne?” (podzial) (bramka złożona): złączenie powinno mieć ten sam typ co rozwidlenie."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "s",
+  "komunikat": "„Rękopis wpłynął” (s): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "rozdzial",
+  "komunikat": "„Rozesłanie do recenzentów” (rozdzial): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "r1",
+  "komunikat": "„Recenzja 1” (r1): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "r2",
+  "komunikat": "„Recenzja 2” (r2): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "r3",
+  "komunikat": "„Recenzja 3” (r3): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "wybor",
+  "komunikat": "„Czy zebrano dość recenzji?” (wybor): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "decyzja",
+  "komunikat": "„Decyzja redakcji” (decyzja): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "podzial",
+  "komunikat": "„Które działania są potrzebne?” (podzial): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "korekta",
+  "komunikat": "„Korekta” (korekta): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "sklad",
+  "komunikat": "„Skład” (sklad): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

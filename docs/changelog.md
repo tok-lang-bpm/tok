@@ -2,16 +2,29 @@
 
 All notable changes to the tok language and its reference tools are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/). Until 1.0 a minor version could change the language; from 1.0 the compatibility promise of the specification (`docs/spec.md` §4.3) holds for every release 1.x, and a patch version never changes the language.
 
-## [Unreleased]
+## [1.0.4] — 2026-11-08
 
-Changes to the agent skills (`skills/`) and the name of the Julia package; the programs and the language are those of 1.0.3. The agent bundle https://github.com/tok-lang-bpm/tok-agent carries them as plugin version 1.0.3.1.
+A release of the engine and the tools from what the studies of tok and the courses found. The language stays 1.0.
+
+### Fixed
+
+- `tok eval` and `tok sim`, documents of languages 0.7 and 1.0: a decision table without `inputdata` saw null in every column, so that it gave its last row or null whatever the values were, with no diagnostic. A name that no element of the document declares is now a variable of the caller, as a process variable is under Camunda 8, and the table means what it means in languages 0.1–0.6. The result of `tok eval` keeps its form, the value of the decision. Documents affected: 0.7 and 1.0 documents with decisions whose columns name variables the document does not declare; declared input data keeps the meaning of DMN, where a decision sees what it requires. The change reaches the Python, R and Julia packages, the playground and the MCP server through the engine.
+- `tok import`: a pool whose process has no elements got `process-name=`, which made the document invalid (`R013`).
+
+### Added
+
+- `tok eval` warns on the standard error about a column of a table that gets no value.
+- `tok bpmn --flow-refs` (the option `flow_refs` of the API) writes the optional `incoming` and `outgoing` of every flow node, from which PM4Py reads the sequence flows of a file; without them PM4Py reads none. The default output is unchanged, as the compatibility promise requires (spec §4.3).
 
 ### Changed
 
+- The SVG pictures carry a text alternative. The root element has `role="img"` and `aria-labelledby`, the title of the document (the file name when the document has no title; the API option `title` when given) is the `<title>` of the picture, where the file name stood before, and a `<desc>` states what the picture shows: for a process diagram the number of pools, lanes, flow nodes, sequence flows and message flows, for a decision requirements diagram the number of decisions, input data, business knowledge models, knowledge sources and requirements. A screen reader reads the title and the description of a picture embedded in a web page or opened in a browser; the drawing is unchanged. The change affects every SVG the tools write, for documents of every language version; the model and every other output are unchanged.
+- The MCP tools `check_bpmn` and `import` take the document as `text`, as every other tool does, because some language models sent the argument `xml` empty in the evidence study of tok. `xml` stays accepted.
+- The documentation names the validator by what tok does today, `tok check FILE.bpmn`.
 - TokLang.jl depends on `tok_jll`, so `Pkg.add("TokLang")` alone gives the engine. The environment variable `TOK_LIBTOK` and the search of the repository build are gone: a build of your own replaces the library through the preference `libtokengine_path` of `tok_jll` (`docs/julia.md`). The tests and the examples run from an installed package (the models and the corpus are copies inside it, `tools/julia-data.sh`, and `tools/check.sh` checks them), the package has a README, runnable scripts in `examples/`, an API reference built with Documenter.jl (https://tok-lang-bpm.github.io/julia/, with the definition of the stable API), checks with Aqua.jl and coverage in continuous integration.
-- The Julia package is named `TokLang` (folder `julia/TokLang.jl`, module `TokLang`, extension `TokLangTuringExt`), the name under which it is registered in the Julia General registry; its UUID and version 1.0.3 are unchanged. Code that loaded it with `using Tok` loads it with `using TokLang`.
+- The Julia package is named `TokLang` (folder `julia/TokLang.jl`, module `TokLang`, extension `TokLangTuringExt`), the name under which it is registered in the Julia General registry; its UUID is unchanged. Code that loaded it with `using Tok` loads it with `using TokLang`.
 - The agent skill `tok-modelling` has a reference policy and a shorter workflow, from the third evidence study of tok (four language models as agents on 87 process descriptions of two datasets, with the skill and the MCP server). Read the cheat sheet once and nothing else before the first check; open the specification only for the one section a diagnostic needs; write the model, check it, fix every error and every warning, format, export, report; the mapping table is written when the description is a numbered table of steps or the person asks for a review of the choices. The sections on the layers of the language (the core language, executable models, BPMN beyond Camunda, collaboration and choreography, models from BPMN or DMN files, decision models, simulation) moved to `references/layers.md`. With the skill of 1.0.3 the agents read the whole reference through the tool `reference` and carried it in every later turn, at 4.4 to 6.5 times the tokens of a run from the one-page reference; the new workflow keeps their validity (97.6–100 %) at 36–60 % of those tokens.
-- The agent skill `bpmn-modelling` fixes every warning as well as every error (BPMN linters such as bpmnlint report the `W…` rules as errors; the previous text let an agent justify a warning instead, and the models left `W022`), and gives a BPMN file to the MCP tool `check_bpmn` as `path`, with `xml` for clients without file tools. The tool calls of one of the studied models (Beam, through Ollama) arrive without an argument named `xml`; a later release of the MCP server may accept `text` as well.
+- The agent skill `bpmn-modelling` fixes every warning as well as every error (BPMN linters such as bpmnlint report the `W…` rules as errors; the previous text let an agent justify a warning instead, and the models left `W022`), and gives a BPMN file to the MCP tool `check_bpmn` as `path`, with `text` for clients without file tools. The tool calls of one of the studied models (Beam, through Ollama) arrived without an argument named `xml`, which is why the tool accepts `text` from this release.
 
 ## [1.0.3] — 2026-10-30
 

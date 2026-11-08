@@ -113,7 +113,7 @@ A document with the header `tok 1.0` is read, checked, printed, exported, import
 
 The header stays as written: `tok fmt` never changes the version of a document, and `tok import` writes the oldest version that expresses what it read (`0.1`, `0.3`, `0.5` or `0.6` for BPMN, `0.7` for DMN), each of which is a valid document with the same meaning in every 1.x release.
 
-Documents of 0.1, 0.3, 0.5, 0.6 and 0.7 stay valid, mean what they meant and give every output they gave, byte for byte: their canonical text, diagnostics, BPMN, DMN, forms, SVG, `tok eval` results and simulations. What depends on the declared version (the table above) keeps depending on it; a 1.0 document has all of it.
+Documents of 0.1, 0.3, 0.5, 0.6 and 0.7 stay valid, mean what they meant and give every output they gave, byte for byte: their canonical text, diagnostics, BPMN, DMN, forms, SVG drawings (the text alternative of a picture, its `<title>` and `<desc>`, may grow as a documented change), `tok eval` results and simulations. What depends on the declared version (the table above) keeps depending on it; a 1.0 document has all of it.
 
 ### 4.2 Deprecations
 
@@ -632,7 +632,7 @@ inputdata egzemplarze "Egzemplarze" type=egzemplarze-t
 
 ### 9.5 Evaluation and export (language 0.7)
 
-- `tok eval FILE DECISION name=value …` evaluates the decision with what it requires: required decisions once each, input data from the arguments by FEEL name, business knowledge models as functions. Text given for input data of a temporal type is read as that type; a JSON object or list is a context or list (see `cli.md`). The result is the value of the decision as JSON. A violated hit policy in the decision or in a decision it requires is reported with exit code 1.
+- `tok eval FILE DECISION name=value …` evaluates the decision with what it requires: required decisions once each, input data from the arguments by FEEL name, business knowledge models as functions. A name that no element of the document declares is a variable of the caller, as a process variable is under Camunda 8: `tok eval` takes it from the arguments and `tok sim` from the variables of the case, so that a table without `inputdata` means the same as in earlier versions of the language. Text given for input data of a temporal type is read as that type; a JSON object or list is a context or list (see `cli.md`). The result is the value of the decision as JSON. A violated hit policy in the decision or in a decision it requires is reported with exit code 1.
 - A `rule` task of a 0.7 document evaluates its decision the same way in the simulator; the case variables are the input data, and `result=` defaults to the only output of a decision table, or else to the FEEL name of the decision.
 - `tok export` writes one DMN 1.5 file per connected decision requirements graph, `NAME.dmn` after its first decision, with the DMN types of the document and a DMNDI diagram laid out automatically (decisions above what they require), and its picture `NAME.drd.svg`. A 0.7 document without a process writes no BPMN file.
 - A document is exported **for Camunda 8** when its header or a pool has the flag `executable` and `target=` is `camunda` (the default), as for BPMN; this holds also for a document that has only decisions (`tok 0.7 "…" executable`). Its DMN files write every FEEL name that is not a plain name (a letter or `_`, then letters, digits and `_`) in backticks, and such a key of a context literal as a string, because Camunda's FEEL reads names with spaces and symbols only in that form (`feel.md` §9.5). Other documents are exported in standard FEEL.
@@ -806,7 +806,7 @@ Conditions, script expressions, loop conditions (`while`), activation conditions
 | `T` | tokens and lines (lexer) |
 | `P` | statements (parser) |
 | `R` | references and structure of the tok document |
-| `E`, `W`, `L` | BPMN 2.0 rules: errors, warnings, style notes (shared with the `bpmn.py` validator) |
+| `E`, `W`, `L` | BPMN 2.0 rules: errors, warnings, style notes (the same rules as `tok check FILE.bpmn`) |
 | `C` | executable profile for Camunda 8 |
 | `D` | decision tables and relations |
 | `F` | FEEL |

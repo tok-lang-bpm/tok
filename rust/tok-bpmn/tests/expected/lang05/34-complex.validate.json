@@ -1,0 +1,14 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "wybor",
+  "komunikat": "„Czy zebrano dość recenzji?” (wybor) (bramka złożona) łączy gałęzie rozwidlone przez „Rozesłanie do recenzentów” (rozdzial) (bramka równoległa (AND)): wszystkie gałęzie dotrą do złączenia, więc dalsza część procesu wykona się kilka razy."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W051",
+  "id": "scalenie",
+  "komunikat": "scalenie (bramka inkluzywna (OR)) łączy gałęzie rozwidlone przez „Które działania są potrzebne?” (podzial) (bramka złożona): złączenie powinno mieć ten sam typ co rozwidlenie."
+ }
+]

@@ -106,6 +106,7 @@ struct Args {
     check: bool,
     output: Option<String>,
     no_layout: bool,
+    flow_refs: bool,
     no_flow_ids: bool,
     class: Option<String>,
     no_sidecar: bool,
@@ -176,6 +177,7 @@ fn run(argv: &[String]) -> Result<u8, u8> {
         check: p.flag("check"),
         output: p.value("output").map(str::to_string),
         no_layout: p.flag("no_layout"),
+        flow_refs: p.flag("flow_refs"),
         no_flow_ids: p.flag("no_flow_ids"),
         class: p.value("class").map(str::to_string),
         no_sidecar: p.flag("no_sidecar"),
@@ -449,8 +451,13 @@ fn bpmn_text(
     doc: &tok_core::Document,
     layout: bool,
     side: Option<&tok_bpmn::Sidecar>,
+    refs: bool,
 ) -> Result<String, String> {
-    let xml = export::export_xml(doc, None);
+    let xml = if refs {
+        export::export_xml_flow_refs(doc, None)
+    } else {
+        export::export_xml(doc, None)
+    };
     if layout {
         return match side {
             Some(s) => tok_bpmn::layout_with(&xml, s),
@@ -459,6 +466,9 @@ fn bpmn_text(
         .map_err(|e| e.to_string());
     }
     let mut root = export::export_tree(doc, None);
+    if refs {
+        export::flow_refs(&mut root);
+    }
     root.indent(0);
     Ok(format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{}\n",
@@ -472,7 +482,12 @@ fn svg_text(
     side: Option<&tok_bpmn::Sidecar>,
 ) -> Result<String, String> {
     let xml = export::export_xml(doc, None);
-    let title = path.file_name().map(|n| n.to_string_lossy().to_string());
+    // the title of the picture, read by screen readers: the title of the document, else the file name
+    let title = doc
+        .title
+        .clone()
+        .filter(|t| !t.is_empty())
+        .or_else(|| path.file_name().map(|n| n.to_string_lossy().to_string()));
     match side {
         Some(s) => tok_bpmn::render_svg_with(&xml, title.as_deref(), s),
         None => tok_bpmn::render_svg(&xml, title.as_deref()),
@@ -567,7 +582,7 @@ fn cmd_bpmn(a: &Args) -> u8 {
         Ok(s) => s,
         Err(e) => return fail(&e),
     };
-    match bpmn_text(&doc, !a.no_layout, side.as_ref())
+    match bpmn_text(&doc, !a.no_layout, side.as_ref(), a.flow_refs)
         .and_then(|t| write_platform(Path::new(&path), &t).map_err(|e| e.to_string()))
     {
         Ok(()) => {
@@ -693,7 +708,7 @@ fn cmd_export(a: &Args) -> u8 {
             Ok(s) => s,
             Err(e) => return fail(&e),
         };
-        let res = bpmn_text(&doc, true, side.as_ref())
+        let res = bpmn_text(&doc, true, side.as_ref(), false)
             .and_then(|t| write_platform(&bpmn_path, &t).map_err(|e| e.to_string()))
             .and_then(|_| svg_text(&doc, &svg_path, side.as_ref()))
             .and_then(|t| write_platform(&svg_path, &t).map_err(|e| e.to_string()));
@@ -886,8 +901,8 @@ options:
 
 const CMD_BPMN: argparse::Spec = argparse::Spec {
     name: "bpmn",
-    usage: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--lang {en,pl}] [--json] file",
-    help: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--lang {en,pl}] [--json] file
+    usage: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--flow-refs] [--lang {en,pl}] [--json] file",
+    help: "usage: tok bpmn [-h] [-o OUTPUT] [--no-layout] [--no-sidecar] [--flow-refs] [--lang {en,pl}] [--json] file
 
 positional arguments:
   file
@@ -897,6 +912,7 @@ options:
   -o OUTPUT, --output OUTPUT
   --no-layout           semantic model only, no BPMNDI
   --no-sidecar          ignore the layout sidecar FILE.layout
+  --flow-refs           write incoming and outgoing of every flow node (PM4Py reads them)
   --lang {en,pl}        language of messages (default: en, or TOK_LANG)
   --json                machine-readable output
 ",
@@ -907,6 +923,7 @@ options:
         ("--output", Opt::Value("output", Conv::Text)),
         ("--no-layout", Opt::Flag("no_layout")),
         ("--no-sidecar", Opt::Flag("no_sidecar")),
+        ("--flow-refs", Opt::Flag("flow_refs")),
         ("--lang", Opt::Value("lang", Conv::Choice(LANGS))),
         ("--json", Opt::Flag("json")),
     ],
@@ -1074,6 +1091,10 @@ fn eval_command(argv: &[String]) -> Result<u8, u8> {
                 errln!("tok: {problem}");
             }
             return Ok(EXIT_ERRORS);
+        }
+        let given: Vec<String> = inputs.keys().cloned().collect();
+        for name in tok_core::drg::eval::unset_inputs(&doc, &decision, &given) {
+            errln!("tok: warning: decision '{decision}' reads '{name}', which has no value here");
         }
         outln!("{}", tok_core::drg::values::to_json(&value).compact());
         return Ok(EXIT_OK);

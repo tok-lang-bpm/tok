@@ -197,4 +197,11 @@ fn layout_and_picture() {
     assert_eq!(code, 0, "{out}");
     let svg = fs::read_to_string(dir.join("03-xor.svg")).expect("svg");
     assert!(svg.starts_with("<svg"));
+    assert!(
+        svg.contains(" role=\"img\" aria-labelledby=\"tok-title tok-desc\">")
+            && svg.contains("<title id=\"tok-title\">")
+            && svg.contains("<desc id=\"tok-desc\">Process diagram with "),
+        "the picture has no text alternative: {}",
+        &svg[..svg.len().min(400)]
+    );
 }

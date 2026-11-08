@@ -10,7 +10,7 @@ calibration of simulation parameters on event logs.
 """
 module TokLang
 
-const VERSION_STRING = "1.0.3"
+const VERSION_STRING = "1.0.4"
 
 include("odict.jl")
 include("diagnostics.jl")

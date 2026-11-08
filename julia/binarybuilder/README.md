@@ -1,6 +1,6 @@
 # tok_jll: the engine library for Julia
 
-`build_tarballs.jl` is the BinaryBuilder recipe of `tok_jll`, the binary package that gives TokLang.jl the C library of the tok engine (`tokengine`, crate `rust/tok-capi`, see `docs/c-api.md`) without a Rust compiler. It builds the library from the source of a release on Codeberg for:
+`build_tarballs.jl` is the BinaryBuilder recipe of `tok_jll`, the binary package that gives TokLang.jl the C library of the tok engine (`tokengine`, crate `rust/tok-capi`, see `docs/c-api.md`) without a Rust compiler. It builds the library from the source of a release on GitHub for:
 
 | Platform | Triplet |
 |---|---|

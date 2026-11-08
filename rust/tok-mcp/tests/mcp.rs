@@ -239,6 +239,24 @@ fn tools_have_exact_schemas() {
 }
 
 #[test]
+fn xml_tools_take_the_document_as_text_and_as_xml() {
+    let mut c = Modern::new();
+    let model = "tok 1.0 \"t\"
+start s
+end e
+flow s -> e
+";
+    let bpmn = c.tool("export", json!({"text": model, "formats": ["bpmn"]}));
+    let xml = bpmn["files"]["model.bpmn"].as_str().expect("xml");
+    let by_text = c.tool("check_bpmn", json!({"text": xml}));
+    let by_xml = c.tool("check_bpmn", json!({"xml": xml}));
+    assert_eq!(by_text, by_xml);
+    let imported = c.tool("import", json!({"text": xml}));
+    assert_eq!(imported, c.tool("import", json!({"xml": xml})));
+    c.tool_error("check", json!({"xml": model}));
+}
+
+#[test]
 fn check_bpmn_reports_the_findings_of_a_bpmn_file() {
     let mut c = Modern::new();
     let r = c.tool(

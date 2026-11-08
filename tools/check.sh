@@ -118,13 +118,29 @@ fi
 if command -v julia > /dev/null; then
   step "Julia: core, engine through the C interface, native simulation, calibration"
   bash tools/julia-data.sh --check
-  # the engine library just built, through the preference of tok_jll; the tests use two
-  # threads for the parallel runs
+  # the engine library just built: a copy of the package is tested with a stand-in for
+  # tok_jll of the version the package asks for, which loads that library, so the gate
+  # also runs before the tok_jll of a new release is registered; the tests use two threads
+  # for the parallel runs
   TOK_LIB="$ROOT/rust/target/release/$LIB"
-  [ "$PLATFORM" = windows ] && TOK_LIB="$(cygpath -m "$TOK_LIB")"
-  printf '[tok_jll]\nlibtokengine_path = "%s"\n' "$TOK_LIB" > julia/TokLang.jl/LocalPreferences.toml
-  julia --project=julia/TokLang.jl -e 'using Pkg; Pkg.test(julia_args=["--threads=2"])'
-  rm -f julia/TokLang.jl/LocalPreferences.toml
+  JL_TMP="$(mktemp -d)"
+  JLL_VERSION="$(sed -n 's/^tok_jll = "\(.*\)"/\1/p' julia/TokLang.jl/Project.toml | tail -1)"
+  JLL_UUID="$(sed -n 's/^tok_jll = "\([0-9a-f-]\{36\}\)"/\1/p' julia/TokLang.jl/Project.toml | head -1)"
+  mkdir -p "$JL_TMP/tok_jll/src"
+  cp -r julia/TokLang.jl "$JL_TMP/TokLang.jl"
+  rm -f "$JL_TMP/TokLang.jl/Manifest.toml" "$JL_TMP/TokLang.jl/LocalPreferences.toml"
+  if [ "$PLATFORM" = windows ]; then
+    TOK_LIB="$(cygpath -m "$TOK_LIB")"
+    JL_PKG="$(cygpath -m "$JL_TMP/TokLang.jl")"
+    JL_JLL="$(cygpath -m "$JL_TMP/tok_jll")"
+  else
+    JL_PKG="$JL_TMP/TokLang.jl"
+    JL_JLL="$JL_TMP/tok_jll"
+  fi
+  printf 'name = "tok_jll"\nuuid = "%s"\nversion = "%s"\n' "$JLL_UUID" "$JLL_VERSION" > "$JL_TMP/tok_jll/Project.toml"
+  printf 'module tok_jll\nis_available() = true\nconst libtokengine_path = "%s"\nend\n' "$TOK_LIB" > "$JL_TMP/tok_jll/src/tok_jll.jl"
+  JL_JLL="$JL_JLL" julia --project="$JL_PKG" -e 'using Pkg; Pkg.develop(path=ENV["JL_JLL"]); Pkg.test(julia_args=["--threads=2"])'
+  rm -rf "$JL_TMP"
 else
   step "Julia: skipped (julia not installed)"
 fi

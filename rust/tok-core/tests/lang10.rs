@@ -168,3 +168,26 @@ fn unknown_and_malformed_versions() {
     assert_eq!(codes("tok v1.0 \"T\""), (None, vec!["P005".to_string()]));
     assert_eq!(tok_core::LANGUAGE_VERSION, "1.0");
 }
+
+/// `tok bpmn --flow-refs` adds the optional `incoming` and `outgoing` where the schema has
+/// them, after documentation and extension elements; the default output keeps its bytes.
+#[test]
+fn flow_references_are_optional() {
+    let text =
+        "tok 1.0 \"t\"\nstart s \"a\"\nuser u \"b\" doc=\"Why\"\nend e \"c\"\nflow s -> u -> e\n";
+    let (doc, _) = tok_core::load(text, "full", None);
+    let plain = tok_core::export::export_xml(&doc, None);
+    assert!(!plain.contains("incoming"));
+    let refs = tok_core::export::export_xml_flow_refs(&doc, None);
+    let task = &refs[refs.find("<bpmn:userTask").expect("task")..];
+    let docs = task.find("</bpmn:documentation>").expect("documentation");
+    let incoming = task.find("<bpmn:incoming>").expect("incoming");
+    let outgoing = task.find("<bpmn:outgoing>").expect("outgoing");
+    let end = task.find("</bpmn:userTask>").expect("end of the task");
+    assert!(
+        docs < incoming && incoming < outgoing && outgoing < end,
+        "{task}"
+    );
+    assert_eq!(refs.matches("<bpmn:incoming>").count(), 2);
+    assert_eq!(refs.matches("<bpmn:outgoing>").count(), 2);
+}

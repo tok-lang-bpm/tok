@@ -1,6 +1,6 @@
 # BPMN 2.0.2 rules enforced by `tok check`
 
-`tok check` enforces rules of the BPMN 2.0.2 specification (OMG formal/13-12-09) on two layers: the tok checker reports violations in the text with `R` codes (they point to the tok line), and after the tok-level checks pass the exported BPMN XML goes through the BPMN validator shared with the course tool `bpmn.py` (`E`, `W` and `L` codes, see `diagnostics.md`). This page lists every rule with the clause of the specification it comes from and its code. Clause numbers are those of BPMN 2.0.2; "Table" and "Figure" refer to its numbered tables and figures.
+`tok check` enforces rules of the BPMN 2.0.2 specification (OMG formal/13-12-09) on two layers: the tok checker reports violations in the text with `R` codes (they point to the tok line), and after the tok-level checks pass the exported BPMN XML goes through the BPMN validator that `tok check FILE.bpmn` uses (`E`, `W` and `L` codes, see `diagnostics.md`). This page lists every rule with the clause of the specification it comes from and its code. Clause numbers are those of BPMN 2.0.2; "Table" and "Figure" refer to its numbered tables and figures.
 
 Severity: an **error** breaks a rule the specification states with MUST or by its metamodel; a **warning** is a modelling practice the specification recommends (SHOULD, or the execution semantics of chapter 13 show the model cannot work as drawn); a **note** is a style convention of the course, not a BPMN rule.
 
@@ -156,7 +156,7 @@ Severity: an **error** breaks a rule the specification states with MUST or by it
 | Every drawn element (flow nodes, process data inputs and outputs, data objects and stores, flows, pools, lanes, annotations) has a shape or an edge | 12.2 (BPMN DI) | D01 |
 | Shapes and edges refer to existing elements | 12.2 | D02 |
 
-The `D` codes are not reported by `tok check` (tok generates the diagram); `bpmn.py check` reports them for files drawn elsewhere. The Camunda codes (`C…`) belong to the execution profile of Camunda 8, not to BPMN (`diagnostics.md`).
+The `D` codes are not reported for a tok document (tok generates the diagram); `tok check FILE.bpmn` reports them for files drawn elsewhere. The Camunda codes (`C…`) belong to the execution profile of Camunda 8, not to BPMN (`diagnostics.md`).
 
 ## Conformance classes
 

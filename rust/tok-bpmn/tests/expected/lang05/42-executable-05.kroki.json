@@ -1,0 +1,122 @@
+[
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W020",
+  "id": "c",
+  "komunikat": "„Czy dość?” (c): bramka z jednym wejściem i jednym wyjściem jest zbędna."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "s",
+  "komunikat": "„Start” (s) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W047",
+  "id": "kilka",
+  "komunikat": "„Kilka” (kilka) ma kilka wyzwalaczy (zdarzenie wielokrotne); BPMN 2.0.2 to dopuszcza, ale narzędzia bpmn.io zgłaszają je jako błąd — zostaw je tylko, gdy opis procesu tego wymaga."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W041",
+  "id": "anuluj",
+  "komunikat": "„Anulowanie” (anuluj) jest nieosiągalny ze zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W040",
+  "id": "czytelnik-process",
+  "komunikat": "Proces „Czytelnik” (czytelnik-process) nie ma zdarzenia początkowego."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "kilka",
+  "komunikat": "„Kilka” (kilka) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "przyjecie",
+  "komunikat": "„Przyjęcie” (przyjecie) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "W054",
+  "id": "odp",
+  "komunikat": "„Odpowiedź” (odp) wysyła lub odbiera wiadomość, ale nie łączy go żaden przepływ komunikatów. Jeśli partner jest osobnym basenem, dodaj messageFlow; jeśli jest wewnątrz tego samego basenu, rozważ inny typ elementu."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "s",
+  "komunikat": "„Start” (s): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "t",
+  "komunikat": "„Transakcja” (t): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "rez",
+  "komunikat": "„Rezerwacja” (rez): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "anuluj",
+  "komunikat": "„Anulowanie” (anuluj): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "c",
+  "komunikat": "„Czy dość?” (c): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "cz",
+  "komunikat": "„Sprawdzenie” (cz): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "proba",
+  "komunikat": "„Próba” (proba): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "kilka",
+  "komunikat": "„Kilka” (kilka): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "przyjecie",
+  "komunikat": "„Przyjęcie” (przyjecie): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "g",
+  "komunikat": "„Co dalej?” (g): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "odp",
+  "komunikat": "„Odpowiedź” (odp): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ },
+ {
+  "poziom": "ostrzeżenie",
+  "kod": "K01",
+  "id": "czas",
+  "komunikat": "„Czas” (czas): nazwa powinna zaczynać się numerem kroku z opisu procesu, np. „12. Zapytanie ofertowe”."
+ }
+]

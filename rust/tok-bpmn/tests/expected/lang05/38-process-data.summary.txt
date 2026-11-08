@@ -1,0 +1,1 @@
+węzły: 4, przepływy sekwencji: 3, przepływy komunikatów: 0, baseny: 0, linie: 0

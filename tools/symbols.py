@@ -496,7 +496,10 @@ TEXT = re.compile(r"<text\b[^>]*>(.*?)</text>", re.S)
 
 def crop(svg, box, labels=False):
     x, y, w, h = box
-    svg = re.sub(r"<title>.*?</title>\n?", "", svg, flags=re.S)
+    # a symbol is shown beside its description, so the picture has no title and no
+    # description of its own (tok svg writes both for the whole diagram)
+    svg = re.sub(r"<(title|desc)\b[^>]*>.*?</\1>\n?", "", svg, flags=re.S)
+    svg = re.sub(r' role="img" aria-labelledby="[^"]*"', "", svg, count=1)
     if not labels:
         svg = TEXT.sub(lambda m: m.group(0) if m.group(1) == "~" else "", svg)
     # the background rectangle of the whole picture

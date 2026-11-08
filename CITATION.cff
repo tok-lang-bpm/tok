@@ -26,6 +26,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.23805401
     description: "tok 1.0.3"
+  - type: doi
+    value: 10.5281/zenodo.24055499
+    description: "tok 1.0.4"
 date-released: 2026-11-08
 license: GPL-3.0-or-later
 repository-code: "https://github.com/tok-lang-bpm/tok"

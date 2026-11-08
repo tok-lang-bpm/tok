@@ -2048,8 +2048,9 @@ def _describe(m, shapes):
             lanes += 1
         elif t in ACT or t in EVT or t in GWS or t in SUBP:
             nodes += 1
-    parts = [_count(pools, "pool"), _count(lanes, "lane"), _count(nodes, "flow node"),
-             _count(len(m.seq), "sequence flow")]
+    # pools and lanes are named only when the picture has them
+    parts = ([_count(pools, "pool")] if pools else []) + ([_count(lanes, "lane")] if lanes else [])
+    parts += [_count(nodes, "flow node"), _count(len(m.seq), "sequence flow")]
     if m.msg:
         parts.append(_count(len(m.msg), "message flow"))
     return "Process diagram with %s and %s." % (", ".join(parts[:-1]), parts[-1])

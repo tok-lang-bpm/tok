@@ -745,11 +745,15 @@ fn describe(md: &Model, shapes: &OMap<[f64; 4]>) -> String {
             nodes += 1;
         }
     }
-    let mut parts = vec![
-        count(pools, "pool"),
-        count(lanes, "lane"),
-        count(nodes, "flow node"),
-    ];
+    // pools and lanes are named only when the picture has them
+    let mut parts = Vec::new();
+    if pools > 0 {
+        parts.push(count(pools, "pool"));
+    }
+    if lanes > 0 {
+        parts.push(count(lanes, "lane"));
+    }
+    parts.push(count(nodes, "flow node"));
     parts.push(count(md.seq.len(), "sequence flow"));
     if !md.msg.is_empty() {
         parts.push(count(md.msg.len(), "message flow"));

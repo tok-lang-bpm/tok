@@ -845,16 +845,21 @@ fn count(n: usize, singular: &str, plural: &str) -> String {
 /// The text alternative of the picture: what the diagram shows, for a reader who hears it.
 fn describe(shapes: &[Shape], requirements: usize) -> String {
     let n = |k: Kind| shapes.iter().filter(|s| s.kind == k).count();
-    let parts = [
-        count(n(Kind::Decision), "decision", "decisions"),
-        count(n(Kind::InputData), "input data", "input data"),
-        count(
-            n(Kind::Bkm),
+    // the other kinds of element are named only when the picture has them
+    let mut parts = vec![count(n(Kind::Decision), "decision", "decisions")];
+    for (k, singular, plural) in [
+        (Kind::InputData, "input data", "input data"),
+        (
+            Kind::Bkm,
             "business knowledge model",
             "business knowledge models",
         ),
-        count(n(Kind::Source), "knowledge source", "knowledge sources"),
-    ];
+        (Kind::Source, "knowledge source", "knowledge sources"),
+    ] {
+        if n(k) > 0 {
+            parts.push(count(n(k), singular, plural));
+        }
+    }
     format!(
         "Decision requirements diagram with {} and {}.",
         parts.join(", "),

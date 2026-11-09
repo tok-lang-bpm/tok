@@ -8,6 +8,8 @@ The package `tok-lang` gives the `tok` command (also as `tok-lang`), the MCP ser
 pip install tok-lang
 ```
 
+On Windows the same is `py -m pip install tok-lang`, on macOS and Linux `python3 -m pip install tok-lang`. When the terminal answers afterwards that it does not know `tok`, or pip stops with `externally-managed-environment`, the section [When a command is not found](https://tok-lang-bpm.github.io/getting-started.html#not-found) of the guide has the fix; `py -m tok` and `python3 -m tok` run the command without it.
+
 PyPI has abi3 wheels (one per platform for every Python from 3.8): Windows x64, Linux x86_64 and aarch64 (manylinux2014, glibc 2.17 or newer) and macOS (universal2, Intel and Apple silicon). Elsewhere pip builds the wheel from the source archive `tok_lang-VERSION.tar.gz`, which contains the Python package and the crates of the engine and needs Rust 1.99 or newer (`rust/rust-toolchain.toml`); maturin is installed by pip for the build. The package is built by maturin from `pyproject.toml` at the root of the repository: the Python sources `python/src/tok`, the extension module from the crate `rust/tok-py`.
 
 The pure-Python implementation is part of every wheel and of the source archive: the modules of `tok` besides `api` and `_engine` (`parser`, `check`, `printer`, `bpmn_export`, `dmn`, `forms`, `sim`, …) are that implementation, unchanged since 0.3. It is kept because it is the reference of the parity tests of the engine for languages 0.1 and 0.3, not as a second engine for users: `TOK_ENGINE=python` selects it, and `tok.api.engine()` tells which one runs. It reads the headers `tok 0.1` and `tok 0.3`; any newer header is an unknown version to it (`P006`), and the statements added after 0.3 are unknown keywords.
@@ -22,6 +24,30 @@ api.eval_decision(text, "tryb-akceptacji", {"rodzaj": "e-book", "cena": 120})
 result = api.simulate(text, cases=200, seed=1)
 print(api.format_kpi(result.kpi()))
 ```
+
+## A first session in the console
+
+`py` (Windows) or `python3` (macOS, Linux) in a terminal starts the Python console, in the folder of the terminal; `exit()` ends it. The functions take the text of a model, so a session reads the file, works on the text and writes the results:
+
+```python
+from pathlib import Path
+from tok import api
+
+model = Path("reading-room.tok").read_text(encoding="utf-8")
+api.check(model)                                                     # [] when the model has no problems
+Path("reading-room.svg").write_text(api.svg(model), encoding="utf-8")
+Path("reading-room.bpmn").write_text(api.bpmn(model), encoding="utf-8")
+
+text = """tok 1.0 "Book request"
+start asked "Reader asks for a book"
+user find "Find the book"
+end found "Book found"
+flow asked -> find -> found
+"""
+Path("book-request.tok").write_text(api.fmt(text), encoding="utf-8")   # a model typed in the console, saved
+```
+
+`ModuleNotFoundError: No module named 'tok'` means that the console runs another Python than the one pip installed into: install with the same command that starts the console (`py -m pip install tok-lang`). The section [Working in the Python and R consoles](https://tok-lang-bpm.github.io/getting-started.html#consoles) of the guide takes a session further, with the examples of the guide, errors and `export`.
 
 ## Functions
 

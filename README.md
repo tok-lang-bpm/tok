@@ -77,6 +77,8 @@ pip install tok-lang
 tok --version
 ```
 
+If the terminal does not know `tok` after the installation, or pip stops with `externally-managed-environment`, the guide explains the fix for each system in [When a command is not found](https://tok-lang-bpm.github.io/getting-started.html#not-found); `py -m tok --version` (Windows) and `python3 -m tok --version` (macOS, Linux) work in the meantime. [Working in the Python and R consoles](https://tok-lang-bpm.github.io/getting-started.html#consoles) shows a first session with the Python module and the R package: reading a `.tok` file, checking it, saving the diagram.
+
 On a platform without a wheel pip builds the engine from the source archive, which needs Rust 1.99 or newer. The command alone, from crates.io or from a checkout of the repository:
 
 ```

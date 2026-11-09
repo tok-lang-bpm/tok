@@ -35,30 +35,55 @@ R CMD INSTALL r/tokr
 
 ## Use
 
+The package installs three example models, in Polish: `wypozyczenie.tok` (an interlibrary loan), `propozycja-zakupu.tok` (a proposal to buy a book, with a decision table and forms) and `kwerenda-symulacja.tok` (an archive query with the parameters of a simulation). `system.file()` gives their path. Copy a model into the working directory (`getwd()`, changed with `setwd()` or a project of RStudio) before you edit it, because the folder of the package is replaced at every update:
+
 ```r
 library(tokr)
 
+list.files(system.file("examples", package = "tokr"))
+file.copy(system.file("examples", "wypozyczenie.tok", package = "tokr"), "wypozyczenie.tok")
+
 m <- tok_read("wypozyczenie.tok")
-tok_check(m)                    # diagnostics as a data frame
-tok_check(m, lang = "pl")       # messages in Polish
-tok_plot(m)                     # diagram in the viewer
-tok_export(m, dir = "camunda")  # BPMN, SVG, DMN and forms for Camunda 8
-tok_fmt(m)                      # canonical text
-tok_import("model.bpmn")        # BPMN 2.0 drawn in Camunda Modeler -> tok
-tok_eval("propozycja-zakupu.tok", "tryb-akceptacji",
-         list(rodzaj = "drukowana", cena = 120))   # decision table, as tok eval
+m                                     # the first lines of the model
+cat(m$text, sep = "\n")               # the whole text
+tok_check(m)                          # diagnostics as a data frame
+tok_check(m, lang = "pl")             # messages in Polish
+tok_plot(m)                           # diagram in the viewer
+tok_svg(m, file = "wypozyczenie.svg") # the diagram saved as a file
+tok_bpmn(m, file = "wypozyczenie.bpmn")
+tok_export(m, dir = "camunda")        # BPMN, SVG, DMN and forms for Camunda 8
+tok_fmt(m)                            # canonical text
+tok_import("model.bpmn")              # BPMN 2.0 drawn in Camunda Modeler -> tok
+tok_eval(system.file("examples", "propozycja-zakupu.tok", package = "tokr"),
+         "tryb-akceptacji", list(rodzaj = "drukowana", cena = 120))   # decision table, as tok eval
 ```
 
-Every function takes a model read with `tok_read()`, the path of a `.tok` file, or the text of a model. `options(tok.lang = "pl")` switches all messages to Polish.
+Every function takes a model read with `tok_read()`, the path of a `.tok` file, or the text of a model. `tok_svg()` and `tok_bpmn()` return the text when `file` is not given, so the console prints the SVG or XML code. `options(tok.lang = "pl")` switches all messages to Polish.
+
+A model typed in the console goes between single quotes, because its labels use double quotes; `writeLines()` saves it as a `.tok` file, and `tok_read()` reads the file again after you edit it:
+
+```r
+text <- 'tok 1.0 "Book request"
+start asked "Reader asks for a book"
+user find "Find the book"
+end found "Book found"
+flow asked -> find -> found'
+tok_check(text)
+writeLines(text, "book-request.tok")
+tok_fmt(tok_read("book-request.tok"), write = TRUE)   # the file in canonical form
+```
+
+The section [Working in the Python and R consoles](https://tok-lang-bpm.github.io/getting-started.html#consoles) of the guide takes a first session further.
 
 ## Simulation
 
 `tok_sim()` runs the simulation of `tok sim` on a model with `simulate`, `resource` and `variable` statements (see `docs/simulation.md` in the repository). The same model and seed give the same numbers as `tok sim` and the Python package.
 
 ```r
-s <- tok_sim("kwerenda-symulacja.tok")   # cases and seed of the simulate statement
+k <- system.file("examples", "kwerenda-symulacja.tok", package = "tokr")
+s <- tok_sim(k)                          # cases and seed of the simulate statement
 s                                        # the report of tok sim
-s <- tok_sim("kwerenda-symulacja.tok", cases = 1000, seed = 3, lang = "pl")
+s <- tok_sim(k, cases = 1000, seed = 3, lang = "pl")
 s$kpi$activities                         # count, mean wait and processing per activity
 s$kpi$resources                          # utilization per resource
 s$cases                                  # one row per case, with the case variables
@@ -81,7 +106,7 @@ See `?tok_sim` for every element of the result.
 
 ```r
 tok_xes(s, "kwerenda.xes")                                       # the log of s
-tok_xes("kwerenda-symulacja.tok", "kwerenda.xes", cases = 500, seed = 3)
+tok_xes(k, "kwerenda.xes", cases = 500, seed = 3)
 ```
 
 Each case is a trace; each activity instance gives the events `schedule`, `start` and `complete` (or `ati_abort` and `withdraw` for instances interrupted by a boundary timer while running or while waiting), with the label, the resource and timestamps with milliseconds. See `?tok_xes`.
